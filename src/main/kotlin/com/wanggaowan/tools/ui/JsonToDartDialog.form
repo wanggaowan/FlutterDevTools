@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="com.wanggaowan.tools.ui.JsonToDartDialog">
+  <grid id="cbd77" binding="mRootPanel" layout-manager="GridBagLayout">
+    <constraints>
+      <xy x="48" y="54" width="1304" height="698"/>
+    </constraints>
+    <properties>
+      <background color="-12828863"/>
+      <enabled value="true"/>
+      <foreground color="-1"/>
+      <inheritsPopupMenu value="true"/>
+      <preferredSize width="800" height="600"/>
+    </properties>
+    <border type="none">
+      <size top="4" left="4" bottom="4" right="4"/>
+      <color color="-705916"/>
+    </border>
+    <children>
+      <grid id="24bfa" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="8" left="8" bottom="0" right="8"/>
+        <constraints>
+          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <gridbag weightx="0.0" weighty="0.0"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="c735b" class="javax.swing.JTextField" binding="mCreateObjectName">
+            <constraints>
+              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="30"/>
+              </grid>
+            </constraints>
+            <properties>
+              <horizontalAlignment value="2"/>
+              <toolTipText value=""/>
+            </properties>
+          </component>
+          <component id="7a8a7" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="创建对象名称"/>
+            </properties>
+          </component>
+          <component id="edd0f" class="javax.swing.JTextField" binding="mObjSuffix">
+            <constraints>
+              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="0" fill="0" indent="1" use-parent-layout="false">
+                <preferred-size width="100" height="30"/>
+              </grid>
+            </constraints>
+            <properties>
+              <text value="Entity"/>
+            </properties>
+          </component>
+        </children>
+      </grid>
+      <grid id="e3588" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="4" left="12" bottom="4" right="12"/>
+        <constraints>
+          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <gridbag weightx="1.0" weighty="1.0"/>
+        </constraints>
+        <properties/>
+        <border type="none">
+          <title-color color="-4473925"/>
+        </border>
+        <children>
+          <component id="eab57" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="1" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="JSON"/>
+            </properties>
+          </component>
+          <grid id="145b5" binding="mJPEtRoot" layout-manager="BorderLayout" hgap="0" vgap="0">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children/>
+          </grid>
+        </children>
+      </grid>
+      <grid id="20f89" layout-manager="GridLayoutManager" row-count="2" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="10" left="0" bottom="0" right="10"/>
+        <constraints>
+          <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <gridbag weightx="0.0" weighty="0.0"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <grid id="58dd1" layout-manager="FlowLayout" hgap="5" vgap="5" flow-align="1">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="504dd" class="javax.swing.JCheckBox" binding="mCbCreateDoc">
+                <constraints/>
+                <properties>
+                  <selected value="true"/>
+                  <text value="json值生成注释文档"/>
+                </properties>
+              </component>
+              <component id="9c6a2" class="javax.swing.JCheckBox" binding="mCbGeneratorJsonSerializable">
+                <constraints/>
+                <properties>
+                  <text value="同步创建序列化数据"/>
+                </properties>
+              </component>
+              <component id="70698" class="javax.swing.JCheckBox" binding="mCbNullSafe">
+                <constraints/>
+                <properties>
+                  <text value="空安全"/>
+                </properties>
+              </component>
+            </children>
+          </grid>
+          <hspacer id="cd466">
+            <constraints>
+              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+          </hspacer>
+          <vspacer id="c228">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
+            </constraints>
+          </vspacer>
+        </children>
+      </grid>
+    </children>
+  </grid>
+</form>

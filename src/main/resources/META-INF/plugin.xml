@@ -1,0 +1,57 @@
+<idea-plugin>
+    <id>com.wanggaowan.tools</id>
+    <name>FlutterDevTools</name>
+    <vendor email="wanggaowan@163.com" url="https://github.com/wanggaowan/RNDevTools.git"/>
+
+    <description><![CDATA[
+    <h2>提供Flutter开发所需工具</h2>
+    <ol>
+      <li>项目结构增加Flutter项目专属分类，仅展示Flutter开发重点关注文件</li>
+    </ol>
+    ]]></description>
+
+    <change-notes><![CDATA[
+    <p>0.1</p>
+    <ul>
+      <li>项目结构增加Flutter项目专属分类，仅展示Flutter开发重点关注文件</li>
+      <li>提供json转dart并支持序列化</li>
+      <li>提供一键执行dart序列化/开启序列化观察者命令</li>
+    </ul>
+    ]]>
+    </change-notes>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lang</depends>
+    <depends>Dart</depends>
+    <depends>io.flutter</depends>
+    <depends>org.jetbrains.plugins.yaml</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <projectViewPane implementation="com.wanggaowan.tools.projectviewpane.FlutterProjectViewPane"
+                         id="Flutter Pane"/>
+    </extensions>
+
+    <actions>
+        <action id="FlutterDevTools.JsonToDart"
+                class="com.wanggaowan.tools.actions.JsonToDartAction"
+                text="Json To Dart"
+                description="Json convert to dart">
+            <add-to-group group-id="GenerateGroup" anchor="last"/>
+        </action>
+
+        <action
+            id="FlutterDevTools.GeneratorJsonSerializable"
+            class="com.wanggaowan.tools.actions.GeneratorJsonSerializableAction"
+            text="Generator Json Serializable"
+            description="根据Dart实体转JSON序列化实体">
+            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
+        </action>
+        <action
+            id="FlutterDevTools.JsonSerializableWatcher"
+            class="com.wanggaowan.tools.actions.JsonSerializableWatcherAction"
+            text="Json Serializable Watcher"
+            description="开启根据Dart实体转JSON序列化实体观察者">
+            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>
