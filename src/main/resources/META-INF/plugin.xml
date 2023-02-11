@@ -29,6 +29,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <projectViewPane implementation="com.wanggaowan.tools.projectviewpane.FlutterProjectViewPane"
                          id="Flutter Pane"/>
+        <notificationGroup displayType="BALLOON" id="com.wanggaowan.tools.notification" isLogByDefault="false"/>
     </extensions>
 
     <actions>
@@ -51,6 +52,11 @@
             class="com.wanggaowan.tools.actions.JsonSerializableWatcherAction"
             text="Json Serializable Watcher"
             description="开启根据Dart实体转JSON序列化实体观察者">
+            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
+        </action>
+        <action id="FlutterDevTools.ImportSameImageResAction"
+                class="com.wanggaowan.tools.actions.ImportSameImageResAction"
+                text="导入不同分辨率下的相同文件">
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
         </action>
     </actions>
