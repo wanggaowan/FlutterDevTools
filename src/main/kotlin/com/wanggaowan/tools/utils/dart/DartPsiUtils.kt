@@ -18,24 +18,20 @@ import com.jetbrains.lang.dart.psi.DartIncompleteDeclaration
  */
 object DartPsiUtils {
 
-    // val DART_CLASS: IElementType = IElementType("", DartLanguage.INSTANCE)
-    //
-    // fun getElementClass(psiElement: PsiElement):PsiElement? {
-    //     if (psiElement is DartClassBody) {
-    //         return psiElement
-    //     }
-    //
-    //     val parent = psiElement.parent ?: return null
-    //
-    //
-    //     for (child in parent.children) {
-    //         if (child is DartClassBody) {
-    //             return child
-    //         }
-    //     }
-    //
-    //     getElementClass(parent)
-    // }
+    /**
+     * 查找指定下标位置element，如果找不到则往前一位查找，直到下标<0
+     */
+    tailrec fun findElementAtOffset(psiFile: PsiFile, offset: Int): PsiElement? {
+        if (offset < 0) {
+            return null
+        }
+        val element = psiFile.findElementAt(offset)
+        if (element != null) {
+            return element
+        }
+
+        return findElementAtOffset(psiFile, offset - 1)
+    }
 
 
     /**

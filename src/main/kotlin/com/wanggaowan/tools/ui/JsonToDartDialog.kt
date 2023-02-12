@@ -27,6 +27,7 @@ class JsonToDartDialog(
     private val mEtJsonContent: EditorTextField = JsonLanguageTextField(project)
     private lateinit var mCbCreateDoc: JCheckBox
     private lateinit var mCbGeneratorJsonSerializable: JCheckBox
+    private lateinit var mCbGeneratorGFile: JCheckBox
     private lateinit var mCbNullSafe: JCheckBox
     private lateinit var mObjSuffix: JTextField
 
@@ -82,14 +83,30 @@ class JsonToDartDialog(
         super.doOKAction()
     }
 
+    /**
+     * 是否生成类序列化方法
+     */
     fun isGeneratorJsonSerializable(): Boolean {
         return mCbGeneratorJsonSerializable.isSelected
     }
 
+    /**
+     * 是否生成类对应的.g.dart文件
+     */
+    fun isGeneratorGFile(): Boolean {
+        return mCbGeneratorGFile.isSelected
+    }
+
+    /**
+     * 是否生成注释
+     */
     fun isGeneratorDoc(): Boolean {
         return mCbCreateDoc.isSelected
     }
 
+    /**
+     * 是否生成空安全类型
+     */
     fun isNullSafe(): Boolean {
         return mCbNullSafe.isSelected
     }

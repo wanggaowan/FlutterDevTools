@@ -33,6 +33,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.StartupUiUtil
 import com.intellij.util.ui.tree.TreeUtil
 import com.wanggaowan.tools.utils.msg.Toast
+import org.jetbrains.eval4j.int
 import java.awt.*
 import java.io.File
 import javax.swing.*
@@ -207,51 +208,58 @@ class ImportImageFolderChooser(
         initRenamePanel()
         val scrollPane = ScrollPaneFactory.createScrollPane(mJRenamePanel)
         scrollPane.border = LineBorder(Config.getLineColor(), 0, 0, 1, 0)
-        scrollPane.preferredSize = JBUI.size(600, 300)
+        scrollPane.preferredSize = JBUI.size(mJRenamePanel.width, 300)
         return scrollPane
     }
 
     private fun initRenamePanel() {
         mJRenamePanel.removeAll()
-        var totalHeight = 0
         var depth = 0
+        val c = GridBagConstraints()
+        c.fill = GridBagConstraints.HORIZONTAL
+        c.weightx = 1.0
+
         mRenameFileMap.forEach {
             val type = JLabel(it.key + "：")
-            type.preferredSize = JBUI.size(600, 40)
-            type.border = BorderFactory.createEmptyBorder(0, 5, 5, 5)
+            type.border = BorderFactory.createEmptyBorder(if (depth > 0) 10 else 0, 5, 5, 5)
             val font = type.font
             val fontSize = if (font == null) 16 else font.size + 2
             type.font = Font(null, Font.BOLD, fontSize)
-
-            val c = GridBagConstraints()
-            c.fill = GridBagConstraints.HORIZONTAL
-            c.gridx = 0
             c.gridy = depth++
-            mJRenamePanel.add(type,c)
-            totalHeight += 40
+            mJRenamePanel.add(type, c)
 
+            val cc = GridBagConstraints()
+            cc.fill = GridBagConstraints.HORIZONTAL
             it.value.forEach { it2 ->
-                val panel = JPanel(BorderLayout())
+                val panel = JPanel(GridBagLayout())
                 panel.border = BorderFactory.createEmptyBorder(0, 5, 5, 5)
-                totalHeight += 40
+                c.gridy = depth++
+                mJRenamePanel.add(panel, c)
 
+                // 左边部分
                 val titleBox = Box.createHorizontalBox()
+                titleBox.preferredSize = JBUI.size(250, 35)
+                titleBox.minimumSize = JBUI.size(250, 35)
+                cc.weightx = 0.0
+                panel.add(titleBox, cc)
+
                 val imageView = ImageView(File(it2.oldFile.path), Config.isDarkTheme)
                 imageView.preferredSize = JBUI.size(35)
-                imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
                 imageView.maximumSize = JBUI.size(35)
+                imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
                 titleBox.add(imageView)
 
                 val title = JLabel(it2.oldName + "：")
-                title.preferredSize = JBUI.size(200, 35)
                 titleBox.add(title)
-                panel.add(titleBox, BorderLayout.WEST)
 
+                // 右边部分
                 val box = Box.createVerticalBox()
-                panel.add(box, BorderLayout.CENTER)
+                cc.weightx = 1.0
+                panel.add(box, cc)
 
                 val rename = JTextField(it2.newName)
-                rename.preferredSize = JBUI.size(350, 35)
+                rename.minimumSize = JBUI.size(0, 35)
+                rename.maximumSize = JBUI.size(Int.MAX_VALUE, 35)
                 box.add(rename)
 
                 val box2 = Box.createHorizontalBox()
@@ -259,7 +267,7 @@ class ImportImageFolderChooser(
                 val existFileImageView =
                     ImageView(if (existFile != null) File(existFile.path) else null, Config.isDarkTheme)
                 existFileImageView.preferredSize = JBUI.size(25)
-                existFileImageView.border = BorderFactory.createEmptyBorder(2, 0, 2, 5)
+                existFileImageView.border = BorderFactory.createEmptyBorder(2, 2, 2, 5)
                 existFileImageView.isVisible = existFile != null
                 existFileImageView.maximumSize = JBUI.size(25)
                 box2.add(existFileImageView)
@@ -280,10 +288,6 @@ class ImportImageFolderChooser(
 
                 box2.add(Box.createHorizontalGlue())
                 box.add(box2)
-
-                totalHeight += if (existFile != null) 25 else 0
-                c.gridy = depth++
-                mJRenamePanel.add(panel,c)
 
                 hint.addChangeListener {
                     it2.coverExistFile = hint.isSelected
@@ -312,32 +316,10 @@ class ImportImageFolderChooser(
             }
         }
 
-        // mJRenamePanel.addComponentListener(object : SimpleComponentListener() {
-        //     override fun componentResized(p0: ComponentEvent?) {
-        //         val width = mJRenamePanel.width
-        //         for (component in mJRenamePanel.components) {
-        //             if (component is JPanel) {
-        //                 val leftRoot = component.getComponent(0) as Box?
-        //                 val jLabel = leftRoot?.getComponent(1) as? JLabel
-        //                 var leftWidth = (width * 0.4).toInt()
-        //                 val leftImageWidth = JBUI.scale(35)
-        //                 leftWidth = (leftWidth - leftImageWidth).coerceAtLeast(JBUI.scale(200))
-        //                 jLabel?.apply {
-        //                     preferredSize = Dimension(leftWidth, this.height)
-        //                 }
-        //
-        //                 val rightRoot = component.getComponent(1) as Box?
-        //                 val textField = rightRoot?.getComponent(0) as? JTextField
-        //                 textField?.apply {
-        //                     preferredSize = Dimension((width - leftWidth - JBUI.scale(5)).coerceAtLeast(JBUI.scale(350)), this.height)
-        //                 }
-        //             }
-        //         }
-        //         mJRenamePanel.updateUI()
-        //     }
-        // })
-
-        // mJRenamePanel.preferredSize = JBUI.size(600, totalHeight)
+        val placeHolder = JLabel()
+        c.weighty = 1.0
+        c.gridy = depth++
+        mJRenamePanel.add(placeHolder, c)
     }
 
     private fun refreshRenamePanel() {

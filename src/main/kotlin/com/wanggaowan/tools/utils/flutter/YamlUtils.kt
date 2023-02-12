@@ -14,23 +14,47 @@ import org.jetbrains.yaml.psi.YAMLMapping
 object YamlUtils {
 
     /**
-     * 解析指定文件是否包含[dependency]指定的依赖
+     * 仅查找dependencies分组的依赖
      */
-    fun haveDependencies(psiFile: PsiFile, dev: Boolean, dependency: String): Boolean {
+    const val DEPENDENCY_TYPE_RELEASE = 0
+
+    /**
+     * 仅查找dev_dependencies分组的依赖
+     */
+    const val DEPENDENCY_TYPE_DEV = 1
+
+    /**
+     * 查找dependencies和dev_dependencies分组的依赖
+     */
+    const val DEPENDENCY_TYPE_ALL = 2
+
+    /**
+     * 解析指定文件是否包含[dependency]指定的依赖,[type]指定查找的依赖分组
+     */
+    fun haveDependencies(psiFile: PsiFile, type: Int, dependency: String): Boolean {
         for (child in psiFile.children) {
             if (child is YAMLDocument) {
                 for (child2 in child.children) {
                     if (child2 is YAMLMapping) {
                         for (child3 in child2.children) {
                             if (child3 is YAMLKeyValue) {
-                                if (dev) {
+                                if (type == DEPENDENCY_TYPE_DEV) {
                                     if (child3.firstChild.textMatches("dev_dependencies")) {
                                         return parseDependencies(child3, dependency)
                                     }
-                                } else if (child3.firstChild.textMatches("dependencies")) {
-                                    return parseDependencies(child3, dependency)
-                                }
+                                } else if (type == DEPENDENCY_TYPE_RELEASE) {
+                                    if (child3.firstChild.textMatches("dependencies")) {
+                                        return parseDependencies(child3, dependency)
+                                    }
+                                } else {
+                                    if (child3.firstChild.textMatches("dev_dependencies")) {
+                                        return parseDependencies(child3, dependency)
+                                    }
 
+                                    if (child3.firstChild.textMatches("dependencies")) {
+                                        return parseDependencies(child3, dependency)
+                                    }
+                                }
                             }
                         }
                     }

@@ -111,7 +111,14 @@
               <component id="9c6a2" class="javax.swing.JCheckBox" binding="mCbGeneratorJsonSerializable">
                 <constraints/>
                 <properties>
-                  <text value="同步创建序列化数据"/>
+                  <selected value="true"/>
+                  <text value="创建序列化方法"/>
+                </properties>
+              </component>
+              <component id="d99e3" class="javax.swing.JCheckBox" binding="mCbGeneratorGFile">
+                <constraints/>
+                <properties>
+                  <text value="生成.g.dart文件"/>
                 </properties>
               </component>
               <component id="70698" class="javax.swing.JCheckBox" binding="mCbNullSafe">

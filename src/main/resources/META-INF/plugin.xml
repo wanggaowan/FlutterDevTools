@@ -33,25 +33,40 @@
     </extensions>
 
     <actions>
+        <!--文件编辑界面的命令-->
         <action id="FlutterDevTools.JsonToDart"
                 class="com.wanggaowan.tools.actions.JsonToDartAction"
                 text="Json To Dart"
                 description="Json convert to dart">
             <add-to-group group-id="GenerateGroup" anchor="last"/>
         </action>
-
+        <action id="FlutterDevTools.GeneratorJsonSerializableAction"
+                class="com.wanggaowan.tools.actions.GeneratorClassSerializableMethodAction"
+                text="生成类序列化方法"
+                description="Json convert to dart">
+            <add-to-group group-id="GenerateGroup" anchor="last"/>
+        </action>
         <action
-            id="FlutterDevTools.GeneratorJsonSerializable"
-            class="com.wanggaowan.tools.actions.GeneratorJsonSerializableAction"
-            text="Generator Json Serializable"
-            description="根据Dart实体转JSON序列化实体">
+            id="FlutterDevTools.GeneratorGFileAction2"
+            class="com.wanggaowan.tools.actions.GeneratorGFileAction2"
+            text="生成 .g.dart"
+            description="根据Dart实体生成.g.dart文件">
+            <add-to-group group-id="GenerateGroup" anchor="last"/>
+        </action>
+
+        <!--tools分组下的命令-->
+        <action
+            id="FlutterDevTools.GeneratorGFileAction"
+            class="com.wanggaowan.tools.actions.GeneratorGFileAction"
+            text="生成 .g.dart"
+            description="根据Dart实体生成.g.dart文件">
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
         </action>
         <action
             id="FlutterDevTools.JsonSerializableWatcher"
             class="com.wanggaowan.tools.actions.JsonSerializableWatcherAction"
-            text="Json Serializable Watcher"
-            description="开启根据Dart实体转JSON序列化实体观察者">
+            text="开启自动生成.g.dart文件服务"
+            description="开启根据Dart实体生成.g.dart文件观察者">
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
         </action>
         <action id="FlutterDevTools.ImportSameImageResAction"

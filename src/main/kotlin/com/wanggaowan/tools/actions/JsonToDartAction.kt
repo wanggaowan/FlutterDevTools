@@ -49,7 +49,7 @@ class JsonToDartAction : DumbAwareAction() {
         if (psiElement == null) {
             val editor = event.getData(CommonDataKeys.EDITOR)
             editor?.let {
-                psiElement = findElementAtOffset(psiFile, it.selectionModel.selectionStart)
+                psiElement = DartPsiUtils.findElementAtOffset(psiFile, it.selectionModel.selectionStart)
             }
         }
 
@@ -77,7 +77,7 @@ class JsonToDartAction : DumbAwareAction() {
             return
         }
 
-        if (dialog.isGeneratorJsonSerializable()) {
+        if (dialog.isGeneratorGFile()) {
             val sdk = FlutterSdk.getFlutterSdk(project)
             if (sdk == null) {
                 showMissingSdkDialog(project)
@@ -186,9 +186,9 @@ class JsonToDartAction : DumbAwareAction() {
         val pubRoot = PubRoot.forPsiFile(psiFile) ?: return
         val pubspec = pubRoot.pubspec.toPsiFile(project) ?: return
         ApplicationManager.getApplication().runReadAction {
-            val haveJsonAnnotation = YamlUtils.haveDependencies(pubspec, false, "json_annotation")
-            val haveJsonSerializable = YamlUtils.haveDependencies(pubspec, true, "json_serializable")
-            val haveBuildRunner = YamlUtils.haveDependencies(pubspec, true, "build_runner")
+            val haveJsonAnnotation = YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_annotation")
+            val haveJsonSerializable = YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_serializable")
+            val haveBuildRunner = YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "build_runner")
             addJsonAnnotation(project, pubRoot, sdk, haveJsonAnnotation) {
                 addJsonSerializable(project, pubRoot, sdk, haveJsonSerializable) {
                     addBuildRunner(project, pubRoot, sdk, haveBuildRunner) {
@@ -394,21 +394,6 @@ class JsonToDartAction : DumbAwareAction() {
                 psiFile.addBefore(it, psiFile.firstChild)
             }
         }
-    }
-
-    /**
-     * 查找指定下标位置element，如果找不到则往前一位查找，直到下标<0
-     */
-    private tailrec fun findElementAtOffset(psiFile: PsiFile, offset: Int): PsiElement? {
-        if (offset < 0) {
-            return null
-        }
-        val element = psiFile.findElementAt(offset)
-        if (element != null) {
-            return element
-        }
-
-        return findElementAtOffset(psiFile, offset - 1)
     }
 
     /**
