@@ -1,0 +1,710 @@
+package com.wanggaowan.tools.ui
+
+import com.intellij.ide.util.EditorHelper
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.wm.ToolWindowManager
+import com.intellij.openapi.wm.ex.ToolWindowManagerListener
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
+import com.intellij.ui.Gray
+import com.intellij.ui.RoundedLineBorder
+import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.update.Activatable
+import com.intellij.util.ui.update.UiNotifyConnector
+import com.wanggaowan.tools.listener.SimpleComponentListener
+import icons.SdkIcons
+import io.flutter.utils.AnimatedIcon.Grey
+import kotlinx.html.InputType
+import java.awt.*
+import java.awt.event.*
+import java.io.File
+import javax.swing.*
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
+
+/**
+ * 图片资源预览面板
+ *
+ * @author Created by wanggaowan on 2022/6/17 13:13
+ */
+class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
+
+    // 搜素布局相关View
+    private lateinit var mSearchPanel: JPanel
+    private lateinit var mSearchBtn: ImageButton
+    private lateinit var mClearBtn: ImageButton
+    private lateinit var mSearchTextField: JTextField
+
+    private lateinit var mScrollPane: JBScrollPane
+    private lateinit var mImagePanel: JPanel
+
+    // 底部布局相关View
+    private lateinit var mListLayoutBtn: JButton
+    private lateinit var mGridLayoutBtn: ImageButton
+    private lateinit var mRefreshBtn: ImageButton
+    private lateinit var mRootPathJPanel: JPanel
+
+    // 网格展示模式时图片布局宽度
+    private val mGridImageLayoutWidth = 160
+
+    // 当前布局模式
+    private var mLayoutMode = 0
+
+    // 需要展示的图片路径
+    private var mImages: Set<String>? = null
+
+    // 当前展示图片数量
+    private var mShowImageCount = 1
+
+    // 默认预览图片文件夹
+    private var mRootFilePath: String? = null
+
+    private var mDarkTheme = UIConfig.isDarkTheme
+
+    init {
+        Disposer.register(this, UiNotifyConnector(this, object : Activatable {
+            override fun hideNotify() {}
+
+            override fun showNotify() {
+                mImages = getImageData()
+                setNewImages()
+            }
+        }))
+
+        project.messageBus.connect()
+            .subscribe(ToolWindowManagerListener.TOPIC, object : ToolWindowManagerListener {
+                override fun stateChanged(toolWindowManager: ToolWindowManager) {
+                    // 通过监听窗口的变化判断是否修改了主题，当打开设置界面并关闭后，此方法会回调
+                    // 目前未找到直接监听主题变更的方法
+                    checkTheme()
+                }
+            })
+
+        layout = BorderLayout()
+        preferredSize = Dimension(320, 100)
+        val basePath = project.basePath
+        mRootFilePath = if (project.basePath.isNullOrEmpty()) null else "${basePath}/assets/images"
+        initPanel()
+    }
+
+    private fun initPanel() {
+        val topPanel = JPanel()
+        topPanel.layout = BorderLayout()
+        add(topPanel, BorderLayout.NORTH)
+
+        initSearchLayout(topPanel)
+        initBottomLayout()
+
+        // 展示Image预览内容的面板
+        mImagePanel = JPanel()
+        mImagePanel.layout = FlowLayout(FlowLayout.LEFT, 0, 0)
+        mImagePanel.background = null
+        mImagePanel.border = null
+        mScrollPane = JBScrollPane(mImagePanel)
+        mScrollPane.background = null
+        mScrollPane.border = LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0)
+        mScrollPane.horizontalScrollBar = null
+        add(mScrollPane, BorderLayout.CENTER)
+
+        registerSizeChange()
+    }
+
+    /**
+     * 初始化搜索界面布局
+     */
+    private fun initSearchLayout(parent: JPanel) {
+        // 搜索一栏根布局
+        mSearchPanel = JPanel()
+        mSearchPanel.layout = BoxLayout(mSearchPanel, BoxLayout.X_AXIS)
+        mSearchPanel.border = BorderFactory.createCompoundBorder(
+            BorderFactory.createCompoundBorder(
+                LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+            ), LineBorder(UIConfig.getInputUnFocusColor(), 1, true)
+        )
+        parent.add(mSearchPanel, BorderLayout.NORTH)
+
+        mSearchBtn = ImageButton()
+        mSearchBtn.preferredSize = Dimension(30, 30)
+        mSearchBtn.minimumSize = mSearchBtn.preferredSize
+        mSearchBtn.maximumSize = mSearchBtn.preferredSize
+        mSearchBtn.icon = SdkIcons.search
+        mSearchBtn.background = UIConfig.TRANSPARENT
+        mSearchBtn.isOpaque = true
+        mSearchPanel.add(mSearchBtn)
+
+        mSearchTextField = JTextField()
+        mSearchTextField.preferredSize = Dimension(100, 30)
+        mSearchTextField.minimumSize = Dimension(100, 30)
+        mSearchTextField.background = UIConfig.TRANSPARENT
+        mSearchTextField.border = BorderFactory.createEmptyBorder()
+        mSearchTextField.isOpaque = true
+        mSearchTextField.addFocusListener(object : FocusListener {
+            override fun focusGained(p0: FocusEvent?) {
+                mSearchPanel.border = BorderFactory.createCompoundBorder(
+                    BorderFactory.createCompoundBorder(
+                        LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0),
+                        BorderFactory.createEmptyBorder(9, 9, 9, 9)
+                    ), LineBorder(UIConfig.getInputFocusColor(), 2, true)
+                )
+            }
+
+            override fun focusLost(p0: FocusEvent?) {
+                mSearchPanel.border = BorderFactory.createCompoundBorder(
+                    BorderFactory.createCompoundBorder(
+                        LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0),
+                        BorderFactory.createEmptyBorder(10, 10, 10, 10)
+                    ), LineBorder(UIConfig.getInputUnFocusColor(), 1, true)
+                )
+            }
+        })
+
+        mSearchPanel.add(mSearchTextField)
+
+        mClearBtn = ImageButton()
+        mClearBtn.preferredSize = Dimension(30, 30)
+        mClearBtn.minimumSize = mSearchBtn.preferredSize
+        mClearBtn.maximumSize = mSearchBtn.preferredSize
+        mClearBtn.icon = SdkIcons.close
+        mClearBtn.background = null
+        mClearBtn.isVisible = false
+        mClearBtn.radius = 100
+        mClearBtn.padding = 7
+        mClearBtn.isOpaque = true
+        mClearBtn.addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent?) {
+                mClearBtn.background = UIConfig.getMouseEnterColor2()
+                mClearBtn.icon = SdkIcons.closeFocus
+            }
+
+            override fun mouseExited(e: MouseEvent?) {
+                super.mouseExited(e)
+                mClearBtn.background = null
+                mClearBtn.icon = SdkIcons.close
+            }
+
+            override fun mouseClicked(e: MouseEvent?) {
+                mSearchTextField.text = null
+                mClearBtn.background = null
+                mClearBtn.icon = SdkIcons.close
+                mClearBtn.isVisible = false
+            }
+        })
+
+        mSearchPanel.add(mClearBtn)
+
+        // 文本改变监听
+        mSearchTextField.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(p0: DocumentEvent?) {
+                val str = mSearchTextField.text.trim()
+                mClearBtn.isVisible = str.isNotEmpty()
+                setNewImages()
+            }
+
+            override fun removeUpdate(p0: DocumentEvent?) {
+                val str = mSearchTextField.text.trim()
+                mClearBtn.isVisible = str.isNotEmpty()
+                setNewImages()
+            }
+
+            override fun changedUpdate(p0: DocumentEvent?) {
+                val str = mSearchTextField.text.trim()
+                mClearBtn.isVisible = str.isNotEmpty()
+                setNewImages()
+            }
+
+        })
+    }
+
+    /**
+     * 初始化底部界面布局
+     */
+    private fun initBottomLayout() {
+        // 底部按钮面板
+        val bottomPanel = JPanel(GridBagLayout())
+        bottomPanel.border = BorderFactory.createEmptyBorder(5, 0, 5, 0)
+        add(bottomPanel, BorderLayout.SOUTH)
+
+        val c = GridBagConstraints()
+        // 底部靠左面板
+        val bottomLeftPanel = JPanel(GridBagLayout())
+        c.fill = GridBagConstraints.VERTICAL
+        c.weightx = 0.0
+        bottomPanel.add(bottomLeftPanel, c)
+
+        mRefreshBtn = ImageButton()
+        this.mRefreshBtn.isOpaque = true
+        mRefreshBtn.icon = SdkIcons.refresh
+        mRefreshBtn.preferredSize = JBUI.size(24)
+        mRefreshBtn.maximumSize = JBUI.size(24)
+        mRefreshBtn.minimumSize = JBUI.size(24)
+        // mRefreshBtn.padding = 5
+        mRefreshBtn.border = null
+        mRefreshBtn.background = null
+        mRefreshBtn.radius = 5
+        c.fill = GridBagConstraints.BOTH
+        bottomLeftPanel.add(mRefreshBtn,c)
+
+        mRefreshBtn.addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent?) {
+                mRefreshBtn.background = UIConfig.getMouseEnterColor()
+            }
+
+            override fun mouseExited(e: MouseEvent?) {
+                super.mouseExited(e)
+                mRefreshBtn.background = null
+            }
+
+            override fun mousePressed(e: MouseEvent?) {
+                super.mousePressed(e)
+                mRefreshBtn.background = UIConfig.getMousePressColor()
+            }
+
+            override fun mouseClicked(e: MouseEvent?) {
+                mRefreshBtn.background = UIConfig.getMouseEnterColor()
+                mImages = getImageData()
+                setNewImages()
+            }
+        })
+
+        // 增加图片预览的根路径显示
+        val path = mRootFilePath ?: ""
+        val basePath = project.basePath ?: ""
+        mRootPathJPanel = JPanel(GridBagLayout())
+        mRootPathJPanel.border = BorderFactory.createCompoundBorder(
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(2, 2, 2, 2),
+                LineBorder(UIConfig.getInputUnFocusColor(), 1, true)
+            ),
+            BorderFactory.createEmptyBorder(0, 4, 0, 4)
+        )
+
+        c.weightx = 1.0
+        c.fill = GridBagConstraints.BOTH
+        bottomPanel.add(mRootPathJPanel, c)
+
+        val label = JLabel("rootPath:")
+        label.foreground = Color(76, 80, 82)
+        label.background = Color.RED
+        label.isOpaque = true
+        val font = label.font
+        label.font = Font(
+            font.name,
+            font.style,
+            if (font == null) JBUI.scaleFontSize(12f) else font.size - 2
+        )
+
+        c.weightx = 0.0
+        c.fill = GridBagConstraints.VERTICAL
+        mRootPathJPanel.add(label, c)
+
+        val pathLabel = JLabel(path.replace(basePath, ""))
+        pathLabel.background = Color.YELLOW
+        pathLabel.isOpaque = false
+        c.fill = GridBagConstraints.BOTH
+        c.weightx = 1.0
+        mRootPathJPanel.add(pathLabel, c)
+
+        val jButton = JButton("Change")
+        jButton.background = Color.GREEN
+        jButton.isOpaque = true
+        c.fill = GridBagConstraints.VERTICAL
+        c.weightx = 0.0
+        mRootPathJPanel.add(jButton, c)
+
+        // 底部靠右的布局面板
+        val bottomRightPanel = JPanel(GridBagLayout())
+        c.fill = GridBagConstraints.VERTICAL
+        c.weightx = 0.0
+        bottomPanel.add(bottomRightPanel, c)
+
+        mListLayoutBtn = JButton(SdkIcons.list)
+        mListLayoutBtn.isOpaque = true
+        mListLayoutBtn.icon = SdkIcons.list
+        mListLayoutBtn.preferredSize = JBUI.size(24)
+        mListLayoutBtn.maximumSize = JBUI.size(24)
+        mListLayoutBtn.minimumSize = JBUI.size(24)
+        // mListLayoutBtn.padding = 5
+        mListLayoutBtn.border = RoundedLineBorder(Color.RED,10)
+        mListLayoutBtn.background = UIConfig.getMousePressColor()
+        // mListLayoutBtn.radius = 5
+        bottomRightPanel.add(mListLayoutBtn, c)
+
+        mGridLayoutBtn = ImageButton()
+        mGridLayoutBtn.isOpaque = true
+        mGridLayoutBtn.icon = SdkIcons.grid
+        mGridLayoutBtn.preferredSize = JBUI.size(24)
+        mGridLayoutBtn.maximumSize = JBUI.size(24)
+        mGridLayoutBtn.minimumSize = JBUI.size(24)
+        // mGridLayoutBtn.padding = 5
+        mGridLayoutBtn.border = null
+        mGridLayoutBtn.background = null
+        mGridLayoutBtn.radius = 5
+        bottomRightPanel.add(mGridLayoutBtn, c)
+
+        mListLayoutBtn.addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent?) {
+                if (mLayoutMode != 0) {
+                    mListLayoutBtn.background = UIConfig.getMouseEnterColor()
+                }
+
+            }
+
+            override fun mouseExited(e: MouseEvent?) {
+                super.mouseExited(e)
+                if (mLayoutMode != 0) {
+                    mListLayoutBtn.background = null
+                }
+            }
+
+            override fun mousePressed(e: MouseEvent?) {
+                super.mousePressed(e)
+                if (mLayoutMode != 0) {
+                    mListLayoutBtn.background = UIConfig.getMousePressColor()
+                }
+            }
+
+            override fun mouseClicked(e: MouseEvent?) {
+                if (mLayoutMode == 0) {
+                    return
+                }
+
+                mListLayoutBtn.background = UIConfig.getMousePressColor()
+                mGridLayoutBtn.background = null
+
+                mLayoutMode = 0
+                setNewImages()
+            }
+        })
+
+        mGridLayoutBtn.addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent?) {
+                if (mLayoutMode != 1) {
+                    mGridLayoutBtn.background = UIConfig.getMouseEnterColor()
+                }
+
+            }
+
+            override fun mouseExited(e: MouseEvent?) {
+                super.mouseExited(e)
+                if (mLayoutMode != 1) {
+                    mGridLayoutBtn.background = null
+                }
+            }
+
+            override fun mousePressed(e: MouseEvent?) {
+                super.mousePressed(e)
+                if (mLayoutMode != 1) {
+                    mGridLayoutBtn.background = UIConfig.getMousePressColor()
+                }
+            }
+
+            override fun mouseClicked(e: MouseEvent?) {
+                if (mLayoutMode == 1) {
+                    return
+                }
+
+                mGridLayoutBtn.background = UIConfig.getMousePressColor()
+                mListLayoutBtn.background = null
+
+                mLayoutMode = 1
+                setNewImages()
+            }
+        })
+    }
+
+    /**
+     * 注册窗口尺寸改变监听
+     */
+    private fun registerSizeChange() {
+        addComponentListener(object : SimpleComponentListener() {
+            override fun componentResized(p0: ComponentEvent?) {
+                if (mLayoutMode == 0) {
+                    for (component in mImagePanel.components) {
+                        component.preferredSize = Dimension(width, 100)
+                    }
+                    val totalHeight = mShowImageCount * 100 + 100
+                    mImagePanel.preferredSize = Dimension(width, totalHeight)
+                    mImagePanel.updateUI()
+                    return
+                }
+
+                val itemHeight: Int = mGridImageLayoutWidth + 60 + 20
+                val itemWidth = mGridImageLayoutWidth + 20
+                val columns: Int = if (width <= itemWidth) 1 else width / itemWidth
+                var rows: Int = mShowImageCount / columns
+                if (mShowImageCount % columns != 0) {
+                    rows += 1
+                }
+                val totalHeight = rows * itemHeight + 100
+                mImagePanel.preferredSize = Dimension(width, totalHeight)
+            }
+        })
+    }
+
+    private fun getImageData(): Set<String>? {
+        if (mRootFilePath.isNullOrEmpty()) {
+            return null
+        }
+
+        val file = VirtualFileManager.getInstance().findFileByUrl("file://$mRootFilePath") ?: return null
+        if (!file.isDirectory) {
+            return null
+        }
+
+        val images = getDeDuplicationList(file)
+        if (images.size == 0) {
+            return null
+        }
+
+        return images
+    }
+
+    // 设置需要预览的图片数据
+    private fun setNewImages() {
+        mImagePanel.removeAll()
+        mImagePanel.updateUI()
+        mShowImageCount = 1
+
+        var data = mImages
+        if (data.isNullOrEmpty()) {
+            return
+        }
+
+        val searchStr = mSearchTextField.text.trim()
+        if (searchStr.isNotEmpty()) {
+            val newData = mutableSetOf<String>()
+            for (path: String in data) {
+                var name = path
+                mRootFilePath?.also {
+                    name = path.replace("$it/", "")
+                }
+
+                if (name.contains(searchStr)) {
+                    newData.add(path)
+                }
+            }
+            data = newData
+        }
+
+        if (data.isEmpty()) {
+            return
+        }
+
+        mShowImageCount = data.size
+        setImageLayout()
+        data.forEach { imagePath ->
+            mImagePanel.add(getPreviewItemPanel(imagePath, mLayoutMode))
+        }
+        mImagePanel.updateUI()
+    }
+
+    // 设置图片预览的布局样式
+    private fun setImageLayout() {
+        (mImagePanel.layout as FlowLayout).let {
+            if (mLayoutMode == 0) {
+                val totalHeight = mShowImageCount * 100 + 100
+                mImagePanel.preferredSize = Dimension(width, totalHeight)
+            } else {
+                val itemHeight: Int = mGridImageLayoutWidth + 60 + 20
+                val itemWidth = mGridImageLayoutWidth + 20
+                val columns: Int = if (width <= itemWidth) 1 else width / itemWidth
+                var rows: Int = mShowImageCount / columns
+                if (mShowImageCount % columns != 0) {
+                    rows += 1
+                }
+                val totalHeight = rows * itemHeight + 100
+                mImagePanel.preferredSize = Dimension(width, totalHeight)
+            }
+        }
+    }
+
+    /**
+     * 获取图片预览Item样式
+     * @param layoutType 0:线性布局，1：网格布局
+     */
+    private fun getPreviewItemPanel(imagePath: String, layoutType: Int): JPanel {
+        val panel = JPanel()
+        panel.layout = BorderLayout()
+        panel.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                super.mouseClicked(e)
+                if (e.clickCount == 2) {
+                    val file = VirtualFileManager.getInstance().findFileByUrl("file://$imagePath") ?: return
+                    val psiFile = PsiManager.getInstance(project).findFile(file) ?: return
+                    EditorHelper.openFilesInEditor(arrayOf<PsiFile?>(psiFile))
+                }
+            }
+        })
+
+        if (layoutType == 0) {
+            // 列表布局
+            panel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
+            panel.preferredSize = Dimension(width, 100)
+
+            val imageView = ImageView(getFile(imagePath), UIConfig.isDarkTheme)
+            imageView.preferredSize = Dimension(80, 80)
+            panel.add(imageView, BorderLayout.WEST)
+            imageView.border = LineBorder(UIConfig.getLineColor(), 1)
+
+            val label = JLabel()
+            label.border = BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(0, 30, 0, 0),
+                LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0)
+            )
+
+            var path = imagePath
+            mRootFilePath?.also {
+                path = path.replace("$it/", "")
+            }
+            label.text = getPropertyValue(path)
+
+            panel.add(label, BorderLayout.CENTER)
+        } else {
+            // 网格布局
+            val labelHeight = 60
+            // 20 为padding 10
+            panel.preferredSize = Dimension(mGridImageLayoutWidth + 20, mGridImageLayoutWidth + labelHeight + 20)
+            panel.border = BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(10, 10, 10, 10),
+                LineBorder(UIConfig.getLineColor(), 1)
+            )
+
+            val imageView = ImageView(getFile(imagePath), UIConfig.isDarkTheme)
+            imageView.preferredSize = Dimension(mGridImageLayoutWidth, mGridImageLayoutWidth)
+            panel.add(imageView, BorderLayout.CENTER)
+
+            val label = JLabel()
+            label.background = UIConfig.getImageTitleBgColor()
+            label.isOpaque = true
+            label.preferredSize = Dimension(mGridImageLayoutWidth, labelHeight)
+            label.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
+
+            var path = imagePath
+            mRootFilePath?.also {
+                path = path.replace(it, "")
+            }
+            label.text = getPropertyValue(path)
+
+            panel.add(label, BorderLayout.SOUTH)
+        }
+
+        return panel
+    }
+
+    private fun isImage(url: String): Boolean {
+        val lower = url.lowercase()
+        return lower.endsWith("png")
+            || lower.endsWith("jpg")
+            || lower.endsWith("jpeg")
+            || lower.endsWith("webp")
+            || lower.endsWith("gif")
+            || lower.endsWith("svg")
+    }
+
+    /**
+     * 获取去重后的属性列表
+     */
+    private fun getDeDuplicationList(rootDir: VirtualFile, parentPath: String = ""): LinkedHashSet<String> {
+        val childrenSet = linkedSetOf<String>()
+        for (child in rootDir.children) {
+            if (child.isDirectory) {
+                childrenSet.addAll(getDeDuplicationList(child, "$parentPath${child.name}/"))
+            } else if (isImage(child.name)) {
+                childrenSet.add(getPropertyValue(child.path))
+            }
+        }
+
+        return childrenSet
+    }
+
+    private fun getPropertyValue(value: String): String {
+        // 此逻辑是用于处理类似IOS那种通过文件名称带@1x，@2x等后缀处理不同分辨率图片的情况
+        // 此情况需要把后缀去除再显示
+        // return value.replace("@1x", "")
+        //     .replace("@2x", "")
+        //     .replace("@3x", "")
+        return value
+    }
+
+    private fun getFile(relativePath: String): File {
+        // 此逻辑是用于处理类似IOS那种通过文件名称带@1x，@2x等后缀处理不同分辨率图片的情况
+        // 此情况只需要显示其中一张即可
+        // val indexOf = relativePath.lastIndexOf(".")
+        // if (indexOf == -1) {
+        //     return File(relativePath)
+        // }
+        //
+        // val name = relativePath.substring(0, indexOf)
+        // val suffix = relativePath.substring(indexOf)
+        // var file = File("$name@3x$suffix")
+        // if (file.exists()) {
+        //     return file
+        // }
+        //
+        // file = File("$name@2x$suffix")
+        // if (file.exists()) {
+        //     return file
+        // }
+        //
+        // file = File("$name@1x$suffix")
+        // if (file.exists()) {
+        //     return file
+        // }
+
+        return File(relativePath)
+    }
+
+    override fun dispose() {
+
+    }
+
+    private fun checkTheme() {
+        val isDarkTheme = UIConfig.isDarkTheme
+        if (mDarkTheme != isDarkTheme) {
+            mDarkTheme = isDarkTheme
+            updateTheme()
+        }
+    }
+
+    private fun updateTheme() {
+        val inputRectColor =
+            if (mSearchTextField.hasFocus()) UIConfig.getInputFocusColor() else UIConfig.getInputUnFocusColor()
+        mSearchPanel.border = BorderFactory.createCompoundBorder(
+            BorderFactory.createCompoundBorder(
+                LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+            ), LineBorder(inputRectColor, 1, true)
+        )
+        mSearchBtn.icon = SdkIcons.search
+        mClearBtn.icon = SdkIcons.close
+
+        mListLayoutBtn.icon = SdkIcons.list
+        if (mLayoutMode == 0) {
+            mListLayoutBtn.background = UIConfig.getMousePressColor()
+        }
+
+        mGridLayoutBtn.icon = SdkIcons.grid
+        if (mLayoutMode == 1) {
+            mGridLayoutBtn.background = UIConfig.getMousePressColor()
+        }
+
+        mRefreshBtn.icon = SdkIcons.refresh
+
+        mRootPathJPanel.border = BorderFactory.createCompoundBorder(
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(2, 2, 2, 2),
+                LineBorder(UIConfig.getInputUnFocusColor(), 1, true)
+            ),
+            BorderFactory.createEmptyBorder(0, 4, 0, 4)
+        )
+
+        mScrollPane.border = LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0)
+        setNewImages()
+    }
+}

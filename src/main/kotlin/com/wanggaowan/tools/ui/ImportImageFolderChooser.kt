@@ -19,7 +19,6 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiFile
-import com.intellij.ui.Gray
 import com.intellij.ui.JBColor
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.tree.AsyncTreeModel
@@ -33,7 +32,6 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.StartupUiUtil
 import com.intellij.util.ui.tree.TreeUtil
 import com.wanggaowan.tools.utils.msg.Toast
-import org.jetbrains.eval4j.int
 import java.awt.*
 import java.io.File
 import javax.swing.*
@@ -42,18 +40,6 @@ import javax.swing.event.DocumentListener
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreeSelectionModel
 import kotlin.collections.set
-
-
-private object Config {
-    var isDarkTheme = false
-    fun getLineColor(): Color {
-        if (isDarkTheme) {
-            return Gray._50
-        }
-
-        return Gray._209
-    }
-}
 
 /**
  * 导入图片资源后选择导入的目标文件夹弹窗，兼带重命名导入文件名称功能
@@ -105,7 +91,6 @@ class ImportImageFolderChooser(
     }
 
     init {
-        Config.isDarkTheme = StartupUiUtil.isUnderDarcula()
         mSelectedFolder = initialFile
         setTitle(title)
 
@@ -207,7 +192,7 @@ class ImportImageFolderChooser(
         mJRenamePanel = JPanel(GridBagLayout())
         initRenamePanel()
         val scrollPane = ScrollPaneFactory.createScrollPane(mJRenamePanel)
-        scrollPane.border = LineBorder(Config.getLineColor(), 0, 0, 1, 0)
+        scrollPane.border = LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0)
         scrollPane.preferredSize = JBUI.size(mJRenamePanel.width, 300)
         return scrollPane
     }
@@ -243,7 +228,7 @@ class ImportImageFolderChooser(
                 cc.weightx = 0.0
                 panel.add(titleBox, cc)
 
-                val imageView = ImageView(File(it2.oldFile.path), Config.isDarkTheme)
+                val imageView = ImageView(File(it2.oldFile.path), UIConfig.isDarkTheme)
                 imageView.preferredSize = JBUI.size(35)
                 imageView.maximumSize = JBUI.size(35)
                 imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
@@ -265,7 +250,7 @@ class ImportImageFolderChooser(
                 val box2 = Box.createHorizontalBox()
                 val (existFile, isInMap) = isImageExist(it2)
                 val existFileImageView =
-                    ImageView(if (existFile != null) File(existFile.path) else null, Config.isDarkTheme)
+                    ImageView(if (existFile != null) File(existFile.path) else null, UIConfig.isDarkTheme)
                 existFileImageView.preferredSize = JBUI.size(25)
                 existFileImageView.border = BorderFactory.createEmptyBorder(2, 2, 2, 5)
                 existFileImageView.isVisible = existFile != null

@@ -30,6 +30,10 @@
         <projectViewPane implementation="com.wanggaowan.tools.projectviewpane.FlutterProjectViewPane"
                          id="Flutter Pane"/>
         <notificationGroup displayType="BALLOON" id="com.wanggaowan.tools.notification" isLogByDefault="false"/>
+
+        <toolWindow id="Resource Manager"
+                    factoryClass="com.wanggaowan.tools.toolwindow.ResourcePreviewToolWindowFactory"
+                    icon="FlutterIcons.Flutter_13"/>
     </extensions>
 
     <actions>
