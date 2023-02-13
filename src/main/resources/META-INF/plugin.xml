@@ -1,21 +1,26 @@
 <idea-plugin>
     <id>com.wanggaowan.tools</id>
     <name>FlutterDevTools</name>
-    <vendor email="wanggaowan@163.com" url="https://github.com/wanggaowan/RNDevTools.git"/>
+    <vendor email="wanggaowan@163.com" url="https://github.com/wanggaowan/FlutterDevTools.git"/>
 
     <description><![CDATA[
     <h2>提供Flutter开发所需工具</h2>
     <ol>
-      <li>项目结构增加Flutter项目专属分类，仅展示Flutter开发重点关注文件</li>
+      <li>项目结构增加Flutter项目专属分类</li>
+      <li>json转dart</li>
+      <li>一键导入android图片</li>
+      <li>flutter图片资源管理ToolWindow</li>
     </ol>
     ]]></description>
 
     <change-notes><![CDATA[
-    <p>0.1</p>
+    <p>1.0</p>
     <ul>
       <li>项目结构增加Flutter项目专属分类，仅展示Flutter开发重点关注文件</li>
       <li>提供json转dart并支持序列化</li>
       <li>提供一键执行dart序列化/开启序列化观察者命令</li>
+      <li>提供一键导入android图片目录结构文件到Flutter</li>
+      <li>提供flutter图片资源管理ToolWindow</li>
     </ul>
     ]]>
     </change-notes>

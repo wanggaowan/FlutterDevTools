@@ -242,6 +242,13 @@ class FlutterCommandLine internal constructor(
             "add",
             "build_runner",
             "--dev"
+        ),
+        PUB_GET(
+            "pub get",
+            true,
+            false,
+            "pub",
+            "get",
         );
 
         val title: String

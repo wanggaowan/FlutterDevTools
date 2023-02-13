@@ -1,11 +1,10 @@
 package com.wanggaowan.tools.ui
 
-import java.awt.Dimension
-import java.awt.Graphics
-import java.awt.Graphics2D
-import java.awt.RenderingHints
+import com.intellij.ui.scale.JBUIScale.scale
+import com.intellij.util.ui.GraphicsUtil
+import java.awt.*
 import javax.swing.Icon
-import javax.swing.JPanel
+import javax.swing.JButton
 
 
 /**
@@ -13,62 +12,89 @@ import javax.swing.JPanel
  *
  * @author Created by wanggaowan on 2022/6/20 08:44
  */
-class ImageButton(icon: Icon? = null) : JPanel() {
+class ImageButton(icon: Icon? = null, arcSize: Int? = null) :
+    JButton(icon) {
 
-    var icon: Icon? = null
-        set(value) {
-            field = value
-            repaint()
-        }
+    private var mArcSize = scale(7)
+    private var mBorderWidth = 0
+    private var mBorderColor: Color? = null
 
-    /**
-     * 圆角半径
-     */
-    var radius: Int = 0
-        set(value) {
-            field = value
-            repaint()
-        }
-
-    /**
-     * 内径，相当于设置一个EmptyBorder，四周边距设置为padding值
-     */
-    var padding: Int = 0
-        set(value) {
-            field = value
-            repaint()
-        }
 
     init {
-        this.icon = icon
-        preferredSize = Dimension(icon?.iconWidth ?: 0, icon?.iconHeight ?: 0)
+        super.setOpaque(false)
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        if (arcSize != null) {
+            mArcSize = arcSize
+        }
     }
 
-    override fun paint(g: Graphics) {
-        // g.clearRect(0, 0, width, height)
-        super.paint(g)
-        if (g is Graphics2D) {
-            // 消除文字锯齿
-            // g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-            // 消除画图锯齿
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+    fun setArcSize(arcSize: Int) {
+        if (mArcSize == arcSize) {
+            return
+        }
+        mArcSize = arcSize
+        repaint()
+    }
+
+    fun setBorderWidth(width: Int) {
+        if (mBorderWidth == width) {
+            return
+        }
+        mBorderWidth = width
+        repaint()
+    }
+
+    fun setBorderColor(color: Color?) {
+        if (mBorderColor == null && color == null) {
+            return
+        }
+        mBorderColor = color
+        repaint()
+    }
+
+    override fun setOpaque(isOpaque: Boolean) {
+
+    }
+
+    override fun getPreferredSize(): Dimension {
+        if (isPreferredSizeSet) {
+            return super.getPreferredSize()
         }
 
-        if (background != null && background.alpha > 0) {
-            g.color = background
-            g.fillRoundRect(padding, padding, width - padding * 2, height - padding * 2, radius, radius)
+        val iconSize = icon.iconWidth
+        val width = iconSize + mBorderWidth * 2
+        val height = iconSize + mBorderWidth * 2
+        return Dimension(width, height)
+    }
+
+    override fun paint(g2: Graphics) {
+        val g = g2 as Graphics2D
+        val config = GraphicsUtil.setupAAPainting(g)
+        val w = g.clipBounds.width
+        val h = g.clipBounds.height
+        mBorderColor?.also {
+            g.paint = it
+            g.fillRoundRect(
+                0,
+                0,
+                w,
+                h,
+                mArcSize,
+                mArcSize
+            )
         }
 
-        icon?.let {
-            val width = width - padding * 2
-            val height = height - padding * 2
-            val imgWidth = it.iconWidth
-            val imgHeight = it.iconHeight
-            if (imgWidth > 0 && imgHeight > 0 && width > 0 && height > 0) {
-                val x: Int = (width - imgWidth) / 2 + padding
-                val y: Int = (height - imgHeight) / 2 + padding
-                it.paintIcon(this, g, x, y)
-            }
-        }
+        g.paint = background
+        val buttonArc = (mArcSize - 1).coerceAtLeast(0)
+        g.fillRoundRect(
+            mBorderWidth,
+            mBorderWidth,
+            w - mBorderWidth * 2,
+            h - mBorderWidth * 2,
+            buttonArc,
+            buttonArc
+        )
+        icon.paintIcon(this, g, (width - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)
+        config.restore()
     }
 }

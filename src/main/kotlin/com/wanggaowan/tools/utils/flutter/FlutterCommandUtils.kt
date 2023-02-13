@@ -57,6 +57,66 @@ object FlutterCommandUtils {
         val commandLine = FlutterCommandLine(sdk, root.root, FlutterCommandLine.Type.JSON_SERIALIZABLE_WATCHER)
         return commandLine.startInModuleConsole(module, onDone, processListener)
     }
+
+    /**
+     * 执行pub get命令
+     */
+    fun pubGet(
+        project: Project,
+        root: PubRoot,
+        sdk: FlutterSdk,
+        onDone: ((existCode: Int) -> Unit)? = null,
+        processListener: ProcessListener? = null
+    ): Process? {
+        val module = root.getModule(project) ?: return null
+        val commandLine = FlutterCommandLine(sdk, root.root, FlutterCommandLine.Type.PUB_GET)
+        return commandLine.startInModuleConsole(module, onDone, processListener)
+    }
+
+    /**
+     * 执行添加build_runner依赖依赖命令，生成序列化文件
+     */
+    fun addBuildRunner(
+        project: Project,
+        pubRoot: PubRoot,
+        flutterSdk: FlutterSdk,
+        haveBuildRunner: Boolean,
+        onDone: Runnable? = null
+    ) {
+        if (!haveBuildRunner) {
+            startAddDependencies(project, pubRoot, flutterSdk,
+                FlutterCommandLine.Type.ADD_BUILD_RUNNER_DEV, {
+                    if (it == 0) {
+                        onDone?.run()
+                    }
+                }
+            )
+        } else {
+            onDone?.run()
+        }
+    }
+
+    /**
+     * 执行添加json_annotation依赖命令
+     */
+    fun doPubGet(
+        project: Project,
+        pubRoot: PubRoot,
+        flutterSdk: FlutterSdk,
+        havePubspecLockFile: Boolean,
+        onDone: Runnable? = null
+    ) {
+        if (!havePubspecLockFile) {
+            pubGet(project, pubRoot, flutterSdk, {
+                if (it == 0) {
+                    onDone?.run()
+                }
+            }
+            )
+        } else {
+            onDone?.run()
+        }
+    }
 }
 
 

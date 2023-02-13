@@ -48,11 +48,15 @@ object YamlUtils {
                                     }
                                 } else {
                                     if (child3.firstChild.textMatches("dev_dependencies")) {
-                                        return parseDependencies(child3, dependency)
+                                        if (parseDependencies(child3, dependency)) {
+                                            return true
+                                        }
                                     }
 
                                     if (child3.firstChild.textMatches("dependencies")) {
-                                        return parseDependencies(child3, dependency)
+                                        if (parseDependencies(child3, dependency)) {
+                                            return true
+                                        }
                                     }
                                 }
                             }

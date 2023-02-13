@@ -22,4 +22,20 @@ object XUtils {
         }
         return isFlutterProject
     }
+
+    /**
+     * 检测项目是否有pubspec.lock文件
+     */
+    fun havePubspecLockFile(project: Project): Boolean {
+        val basePath = project.basePath ?: return false
+        val file = VirtualFileManager.getInstance().findFileByUrl("file://$basePath") ?: return false
+        var have = false
+        for (child in file.children) {
+            if (child.name == "pubspec.lock") {
+                have = true
+                break
+            }
+        }
+        return have
+    }
 }

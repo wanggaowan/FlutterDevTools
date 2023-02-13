@@ -186,13 +186,18 @@ class JsonToDartAction : DumbAwareAction() {
         val pubRoot = PubRoot.forPsiFile(psiFile) ?: return
         val pubspec = pubRoot.pubspec.toPsiFile(project) ?: return
         ApplicationManager.getApplication().runReadAction {
-            val haveJsonAnnotation = YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_annotation")
-            val haveJsonSerializable = YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_serializable")
+            val haveJsonAnnotation =
+                YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_annotation")
+            val haveJsonSerializable =
+                YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_serializable")
             val haveBuildRunner = YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "build_runner")
+            val havePubspecLockFile = XUtils.havePubspecLockFile(project)
             addJsonAnnotation(project, pubRoot, sdk, haveJsonAnnotation) {
                 addJsonSerializable(project, pubRoot, sdk, haveJsonSerializable) {
-                    addBuildRunner(project, pubRoot, sdk, haveBuildRunner) {
-                        FlutterCommandUtils.startGeneratorJsonSerializable(project, pubRoot, sdk)
+                    FlutterCommandUtils.addBuildRunner(project, pubRoot, sdk, haveBuildRunner) {
+                        FlutterCommandUtils.doPubGet(project, pubRoot, sdk, havePubspecLockFile) {
+                            FlutterCommandUtils.startGeneratorJsonSerializable(project, pubRoot, sdk)
+                        }
                     }
                 }
             }
@@ -237,30 +242,6 @@ class JsonToDartAction : DumbAwareAction() {
             FlutterCommandUtils.startAddDependencies(
                 project, pubRoot, flutterSdk,
                 FlutterCommandLine.Type.ADD_JSON_SERIALIZABLE_DEV, {
-                    if (it == 0) {
-                        onDone?.run()
-                    }
-                }
-            )
-        } else {
-            onDone?.run()
-        }
-    }
-
-    /**
-     * 执行添加build_runner依赖依赖命令，生成序列化文件
-     */
-    private fun addBuildRunner(
-        project: Project,
-        pubRoot: PubRoot,
-        flutterSdk: FlutterSdk,
-        haveBuildRunner: Boolean,
-        onDone: Runnable? = null
-    ) {
-        if (!haveBuildRunner) {
-            FlutterCommandUtils.startAddDependencies(
-                project, pubRoot, flutterSdk,
-                FlutterCommandLine.Type.ADD_BUILD_RUNNER_DEV, {
                     if (it == 0) {
                         onDone?.run()
                     }

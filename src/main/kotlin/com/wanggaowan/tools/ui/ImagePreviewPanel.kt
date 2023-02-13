@@ -10,16 +10,13 @@ import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.openapi.wm.ex.ToolWindowManagerListener
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
-import com.intellij.ui.Gray
-import com.intellij.ui.RoundedLineBorder
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.update.Activatable
 import com.intellij.util.ui.update.UiNotifyConnector
 import com.wanggaowan.tools.listener.SimpleComponentListener
+import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import icons.SdkIcons
-import io.flutter.utils.AnimatedIcon.Grey
-import kotlinx.html.InputType
 import java.awt.*
 import java.awt.event.*
 import java.io.File
@@ -44,10 +41,11 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
     private lateinit var mImagePanel: JPanel
 
     // 底部布局相关View
-    private lateinit var mListLayoutBtn: JButton
+    private lateinit var mListLayoutBtn: ImageButton
     private lateinit var mGridLayoutBtn: ImageButton
     private lateinit var mRefreshBtn: ImageButton
     private lateinit var mRootPathJPanel: JPanel
+    private lateinit var mRootPathLabel: JLabel
 
     // 网格展示模式时图片布局宽度
     private val mGridImageLayoutWidth = 160
@@ -87,9 +85,26 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
 
         layout = BorderLayout()
         preferredSize = Dimension(320, 100)
-        val basePath = project.basePath
-        mRootFilePath = if (project.basePath.isNullOrEmpty()) null else "${basePath}/assets/images"
+        initRootPath()
         initPanel()
+    }
+
+    private fun initRootPath() {
+        val basePath = project.basePath
+        mRootFilePath = if (project.basePath.isNullOrEmpty()) {
+            null
+        } else {
+            val rootPath = PropertiesSerializeUtils.getString(project, ROOT_PATH, "")
+            if (rootPath.isNotEmpty()) {
+                if (File(rootPath).exists()) {
+                    rootPath
+                } else {
+                    "${basePath}/assets/images"
+                }
+            } else {
+                "${basePath}/assets/images"
+            }
+        }
     }
 
     private fun initPanel() {
@@ -129,13 +144,11 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
         )
         parent.add(mSearchPanel, BorderLayout.NORTH)
 
-        mSearchBtn = ImageButton()
+        mSearchBtn = ImageButton(SdkIcons.search)
         mSearchBtn.preferredSize = Dimension(30, 30)
         mSearchBtn.minimumSize = mSearchBtn.preferredSize
         mSearchBtn.maximumSize = mSearchBtn.preferredSize
-        mSearchBtn.icon = SdkIcons.search
         mSearchBtn.background = UIConfig.TRANSPARENT
-        mSearchBtn.isOpaque = true
         mSearchPanel.add(mSearchBtn)
 
         mSearchTextField = JTextField()
@@ -166,16 +179,13 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
 
         mSearchPanel.add(mSearchTextField)
 
-        mClearBtn = ImageButton()
+        mClearBtn = ImageButton(SdkIcons.close, arcSize = 100)
         mClearBtn.preferredSize = Dimension(30, 30)
         mClearBtn.minimumSize = mSearchBtn.preferredSize
         mClearBtn.maximumSize = mSearchBtn.preferredSize
-        mClearBtn.icon = SdkIcons.close
         mClearBtn.background = null
         mClearBtn.isVisible = false
-        mClearBtn.radius = 100
-        mClearBtn.padding = 7
-        mClearBtn.isOpaque = true
+        mClearBtn.setBorderWidth(7)
         mClearBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent?) {
                 mClearBtn.background = UIConfig.getMouseEnterColor2()
@@ -186,6 +196,12 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
                 super.mouseExited(e)
                 mClearBtn.background = null
                 mClearBtn.icon = SdkIcons.close
+            }
+
+            override fun mousePressed(e: MouseEvent?) {
+                super.mousePressed(e)
+                mClearBtn.background = UIConfig.getMousePressColor2()
+                mClearBtn.icon = SdkIcons.closeFocus
             }
 
             override fun mouseClicked(e: MouseEvent?) {
@@ -237,18 +253,14 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
         c.weightx = 0.0
         bottomPanel.add(bottomLeftPanel, c)
 
-        mRefreshBtn = ImageButton()
-        this.mRefreshBtn.isOpaque = true
-        mRefreshBtn.icon = SdkIcons.refresh
-        mRefreshBtn.preferredSize = JBUI.size(24)
-        mRefreshBtn.maximumSize = JBUI.size(24)
-        mRefreshBtn.minimumSize = JBUI.size(24)
-        // mRefreshBtn.padding = 5
-        mRefreshBtn.border = null
+        mRefreshBtn = ImageButton(SdkIcons.refresh)
+        mRefreshBtn.preferredSize = JBUI.size(30)
+        mRefreshBtn.maximumSize = JBUI.size(30)
+        mRefreshBtn.minimumSize = JBUI.size(30)
         mRefreshBtn.background = null
-        mRefreshBtn.radius = 5
+        mRefreshBtn.setBorderWidth(3)
         c.fill = GridBagConstraints.BOTH
-        bottomLeftPanel.add(mRefreshBtn,c)
+        bottomLeftPanel.add(mRefreshBtn, c)
 
         mRefreshBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent?) {
@@ -278,7 +290,7 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
         mRootPathJPanel = JPanel(GridBagLayout())
         mRootPathJPanel.border = BorderFactory.createCompoundBorder(
             BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(2, 2, 2, 2),
+                BorderFactory.createEmptyBorder(2, 4, 2, 4),
                 LineBorder(UIConfig.getInputUnFocusColor(), 1, true)
             ),
             BorderFactory.createEmptyBorder(0, 4, 0, 4)
@@ -289,10 +301,9 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
         bottomPanel.add(mRootPathJPanel, c)
 
         val label = JLabel("rootPath:")
+        @Suppress("UseJBColor")
         label.foreground = Color(76, 80, 82)
-        label.background = Color.RED
-        label.isOpaque = true
-        val font = label.font
+        var font = label.font
         label.font = Font(
             font.name,
             font.style,
@@ -303,16 +314,38 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
         c.fill = GridBagConstraints.VERTICAL
         mRootPathJPanel.add(label, c)
 
-        val pathLabel = JLabel(path.replace(basePath, ""))
-        pathLabel.background = Color.YELLOW
-        pathLabel.isOpaque = false
+        mRootPathLabel = JLabel(path.replace(basePath, ""))
         c.fill = GridBagConstraints.BOTH
         c.weightx = 1.0
-        mRootPathJPanel.add(pathLabel, c)
+        mRootPathJPanel.add(mRootPathLabel, c)
 
         val jButton = JButton("Change")
-        jButton.background = Color.GREEN
-        jButton.isOpaque = true
+        jButton.preferredSize = JBUI.size(60, 26)
+        jButton.maximumSize = JBUI.size(60, 26)
+        jButton.minimumSize = JBUI.size(60, 26)
+        font = jButton.font
+        jButton.font = Font(
+            font.name,
+            font.style,
+            if (font == null) JBUI.scaleFontSize(12f) else font.size - 2
+        )
+        jButton.addActionListener {
+            jButton.isEnabled = false
+            val file = VirtualFileManager.getInstance().findFileByUrl("file://$mRootFilePath")
+            val fileDialog = FileChooseDialog(project, FileChooseDialog.CHOSE_DIR, file)
+            fileDialog.show()
+            jButton.isEnabled = true
+            fileDialog.selectedFile?.also {
+                mRootFilePath = it.path
+                val path2 = mRootFilePath ?: ""
+                val basePath2 = project.basePath ?: ""
+                PropertiesSerializeUtils.putString(project, ROOT_PATH, path2)
+                mRootPathLabel.text = path2.replace(basePath2, "")
+                mImages = getImageData()
+                setNewImages()
+            }
+        }
+
         c.fill = GridBagConstraints.VERTICAL
         c.weightx = 0.0
         mRootPathJPanel.add(jButton, c)
@@ -323,35 +356,25 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
         c.weightx = 0.0
         bottomPanel.add(bottomRightPanel, c)
 
-        mListLayoutBtn = JButton(SdkIcons.list)
-        mListLayoutBtn.isOpaque = true
-        mListLayoutBtn.icon = SdkIcons.list
-        mListLayoutBtn.preferredSize = JBUI.size(24)
-        mListLayoutBtn.maximumSize = JBUI.size(24)
-        mListLayoutBtn.minimumSize = JBUI.size(24)
-        // mListLayoutBtn.padding = 5
-        mListLayoutBtn.border = RoundedLineBorder(Color.RED,10)
+        mListLayoutBtn = ImageButton(SdkIcons.list)
+        mListLayoutBtn.preferredSize = JBUI.size(30)
+        mListLayoutBtn.maximumSize = JBUI.size(30)
+        mListLayoutBtn.minimumSize = JBUI.size(30)
         mListLayoutBtn.background = UIConfig.getMousePressColor()
-        // mListLayoutBtn.radius = 5
+        mListLayoutBtn.setBorderWidth(3)
         bottomRightPanel.add(mListLayoutBtn, c)
 
-        mGridLayoutBtn = ImageButton()
-        mGridLayoutBtn.isOpaque = true
-        mGridLayoutBtn.icon = SdkIcons.grid
-        mGridLayoutBtn.preferredSize = JBUI.size(24)
-        mGridLayoutBtn.maximumSize = JBUI.size(24)
-        mGridLayoutBtn.minimumSize = JBUI.size(24)
-        // mGridLayoutBtn.padding = 5
-        mGridLayoutBtn.border = null
+        mGridLayoutBtn = ImageButton(SdkIcons.grid)
+        mGridLayoutBtn.preferredSize = JBUI.size(30)
+        mGridLayoutBtn.maximumSize = JBUI.size(30)
+        mGridLayoutBtn.minimumSize = JBUI.size(30)
         mGridLayoutBtn.background = null
-        mGridLayoutBtn.radius = 5
+        mGridLayoutBtn.setBorderWidth(3)
         bottomRightPanel.add(mGridLayoutBtn, c)
 
         mListLayoutBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent?) {
-                if (mLayoutMode != 0) {
-                    mListLayoutBtn.background = UIConfig.getMouseEnterColor()
-                }
+                mListLayoutBtn.background = UIConfig.getMouseEnterColor()
 
             }
 
@@ -359,14 +382,14 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
                 super.mouseExited(e)
                 if (mLayoutMode != 0) {
                     mListLayoutBtn.background = null
+                } else {
+                    mListLayoutBtn.background = UIConfig.getMousePressColor()
                 }
             }
 
             override fun mousePressed(e: MouseEvent?) {
                 super.mousePressed(e)
-                if (mLayoutMode != 0) {
-                    mListLayoutBtn.background = UIConfig.getMousePressColor()
-                }
+                mListLayoutBtn.background = UIConfig.getMousePressColor()
             }
 
             override fun mouseClicked(e: MouseEvent?) {
@@ -384,24 +407,21 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
 
         mGridLayoutBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent?) {
-                if (mLayoutMode != 1) {
-                    mGridLayoutBtn.background = UIConfig.getMouseEnterColor()
-                }
-
+                mGridLayoutBtn.background = UIConfig.getMouseEnterColor()
             }
 
             override fun mouseExited(e: MouseEvent?) {
                 super.mouseExited(e)
                 if (mLayoutMode != 1) {
                     mGridLayoutBtn.background = null
+                } else {
+                    mGridLayoutBtn.background = UIConfig.getMousePressColor()
                 }
             }
 
             override fun mousePressed(e: MouseEvent?) {
                 super.mousePressed(e)
-                if (mLayoutMode != 1) {
-                    mGridLayoutBtn.background = UIConfig.getMousePressColor()
-                }
+                mGridLayoutBtn.background = UIConfig.getMousePressColor()
             }
 
             override fun mouseClicked(e: MouseEvent?) {
@@ -587,7 +607,7 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
 
             var path = imagePath
             mRootFilePath?.also {
-                path = path.replace(it, "")
+                path = path.replace("$it/", "")
             }
             label.text = getPropertyValue(path)
 
@@ -706,5 +726,9 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
 
         mScrollPane.border = LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0)
         setNewImages()
+    }
+
+    companion object {
+        private const val ROOT_PATH = "Image Preview Root Path"
     }
 }

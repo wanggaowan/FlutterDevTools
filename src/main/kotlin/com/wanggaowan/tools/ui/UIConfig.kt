@@ -27,6 +27,10 @@ object UIConfig {
     private val MOUSE_PRESS_COLOR = Gray._207
     private val MOUSE_PRESS_COLOR_DARK = Color(92, 97, 100)
 
+    // 用于透明Icon使用
+    private val MOUSE_PRESS_COLOR2 = Color(162, 166, 169)
+    private val MOUSE_PRESS_COLOR_DARK2 = Color(82, 87, 91)
+
     private val INPUT_FOCUS_COLOR = Color(71, 135, 201)
 
     private val INPUT_UN_FOCUS_COLOR = Gray._196
@@ -59,6 +63,14 @@ object UIConfig {
         }
 
         return MOUSE_ENTER_COLOR2
+    }
+
+    fun getMousePressColor2(): Color {
+        if (isDarkTheme) {
+            return MOUSE_PRESS_COLOR_DARK2
+        }
+
+        return MOUSE_PRESS_COLOR2
     }
 
     fun getMousePressColor(): Color {
