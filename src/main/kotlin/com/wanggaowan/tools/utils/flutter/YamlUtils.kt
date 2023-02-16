@@ -32,43 +32,34 @@ object YamlUtils {
      * 解析指定文件是否包含[dependency]指定的依赖,[type]指定查找的依赖分组
      */
     fun haveDependencies(psiFile: PsiFile, type: Int, dependency: String): Boolean {
-        for (child in psiFile.children) {
-            if (child is YAMLDocument) {
-                for (child2 in child.children) {
-                    if (child2 is YAMLMapping) {
-                        for (child3 in child2.children) {
-                            if (child3 is YAMLKeyValue) {
-                                if (type == DEPENDENCY_TYPE_DEV) {
-                                    if (child3.firstChild.textMatches("dev_dependencies")) {
-                                        return parseDependencies(child3, dependency)
-                                    }
-                                } else if (type == DEPENDENCY_TYPE_RELEASE) {
-                                    if (child3.firstChild.textMatches("dependencies")) {
-                                        return parseDependencies(child3, dependency)
-                                    }
-                                } else {
-                                    if (child3.firstChild.textMatches("dev_dependencies")) {
-                                        if (parseDependencies(child3, dependency)) {
-                                            return true
-                                        }
-                                    }
+        when (type) {
+            DEPENDENCY_TYPE_DEV -> {
+                val element = findElement(psiFile,"dev_dependencies")
+                return parseDependencies(element, dependency)
+            }
 
-                                    if (child3.firstChild.textMatches("dependencies")) {
-                                        if (parseDependencies(child3, dependency)) {
-                                            return true
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+            DEPENDENCY_TYPE_RELEASE -> {
+                val element = findElement(psiFile,"dependencies")
+                return parseDependencies(element, dependency)
+            }
+
+            else -> {
+                var element = findElement(psiFile,"dev_dependencies")
+                if (parseDependencies(element, dependency)) {
+                    return true
                 }
+
+                element = findElement(psiFile,"dependencies")
+                return parseDependencies(element, dependency)
             }
         }
-        return false
     }
 
-    private fun parseDependencies(psiElement: PsiElement, dependency: String): Boolean {
+    private fun parseDependencies(psiElement: PsiElement?, dependency: String): Boolean {
+        if (psiElement == null) {
+            return false
+        }
+
         for (child in psiElement.children) {
             if (child is YAMLMapping) {
                 for (child2 in child.children) {
@@ -81,6 +72,45 @@ object YamlUtils {
             }
         }
         return false
+    }
+
+    /**
+     * 查找[parent]节点下指定[name]的子节点，只查找[parent]的直接子类，比如有如下结构：
+     *
+     * ```
+     * # pubspec.yaml
+     * ...
+     * flutter:
+     *   assets:
+     *      -assets/images/
+     * ```
+     * 想得到pubspec.yaml下flutter下的assets节点，需要调用两次：
+     * ```
+     * val flutterElement = findElement(pubspecPsiFle, "flutter")
+     * val assetsElement = findElement(flutterElement, "assets")
+     * ```
+     */
+    fun findElement(parent: PsiElement, name: String):PsiElement? {
+        for (child in parent.children) {
+            if (child is YAMLDocument) {
+                val element = child.firstChild
+                return if (element == null) {
+                    null
+                } else {
+                    findElement(child.firstChild, name)
+                }
+            } else if (child is YAMLMapping) {
+                val element = findElement(child, name)
+                if (element != null) {
+                    return element
+                }
+            } else if (child is YAMLKeyValue){
+                if (child.firstChild.textMatches(name)) {
+                    return child
+                }
+            }
+        }
+        return null
     }
 }
 
