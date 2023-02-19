@@ -1,6 +1,7 @@
 package com.wanggaowan.tools.utils
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 
 /**
@@ -27,16 +28,16 @@ object XUtils {
      * 检测项目是否有pubspec.lock文件
      */
     fun havePubspecLockFile(project: Project): Boolean {
-        val basePath = project.basePath ?: return false
-        val file = VirtualFileManager.getInstance().findFileByUrl("file://$basePath") ?: return false
-        var have = false
-        for (child in file.children) {
-            if (child.name == "pubspec.lock") {
-                have = true
-                break
-            }
-        }
-        return have
+        return findFileInRootDir(project,"pubspec.lock") != null
+    }
+
+    /**
+     * 检测项目根目录下是否有[fileName]指定文件
+     */
+    fun findFileInRootDir(project: Project,fileName:String): VirtualFile? {
+        val basePath = project.basePath ?: return null
+        val file = VirtualFileManager.getInstance().findFileByUrl("file://$basePath") ?: return null
+        return file.findChild(fileName)
     }
 
     /**

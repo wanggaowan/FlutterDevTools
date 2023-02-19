@@ -9,11 +9,19 @@
       <li>项目结构增加Flutter项目专属分类</li>
       <li>json转dart</li>
       <li>一键导入android图片</li>
-      <li>flutter图片资源管理ToolWindow</li>
+      <li>常用命令提供快捷方式</li>
+      <li>实时显示多语言翻译后文本</li>
     </ol>
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>1.1</p>
+    <ul>
+      <li>增加生成图片资源引用文件并配置yaml assets节点功能</li>
+      <li>增加实时显示多语言翻译后文本功能</li>
+      <li>增加执行gen-l10n快捷方式</li>
+    </ul>
+
     <p>1.0</p>
     <ul>
       <li>项目结构增加Flutter项目专属分类，仅展示Flutter开发重点关注文件</li>
@@ -44,6 +52,8 @@
         <applicationConfigurable parentId="tools" instance="com.wanggaowan.tools.settings.PluginSettingsConfigurable"
                                  id="FlutterDevTools.PluginSettingsConfigurable"
                                  displayName="FlutterDevTools"/>
+
+        <lang.foldingBuilder language="Dart" implementationClass="com.wanggaowan.tools.lang.I18nFoldingBuilder"/>
     </extensions>
 
     <applicationListeners>
