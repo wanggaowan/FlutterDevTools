@@ -39,10 +39,27 @@
         <toolWindow id="Resource Manager"
                     factoryClass="com.wanggaowan.tools.toolwindow.ResourcePreviewToolWindowFactory"
                     icon="FlutterIcons.Flutter_13"/>
+
+        <applicationService serviceImplementation="com.wanggaowan.tools.settings.PluginSettings"/>
+        <applicationConfigurable parentId="tools" instance="com.wanggaowan.tools.settings.PluginSettingsConfigurable"
+                                 id="FlutterDevTools.PluginSettingsConfigurable"
+                                 displayName="FlutterDevTools"/>
     </extensions>
+
+    <applicationListeners>
+        <listener class="com.wanggaowan.tools.listener.ProjectManagerListenerImpl"
+                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
+    </applicationListeners>
 
     <actions>
         <!--文件编辑界面的命令-->
+        <action
+            id="FlutterDevTools.DoL10nAction2"
+            class="com.wanggaowan.tools.actions.DoL10nAction2"
+            text="gen-l10n"
+            description="执行flutter gen-l10n命令">
+            <add-to-group group-id="GenerateGroup" anchor="last"/>
+        </action>
         <action id="FlutterDevTools.JsonToDart"
                 class="com.wanggaowan.tools.actions.JsonToDartAction"
                 text="Json To Dart"
@@ -65,6 +82,13 @@
 
         <!--tools分组下的命令-->
         <action
+            id="FlutterDevTools.DoL10nAction"
+            class="com.wanggaowan.tools.actions.DoL10nAction"
+            text="gen-l10n"
+            description="执行flutter gen-l10n命令">
+            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
+        </action>
+        <action
             id="FlutterDevTools.GeneratorGFileAction"
             class="com.wanggaowan.tools.actions.GeneratorGFileAction"
             text="生成 .g.dart"
@@ -76,6 +100,11 @@
             class="com.wanggaowan.tools.actions.JsonSerializableWatcherAction"
             text="开启自动生成.g.dart文件服务"
             description="开启根据Dart实体生成.g.dart文件观察者">
+            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
+        </action>
+        <action id="FlutterDevTools.GeneratorImageRefAction"
+                class="com.wanggaowan.tools.actions.GeneratorImageRefAction"
+                text="生成图片资源引用文件并配置yaml assets节点">
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
         </action>
         <action id="FlutterDevTools.ImportSameImageResAction"

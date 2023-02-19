@@ -1,10 +1,20 @@
 package com.wanggaowan.tools.utils.flutter
 
+import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiFileFactory
+import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.util.LocalTimeCounter
+import kotlinx.serialization.json.JsonNull.content
+import org.jetbrains.kotlin.idea.base.projectStructure.moduleInfo.NotUnderContentRootModuleInfo.project
+import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
+import org.jetbrains.yaml.YAMLElementGenerator
+import org.jetbrains.yaml.YAMLFileType
 import org.jetbrains.yaml.psi.YAMLDocument
 import org.jetbrains.yaml.psi.YAMLKeyValue
 import org.jetbrains.yaml.psi.YAMLMapping
+import org.jetbrains.yaml.psi.YAMLSequenceItem
 
 /**
  * 解析Yaml文件
@@ -34,22 +44,22 @@ object YamlUtils {
     fun haveDependencies(psiFile: PsiFile, type: Int, dependency: String): Boolean {
         when (type) {
             DEPENDENCY_TYPE_DEV -> {
-                val element = findElement(psiFile,"dev_dependencies")
+                val element = findElement(psiFile, "dev_dependencies")
                 return parseDependencies(element, dependency)
             }
 
             DEPENDENCY_TYPE_RELEASE -> {
-                val element = findElement(psiFile,"dependencies")
+                val element = findElement(psiFile, "dependencies")
                 return parseDependencies(element, dependency)
             }
 
             else -> {
-                var element = findElement(psiFile,"dev_dependencies")
+                var element = findElement(psiFile, "dev_dependencies")
                 if (parseDependencies(element, dependency)) {
                     return true
                 }
 
-                element = findElement(psiFile,"dependencies")
+                element = findElement(psiFile, "dependencies")
                 return parseDependencies(element, dependency)
             }
         }
@@ -90,7 +100,7 @@ object YamlUtils {
      * val assetsElement = findElement(flutterElement, "assets")
      * ```
      */
-    fun findElement(parent: PsiElement, name: String):PsiElement? {
+    fun findElement(parent: PsiElement, name: String): PsiElement? {
         for (child in parent.children) {
             if (child is YAMLDocument) {
                 val element = child.firstChild
@@ -104,13 +114,44 @@ object YamlUtils {
                 if (element != null) {
                     return element
                 }
-            } else if (child is YAMLKeyValue){
+            } else if (child is YAMLKeyValue) {
                 if (child.firstChild.textMatches(name)) {
                     return child
                 }
             }
         }
         return null
+    }
+
+    /**
+     * 创建yaml文件
+     */
+    fun createDummyFile(project: Project, content: String = ""): PsiFile {
+        return PsiFileFactory.getInstance(project).createFileFromText(
+            "dummy.${YAMLFileType.YML.defaultExtension}",
+            YAMLFileType.YML, content, LocalTimeCounter.currentTime(), false
+        )
+    }
+
+    /**
+     * 创建 key:value结构，[content]如果没有值，可以只传 key: 这种结构，一定要带:
+     */
+    fun createYAMLKeyValue(project: Project, content: String): YAMLKeyValue? {
+        val psiFile = createDummyFile(project, content)
+        return PsiTreeUtil.findChildOfType(psiFile, YAMLKeyValue::class.java)
+    }
+
+    /**
+     * 创建如下结构中 - images/ 或 - images/a.png 节点
+     * ```
+     * assets:
+     *  - images/
+     *  - images/a.png
+     * ```
+     */
+    fun createYAMLSequenceItem(project: Project, content: String): YAMLSequenceItem? {
+        val psiFile = createDummyFile(project, content)
+        return PsiTreeUtil.findChildOfType(psiFile, YAMLSequenceItem::class.java)
     }
 }
 

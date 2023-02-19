@@ -16,7 +16,7 @@ import org.jetbrains.kotlin.idea.core.util.toPsiFile
  *
  * @author Created by wanggaowan on 2023/2/6 15:44
  */
-class GeneratorGFileAction : FlutterSdkAction() {
+open class GeneratorGFileAction : FlutterSdkAction() {
     override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
         root?.also {
             it.pubspec.toPsiFile(project)?.also { psiFile ->

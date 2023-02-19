@@ -15,11 +15,9 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
-import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiWhiteSpace
-import com.intellij.psi.impl.source.codeStyle.CodeStyleManagerImpl
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.ui.JsonToDartDialog
@@ -165,7 +163,7 @@ class JsonToDartAction : DumbAwareAction() {
                         addPartImport(project, psiFile)
                     }
 
-                    reformatFile(project, psiFile)
+                    DartPsiUtils.reformatFile(project, psiFile)
 
                     flutterSdk?.also {
                         FileDocumentManager.getInstance().saveAllDocuments()
@@ -378,16 +376,6 @@ class JsonToDartAction : DumbAwareAction() {
     }
 
     /**
-     * 执行格式化
-     *
-     * @param project     项目对象
-     * @param psiFile 需要格式化文件
-     */
-    private fun reformatFile(project: Project, psiFile: PsiFile) {
-        CodeStyleManagerImpl(project).reformatText(psiFile, mutableListOf(TextRange(0, psiFile.textLength)))
-    }
-
-    /**
      * 根据json创建类中的字段
      */
     private fun createFieldOnJsonObject(
@@ -408,7 +396,7 @@ class JsonToDartAction : DumbAwareAction() {
                 addField(project, it, obj as JsonPrimitive, parentElement, createDoc, nullSafe)
             } else if (obj.isJsonObject) {
                 val (key, doc) = getFieldName(it)
-                val className = StringUtils.toHumpFormat(key)
+                val className = StringUtils.lowerCamelCase(key)
                 addFieldForObjType(project, key, className + suffix, false, parentElement, doc, createDoc, nullSafe)
                 addClass(
                     project,
@@ -423,7 +411,7 @@ class JsonToDartAction : DumbAwareAction() {
                 )
             } else if (obj.isJsonArray) {
                 val (key, doc) = getFieldName(it)
-                val className = StringUtils.toHumpFormat(key)
+                val className = StringUtils.lowerCamelCase(key)
                 obj.asJsonArray.let { jsonArray ->
                     val (type, json) = getJsonArrayType(jsonArray, className + suffix)
                     addFieldForObjType(project, key, type, true, parentElement, doc, createDoc, nullSafe)

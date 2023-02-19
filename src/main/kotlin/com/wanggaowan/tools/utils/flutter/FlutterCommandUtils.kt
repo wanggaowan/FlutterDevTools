@@ -74,6 +74,21 @@ object FlutterCommandUtils {
     }
 
     /**
+     * 执行gen-l10n命令
+     */
+    fun genL10N(
+        project: Project,
+        root: PubRoot,
+        sdk: FlutterSdk,
+        onDone: ((existCode: Int) -> Unit)? = null,
+        processListener: ProcessListener? = null
+    ): Process? {
+        val module = root.getModule(project) ?: return null
+        val commandLine = FlutterCommandLine(sdk, root.root, FlutterCommandLine.Type.GEN_L10N)
+        return commandLine.startInModuleConsole(module, onDone, processListener)
+    }
+
+    /**
      * 执行添加build_runner依赖依赖命令，生成序列化文件
      */
     fun addBuildRunner(

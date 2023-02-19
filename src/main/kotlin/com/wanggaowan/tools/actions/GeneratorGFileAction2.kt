@@ -17,26 +17,7 @@ import org.jetbrains.kotlin.idea.core.util.toPsiFile
  *
  * @author Created by wanggaowan on 2023/2/6 15:44
  */
-class GeneratorGFileAction2 : FlutterSdkAction() {
-    override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
-        root?.also {
-            it.pubspec.toPsiFile(project)?.also { psiFile ->
-                val haveJsonAnnotation =
-                    YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "build_runner")
-                val havePubspecLockFile = XUtils.havePubspecLockFile(project)
-                FlutterCommandUtils.addBuildRunner(project, it, sdk, haveJsonAnnotation) {
-                    FlutterCommandUtils.doPubGet(project, it, sdk, havePubspecLockFile) {
-                        FlutterCommandUtils.startGeneratorJsonSerializable(project, root, sdk)
-                    }
-                }
-            }
-        }
-    }
-
-    override fun getActionUpdateThread(): ActionUpdateThread {
-        return ActionUpdateThread.BGT
-    }
-
+class GeneratorGFileAction2 : GeneratorGFileAction() {
     override fun update(e: AnActionEvent) {
         val project = e.project ?: return
         if (!XUtils.isFlutterProject(project)) {

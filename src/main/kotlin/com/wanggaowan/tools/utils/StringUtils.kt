@@ -9,9 +9,11 @@ import java.util.*
  */
 object StringUtils {
     /**
-     * 转成驼峰
+     * 转成驼峰,[firstUp]指定第一个字母是否大写，默认true
      */
-    fun toHumpFormat(str: String): String {
+    @JvmStatic
+    @JvmOverloads
+    fun lowerCamelCase(str: String, firstUp: Boolean = true): String {
         if (str.isEmpty()) {
             return str
         }
@@ -23,8 +25,13 @@ object StringUtils {
 
         val strings = text.split("_")
         val stringBuilder = StringBuilder()
-        for (element in strings) {
-            stringBuilder.append(capitalName(element))
+        strings.indices.forEach {
+            val element = strings[it]
+            if (!firstUp && it == 0) {
+                stringBuilder.append(element)
+            } else {
+                stringBuilder.append(capitalName(element))
+            }
         }
         return stringBuilder.toString()
     }

@@ -38,4 +38,17 @@ object XUtils {
         }
         return have
     }
+
+    /**
+     * 判断给的名称是否是图片格式
+     */
+    fun isImage(name: String): Boolean {
+        val lower = name.lowercase()
+        return lower.endsWith("png")
+            || lower.endsWith("jpg")
+            || lower.endsWith("jpeg")
+            || lower.endsWith("webp")
+            || lower.endsWith("gif")
+            || lower.endsWith("svg")
+    }
 }

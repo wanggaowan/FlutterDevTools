@@ -249,6 +249,12 @@ class FlutterCommandLine internal constructor(
             false,
             "pub",
             "get",
+        ),
+        GEN_L10N(
+            "gen-l10n",
+            false,
+            false,
+            "gen-l10n",
         );
 
         val title: String

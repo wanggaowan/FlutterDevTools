@@ -1,10 +1,17 @@
 package com.wanggaowan.tools.utils.dart
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.TextRange
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
+import com.intellij.psi.impl.source.codeStyle.CodeStyleManagerImpl
+import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.IncorrectOperationException
+import com.intellij.util.LocalTimeCounter
+import com.jetbrains.lang.dart.DartFileType
 import com.jetbrains.lang.dart.DartLanguage
 import com.jetbrains.lang.dart.psi.DartFile
 import com.jetbrains.lang.dart.psi.DartIncompleteDeclaration
@@ -40,8 +47,8 @@ object DartPsiUtils {
     @Throws(IncorrectOperationException::class)
     fun createFile(project: Project, name: String): DartFile? {
         val psiFile = PsiFileFactory.getInstance(project).createFileFromText(
-            "$name.dart",
-            DartLanguage.INSTANCE, "", false, true
+            "$name.${DartFileType.INSTANCE.defaultExtension}",
+            DartFileType.INSTANCE, "", LocalTimeCounter.currentTime(), false
         )
 
         if (psiFile is DartFile) {
@@ -57,8 +64,8 @@ object DartPsiUtils {
         // val viewProvider = factory?.createFileViewProvider(virtualFile, language, myManager, physical)
         // return DartFile(viewProvider)
         return PsiFileFactory.getInstance(project).createFileFromText(
-            "dummy.dart",
-            DartLanguage.INSTANCE, text, false, true
+            "dummy.${DartFileType.INSTANCE.defaultExtension}",
+            DartFileType.INSTANCE, text, LocalTimeCounter.currentTime(), false
         )
     }
 
@@ -68,11 +75,7 @@ object DartPsiUtils {
     @Throws(IncorrectOperationException::class)
     fun createSemicolonElement(project: Project): PsiElement? {
         val psiFile = createCommonPsiFile(project, ";")
-        return try {
-            psiFile.children[0].children[0]
-        } catch (e: Exception) {
-            null
-        }
+        return PsiTreeUtil.findChildOfType(psiFile, LeafPsiElement::class.java)
     }
 
     /**
@@ -81,13 +84,7 @@ object DartPsiUtils {
     @Throws(IncorrectOperationException::class)
     fun createWhiteSpaceElement(project: Project): PsiElement? {
         val psiFile = createCommonPsiFile(project, " ")
-
-        val children = psiFile.children
-        if (children.isEmpty()) {
-            return null
-        }
-
-        return children[0]
+        return psiFile.firstChild
     }
 
     /**
@@ -104,13 +101,7 @@ object DartPsiUtils {
     @Throws(IncorrectOperationException::class)
     fun createDocElement(project: Project, doc: String): PsiElement? {
         val psiFile = createCommonPsiFile(project, doc)
-
-        val children = psiFile.children
-        if (children.isEmpty()) {
-            return null
-        }
-
-        return children[0]
+        return psiFile.firstChild
     }
 
     /**
@@ -119,13 +110,7 @@ object DartPsiUtils {
     @Throws(IncorrectOperationException::class)
     fun createClassElement(project: Project, className: String): PsiElement? {
         val psiFile = createCommonPsiFile(project, "class $className { \n}")
-
-        val children = psiFile.children
-        if (children.isEmpty()) {
-            return null
-        }
-
-        return children[0]
+        return psiFile.firstChild
     }
 
     /**
@@ -146,10 +131,10 @@ object DartPsiUtils {
     fun createCommonElement(project: Project, text: String): PsiElement? {
         val psiFile = createCommonPsiFile(project, text)
         return try {
-            val element = psiFile.children[0]
+            val element = psiFile.firstChild
             if (element is DartIncompleteDeclaration) {
                 // 注解
-                element.children[0]
+                element.firstChild
             } else {
                 element
             }
@@ -178,8 +163,8 @@ object DartPsiUtils {
      */
     fun createClassMember(project: Project, text: String): PsiElement? {
         val psiFile = PsiFileFactory.getInstance(project).createFileFromText(
-            "dummy.dart",
-            DartLanguage.INSTANCE, "class Dummy { $text }", false, true
+            "dummy.${DartFileType.INSTANCE.defaultExtension}",
+            DartFileType.INSTANCE, "class Dummy { $text }", LocalTimeCounter.currentTime(), false
         )
 
         return try {
@@ -193,5 +178,15 @@ object DartPsiUtils {
         } catch (e: Exception) {
             null
         }
+    }
+
+    /**
+     * 执行格式化
+     *
+     * @param project     项目对象
+     * @param psiFile 需要格式化文件
+     */
+    fun reformatFile(project: Project, psiFile: PsiFile) {
+        CodeStyleManagerImpl(project).reformatText(psiFile, mutableListOf(TextRange(0, psiFile.textLength)))
     }
 }
