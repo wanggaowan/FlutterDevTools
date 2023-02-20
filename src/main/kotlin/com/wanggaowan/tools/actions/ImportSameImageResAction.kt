@@ -13,6 +13,7 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.wanggaowan.tools.ui.ImportImageFolderChooser
 import com.wanggaowan.tools.ui.RenameEntity
 import com.wanggaowan.tools.utils.NotificationUtils
+import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 
 
 /**
@@ -29,7 +30,13 @@ class ImportSameImageResAction : AnAction() {
                 val distinctFiles = getDistinctFiles(files)
                 val projectDir = project.basePath
                 var selectFile: VirtualFile? = null
-                if (projectDir != null) {
+                val preSelectFileFolder = PropertiesSerializeUtils.getString(project, IMPORT_TO_FOLDER)
+                if (preSelectFileFolder.isNotEmpty()) {
+                    selectFile =
+                        VirtualFileManager.getInstance().findFileByUrl("file://${preSelectFileFolder}")
+                }
+
+                if (selectFile == null && projectDir != null) {
                     selectFile =
                         VirtualFileManager.getInstance().findFileByUrl("file://${projectDir}/assets/images")
                 }
@@ -37,7 +44,9 @@ class ImportSameImageResAction : AnAction() {
                 val dialog = ImportImageFolderChooser(project, "导入图片", selectFile, distinctFiles)
                 dialog.setOkActionListener {
                     val file = dialog.getSelectedFolder() ?: return@setOkActionListener
+                    PropertiesSerializeUtils.putString(project, IMPORT_TO_FOLDER, file.path)
                     importImages(project, distinctFiles, file, dialog.getRenameFileMap())
+                    GeneratorImageRefAction().actionPerformed(e)
                 }
                 dialog.isVisible = true
             }
@@ -231,6 +240,13 @@ class ImportSameImageResAction : AnAction() {
 
             NotificationUtils.showBalloonMsg(project, "图片已导入", NotificationType.INFORMATION)
         }
+    }
+
+    companion object {
+        /**
+         * 图片导入的目录
+         */
+        private const val IMPORT_TO_FOLDER = "importToFolder"
     }
 }
 

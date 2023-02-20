@@ -29,14 +29,12 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         // 查找需要折叠的元素
         val group = FoldingGroup.newGroup("flutter dev tools")
         val descriptors = mutableListOf<FoldingDescriptor>()
-        root.module?.also { module ->
-            if (FlutterUtil.isFlutterModule(module)) {
-                PsiTreeUtil.collectElementsOfType(root, DartReferenceExpression::class.java).forEach {
-                    if (it is DartReferenceExpression) {
-                        val text = it.text
-                        if (text.startsWith("S.of(") || text.startsWith("S.current.")) {
-                            descriptors.add(FoldingDescriptor(it.node, it.textRange, group))
-                        }
+        if (XUtils.isFlutterProject(root.project)) {
+            PsiTreeUtil.collectElementsOfType(root, DartReferenceExpression::class.java).forEach {
+                if (it is DartReferenceExpression) {
+                    val text = it.text
+                    if (text.startsWith("S.of(") || text.startsWith("S.current.")) {
+                        descriptors.add(FoldingDescriptor(it.node, it.textRange, group))
                     }
                 }
             }
