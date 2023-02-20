@@ -48,7 +48,7 @@ class GeneratorImageRefAction : DumbAwareAction() {
             override fun run(progressIndicator: ProgressIndicator) {
                 progressIndicator.isIndeterminate = true
                 WriteCommandAction.runWriteCommandAction(project) {
-                    createImageRefFile(project, projectFile, imagesDir)
+                    createImageRefFile(project, projectFile, imagesDir, imagesDirPath)
                     progressIndicator.fraction = 0.5
                     insertAssets(project, projectFile, imagesDir, imagesDirPath)
                 }
@@ -78,10 +78,15 @@ class GeneratorImageRefAction : DumbAwareAction() {
     /**
      * 创建Images.dart
      */
-    private fun createImageRefFile(project: Project, projectFile: VirtualFile, imagesDir: VirtualFile) {
+    private fun createImageRefFile(
+        project: Project,
+        projectFile: VirtualFile,
+        imagesDir: VirtualFile,
+        imageDirRelPath: String
+    ) {
         val imagesPsiFile = findOrCreateResourcesDir(project, projectFile).toPsiFile(project) ?: return
         val classMember = findOrCreateClass(project, imagesPsiFile) ?: return
-        val allImages = getDeDuplicationList(imagesDir)
+        val allImages = getDeDuplicationList(imagesDir, basePath = imageDirRelPath)
         if (allImages.isEmpty()) {
             return
         }
@@ -134,12 +139,16 @@ class GeneratorImageRefAction : DumbAwareAction() {
     /**
      * 获取去重后的图片文件列表
      */
-    private fun getDeDuplicationList(rootDir: VirtualFile, parentPath: String = ""): LinkedHashSet<Property> {
+    private fun getDeDuplicationList(
+        rootDir: VirtualFile,
+        basePath: String = "",
+        parentPath: String = ""
+    ): LinkedHashSet<Property> {
         val childrenSet = linkedSetOf<Property>()
         val dirName = rootDir.name
         for (child in rootDir.children) {
             if (child.isDirectory) {
-                childrenSet.addAll(getDeDuplicationList(child, "$parentPath${child.name}/"))
+                childrenSet.addAll(getDeDuplicationList(child, basePath, "$parentPath${child.name}/"))
             } else if (isImage(child.name)) {
                 val path = if (dirName == "1.5x" || dirName == "2.0x"
                     || dirName == "3.0x" || dirName == "4.0x"
@@ -150,7 +159,7 @@ class GeneratorImageRefAction : DumbAwareAction() {
                 }
                 val value = path + child.name
                 val key = getPropertyKey(value)
-                childrenSet.add(Property(key, value))
+                childrenSet.add(Property(key, "$basePath/$value"))
             }
         }
 
@@ -159,7 +168,9 @@ class GeneratorImageRefAction : DumbAwareAction() {
 
     private fun getPropertyKey(value: String): String {
         return StringUtils.lowerCamelCase(
-            value.substring(0, value.lastIndexOf(".")).replace("/", "_")
+            value.substring(0, value.lastIndexOf("."))
+                .replace("/", "_")
+                .replace("-", "_")
                 .replace("@", ""), false
         )
     }
@@ -170,12 +181,10 @@ class GeneratorImageRefAction : DumbAwareAction() {
     private fun removeNotExistImageNode(classMember: PsiElement, allImages: Set<Property>) {
         // 移除不存在的数据
         classMember.children.forEach {
-            if (it is DartVarDeclarationList) {
-                val key = it.getChildOfType<DartVarAccessDeclaration>()?.let { child ->
-                    child.getChildOfType<DartComponentName>()?.name
-                }
+            if (it is DartGetterDeclaration) {
+                val key = it.getChildOfType<DartComponentName>()?.name
 
-                val value = it.getChildOfType<DartVarInit>()?.let { child ->
+                val value = it.getChildOfType<DartFunctionBody>()?.let { child ->
                     child.getChildOfType<DartStringLiteralExpression>()?.text
                 }
 
@@ -188,10 +197,6 @@ class GeneratorImageRefAction : DumbAwareAction() {
                 }
 
                 if (!exist) {
-                    val nextSibling = it.nextSibling
-                    if (nextSibling.textMatches(";")) {
-                        nextSibling.delete()
-                    }
                     it.delete()
                 }
             }
@@ -204,12 +209,10 @@ class GeneratorImageRefAction : DumbAwareAction() {
     private fun addNewImagesNode(project: Project, classMember: PsiElement, allImages: Set<Property>) {
         allImages.forEach {
             val value = classMember.children.find { child ->
-                if (child is DartVarDeclarationList) {
-                    val key = child.getChildOfType<DartVarAccessDeclaration>()?.let { child2 ->
-                        child2.getChildOfType<DartComponentName>()?.name
-                    }
+                if (child is DartGetterDeclaration) {
+                    val key = child.getChildOfType<DartComponentName>()?.name
 
-                    val value = child.getChildOfType<DartVarInit>()?.let { child2 ->
+                    val value = child.getChildOfType<DartFunctionBody>()?.let { child2 ->
                         child2.getChildOfType<DartStringLiteralExpression>()?.text
                     }
 
@@ -227,14 +230,10 @@ class GeneratorImageRefAction : DumbAwareAction() {
             }
 
             if (value == null) {
-                DartPsiUtils.createCommonElement(project, "static const String ${it.key} = '${it.value}'")
+                DartPsiUtils.createCommonElement(project, "static String get ${it.key} => '${it.value}';")
                     ?.also { child ->
                         classMember.add(child)
                     }
-
-                DartPsiUtils.createSemicolonElement(project)?.also { child ->
-                    classMember.add(child)
-                }
             }
         }
     }
