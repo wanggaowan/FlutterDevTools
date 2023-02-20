@@ -12,8 +12,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
+import com.jetbrains.lang.dart.flutter.FlutterUtil
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
 import com.wanggaowan.tools.utils.XUtils
+import org.jetbrains.kotlin.idea.base.util.module
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.yaml.psi.YAMLKeyValue
 
@@ -27,11 +29,15 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         // 查找需要折叠的元素
         val group = FoldingGroup.newGroup("flutter dev tools")
         val descriptors = mutableListOf<FoldingDescriptor>()
-        PsiTreeUtil.collectElementsOfType(root, DartReferenceExpression::class.java).forEach {
-            if (it is DartReferenceExpression) {
-                val text = it.text
-                if (text.startsWith("S.of(") || text.startsWith("S.current.")) {
-                    descriptors.add(FoldingDescriptor(it.node, it.textRange, group))
+        root.module?.also { module ->
+            if (FlutterUtil.isFlutterModule(module)) {
+                PsiTreeUtil.collectElementsOfType(root, DartReferenceExpression::class.java).forEach {
+                    if (it is DartReferenceExpression) {
+                        val text = it.text
+                        if (text.startsWith("S.of(") || text.startsWith("S.current.")) {
+                            descriptors.add(FoldingDescriptor(it.node, it.textRange, group))
+                        }
+                    }
                 }
             }
         }
@@ -42,7 +48,7 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
     override fun getPlaceholderText(node: ASTNode): String? {
         // 返回折叠的元素需要展示的文本内容
         val element = node.psi.reference?.resolve() ?: return null
-        val translateFile = getTranslateFile(element.project)?: return null
+        val translateFile = getTranslateFile(element.project) ?: return null
         try {
             val jsonObject = Gson().fromJson(translateFile.text, JsonObject::class.java)
             val jsonElement = jsonObject.get(element.text)

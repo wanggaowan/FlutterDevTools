@@ -112,14 +112,14 @@
             description="开启根据Dart实体生成.g.dart文件观察者">
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
         </action>
-        <action id="FlutterDevTools.GeneratorImageRefAction"
-                class="com.wanggaowan.tools.actions.GeneratorImageRefAction"
-                text="生成图片资源引用文件并配置yaml assets节点">
-            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
-        </action>
         <action id="FlutterDevTools.ImportSameImageResAction"
                 class="com.wanggaowan.tools.actions.ImportSameImageResAction"
                 text="导入不同分辨率下的相同文件">
+            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
+        </action>
+        <action id="FlutterDevTools.GeneratorImageRefAction"
+                class="com.wanggaowan.tools.actions.GeneratorImageRefAction"
+                text="生成图片资源引用文件并配置yaml assets节点">
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
         </action>
     </actions>

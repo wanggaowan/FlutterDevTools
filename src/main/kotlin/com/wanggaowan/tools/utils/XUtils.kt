@@ -11,30 +11,21 @@ import com.intellij.openapi.vfs.VirtualFileManager
  */
 object XUtils {
     fun isFlutterProject(project: Project): Boolean {
-        val basePath = project.basePath ?: return false
-        val file = VirtualFileManager.getInstance().findFileByUrl("file://$basePath") ?: return false
-        var isFlutterProject = false
-        for (child in file.children) {
-            if (child.name == "pubspec.yaml") {
-                // 存在pubspec.yaml文件就认为是Flutter项目
-                isFlutterProject = true
-                break
-            }
-        }
-        return isFlutterProject
+        // 存在pubspec.yaml文件就认为是Flutter项目
+        return findFileInRootDir(project, "pubspec.yaml") != null
     }
 
     /**
      * 检测项目是否有pubspec.lock文件
      */
     fun havePubspecLockFile(project: Project): Boolean {
-        return findFileInRootDir(project,"pubspec.lock") != null
+        return findFileInRootDir(project, "pubspec.lock") != null
     }
 
     /**
      * 检测项目根目录下是否有[fileName]指定文件
      */
-    fun findFileInRootDir(project: Project,fileName:String): VirtualFile? {
+    fun findFileInRootDir(project: Project, fileName: String): VirtualFile? {
         val basePath = project.basePath ?: return null
         val file = VirtualFileManager.getInstance().findFileByUrl("file://$basePath") ?: return null
         return file.findChild(fileName)
