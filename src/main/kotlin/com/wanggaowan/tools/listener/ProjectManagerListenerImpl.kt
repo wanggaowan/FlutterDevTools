@@ -13,10 +13,6 @@ class ProjectManagerListenerImpl : ProjectManagerListener {
     override fun projectOpened(project: Project) {
         super.projectOpened(project)
         ProjectManagerListenerImpl.project = project
-        // EditorFactory.getInstance().eventMulticaster.addDocumentListener(VirtualFileListenerImpl(),object :Disposable {
-        //     override fun dispose() {
-        //     }
-        // })
     }
 
     override fun projectClosed(project: Project) {
