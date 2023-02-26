@@ -6,6 +6,7 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.Content
 import com.wanggaowan.tools.ui.ImagePreviewPanel
 import com.wanggaowan.tools.utils.XUtils
+import com.wanggaowan.tools.utils.ex.isFlutterProject
 
 
 /**
@@ -16,7 +17,7 @@ import com.wanggaowan.tools.utils.XUtils
 class ResourcePreviewToolWindowFactory : ToolWindowFactory {
 
     override fun isApplicable(project: Project): Boolean {
-        return XUtils.isFlutterProject(project)
+        return project.isFlutterProject
     }
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {

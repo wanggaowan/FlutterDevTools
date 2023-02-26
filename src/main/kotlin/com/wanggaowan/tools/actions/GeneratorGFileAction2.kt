@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.project.Project
 import com.wanggaowan.tools.utils.XUtils
+import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.flutter.FlutterCommandUtils
 import com.wanggaowan.tools.utils.flutter.YamlUtils
 import io.flutter.actions.FlutterSdkAction
@@ -20,7 +21,7 @@ import org.jetbrains.kotlin.idea.core.util.toPsiFile
 class GeneratorGFileAction2 : GeneratorGFileAction() {
     override fun update(e: AnActionEvent) {
         val project = e.project ?: return
-        if (!XUtils.isFlutterProject(project)) {
+        if (!project.isFlutterProject) {
             e.presentation.isVisible = false
             return
         }

@@ -2,6 +2,7 @@ package com.wanggaowan.tools.actions
 
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.wanggaowan.tools.utils.XUtils
+import com.wanggaowan.tools.utils.ex.isFlutterProject
 
 /**
  * 执行l10n生成多语言相关代码命令
@@ -11,7 +12,7 @@ import com.wanggaowan.tools.utils.XUtils
 class DoL10nAction2 : DoL10nAction() {
     override fun update(e: AnActionEvent) {
         val project = e.project ?: return
-        if (!XUtils.isFlutterProject(project)) {
+        if (!project.isFlutterProject) {
             e.presentation.isVisible = false
             return
         }

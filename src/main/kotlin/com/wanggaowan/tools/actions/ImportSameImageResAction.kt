@@ -10,10 +10,12 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
+import com.wanggaowan.tools.listener.ProjectManagerListenerImpl
 import com.wanggaowan.tools.ui.ImportImageFolderChooser
 import com.wanggaowan.tools.ui.RenameEntity
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
+import org.jetbrains.kotlin.preloading.ProfilingInstrumenterExample.e
 
 
 /**
@@ -27,34 +29,48 @@ class ImportSameImageResAction : AnAction() {
         val descriptor = FileChooserDescriptor(true, true, false, false, false, true)
         FileChooser.chooseFiles(descriptor, project, null) { files ->
             if (!files.isNullOrEmpty()) {
-                val distinctFiles = getDistinctFiles(files)
-                val projectDir = project.basePath
-                var selectFile: VirtualFile? = null
-                val preSelectFileFolder = PropertiesSerializeUtils.getString(project, IMPORT_TO_FOLDER)
-                if (preSelectFileFolder.isNotEmpty()) {
-                    selectFile =
-                        VirtualFileManager.getInstance().findFileByUrl("file://${preSelectFileFolder}")
-                }
-
-                if (selectFile == null && projectDir != null) {
-                    selectFile =
-                        VirtualFileManager.getInstance().findFileByUrl("file://${projectDir}/assets/images")
-                }
-
-                val dialog = ImportImageFolderChooser(project, "导入图片", selectFile, distinctFiles)
-                dialog.setOkActionListener {
-                    val file = dialog.getSelectedFolder() ?: return@setOkActionListener
-                    PropertiesSerializeUtils.putString(project, IMPORT_TO_FOLDER, file.path)
-                    importImages(project, distinctFiles, file, dialog.getRenameFileMap())
-                    GeneratorImageRefAction().actionPerformed(e)
-                }
-                dialog.isVisible = true
+                ImportSameImageResUtils.import(project, files)
             }
         }
     }
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
+    }
+}
+
+object ImportSameImageResUtils {
+    /**
+     * 图片导入的目录
+     */
+    private const val IMPORT_TO_FOLDER = "importToFolder"
+
+    fun import(project: Project?, files: List<VirtualFile>, importToFolder: VirtualFile? = null) {
+        val projectWrapper = project ?: ProjectManagerListenerImpl.project ?: return
+        val distinctFiles = getDistinctFiles(files)
+        val projectDir = projectWrapper.basePath
+        var selectFile: VirtualFile? = importToFolder
+        if (importToFolder == null) {
+            val preSelectFileFolder = PropertiesSerializeUtils.getString(projectWrapper, IMPORT_TO_FOLDER)
+            if (preSelectFileFolder.isNotEmpty()) {
+                selectFile =
+                    VirtualFileManager.getInstance().findFileByUrl("file://${preSelectFileFolder}")
+            }
+        }
+
+        if (selectFile == null && projectDir != null) {
+            selectFile =
+                VirtualFileManager.getInstance().findFileByUrl("file://${projectDir}/assets/images")
+        }
+
+        val dialog = ImportImageFolderChooser(projectWrapper, "导入图片", selectFile, distinctFiles)
+        dialog.setOkActionListener {
+            val file = dialog.getSelectedFolder() ?: return@setOkActionListener
+            PropertiesSerializeUtils.putString(projectWrapper, IMPORT_TO_FOLDER, file.path)
+            importImages(projectWrapper, distinctFiles, file, dialog.getRenameFileMap())
+            GeneratorImageRefUtils.generate(projectWrapper)
+        }
+        dialog.isVisible = true
     }
 
     /**
@@ -240,13 +256,6 @@ class ImportSameImageResAction : AnAction() {
 
             NotificationUtils.showBalloonMsg(project, "图片已导入", NotificationType.INFORMATION)
         }
-    }
-
-    companion object {
-        /**
-         * 图片导入的目录
-         */
-        private const val IMPORT_TO_FOLDER = "importToFolder"
     }
 }
 

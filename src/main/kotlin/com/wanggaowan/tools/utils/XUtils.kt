@@ -3,6 +3,9 @@ package com.wanggaowan.tools.utils
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
+import com.wanggaowan.tools.utils.ex.findChild
+import com.wanggaowan.tools.utils.ex.rootDir
+import kotlinx.html.InputType
 
 /**
  * 提供通用工具方法
@@ -10,25 +13,11 @@ import com.intellij.openapi.vfs.VirtualFileManager
  * @author Created by wanggaowan on 2023/2/3 09:48
  */
 object XUtils {
-    fun isFlutterProject(project: Project): Boolean {
-        // 存在pubspec.yaml文件就认为是Flutter项目
-        return findFileInRootDir(project, "pubspec.yaml") != null
-    }
-
     /**
      * 检测项目是否有pubspec.lock文件
      */
     fun havePubspecLockFile(project: Project): Boolean {
-        return findFileInRootDir(project, "pubspec.lock") != null
-    }
-
-    /**
-     * 检测项目根目录下是否有[fileName]指定文件
-     */
-    fun findFileInRootDir(project: Project, fileName: String): VirtualFile? {
-        val basePath = project.basePath ?: return null
-        val file = VirtualFileManager.getInstance().findFileByUrl("file://$basePath") ?: return null
-        return file.findChild(fileName)
+        return project.findChild("pubspec.lock") != null
     }
 
     /**

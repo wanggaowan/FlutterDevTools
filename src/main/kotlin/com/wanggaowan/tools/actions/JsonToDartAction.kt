@@ -24,6 +24,7 @@ import com.wanggaowan.tools.ui.JsonToDartDialog
 import com.wanggaowan.tools.utils.StringUtils
 import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
+import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
 import com.wanggaowan.tools.utils.flutter.FlutterCommandUtils
 import com.wanggaowan.tools.utils.flutter.YamlUtils
@@ -93,7 +94,7 @@ class JsonToDartAction : DumbAwareAction() {
 
     override fun update(e: AnActionEvent) {
         val project = e.project ?: return
-        if (!XUtils.isFlutterProject(project)) {
+        if (!project.isFlutterProject) {
             e.presentation.isVisible = false
             return
         }

@@ -26,7 +26,7 @@ import java.util.function.Consumer
 /**
  * Flutter命令行命令
  *
- * @param workDir 当前命令执行的目录范围，不传则整个项目，否则为指定目录范围
+ * @param workDir 当前命令执行的目录范围，不传则为Flutter环境变量配置的目录
  * @param type 要执行的命令类型
  *
  * @author Created by wanggaowan on 2023/2/6 17:35
@@ -58,7 +58,7 @@ class FlutterCommandLine internal constructor(
         return java.lang.String.join(" ", words)
     }
 
-    fun start(onDone: Consumer<ProcessOutput?>?, processListener: ProcessListener?): Process? {
+    fun start(onDone: Consumer<ProcessOutput>? = null, processListener: ProcessListener? = null): Process? {
         val handler = startProcessOrShowError(null as Project?)
         return if (handler == null) {
             null

@@ -24,6 +24,7 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
 import com.wanggaowan.tools.utils.XUtils
+import com.wanggaowan.tools.utils.ex.isFlutterProject
 import icons.FlutterIcons
 import icons.SdkIcons
 import javax.swing.Icon
@@ -44,7 +45,7 @@ class FlutterProjectViewPane(private val project: Project) : ProjectViewPane(pro
      * 判断项目视图是否展示
      */
     override fun isInitiallyVisible(): Boolean {
-        return XUtils.isFlutterProject(project)
+        return project.isFlutterProject
     }
 
     override fun getIcon(): Icon {

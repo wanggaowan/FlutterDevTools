@@ -16,6 +16,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.DartFileType
 import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.entity.Property
+import com.wanggaowan.tools.listener.ProjectManagerListenerImpl
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.StringUtils
 import com.wanggaowan.tools.utils.XUtils.isImage
@@ -36,30 +37,36 @@ import org.jetbrains.yaml.psi.YAMLSequence
 class GeneratorImageRefAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
-        val project = getEventProject(e) ?: return
-        val basePath = project.basePath ?: return
+        GeneratorImageRefUtils.generate(e.project)
+    }
+
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.BGT
+    }
+}
+
+object GeneratorImageRefUtils {
+    fun generate(project: Project?) {
+        val projectWrapper = project ?: ProjectManagerListenerImpl.project ?: return
+        val basePath = projectWrapper.basePath ?: return
         val virtualFileManager = VirtualFileManager.getInstance()
         val projectFile = virtualFileManager.findFileByUrl("file://${basePath}") ?: return
 
         val imagesDirPath = formatPath(PluginSettings.imagesFileDir)
         val imagesDir = virtualFileManager.findFileByUrl("file://${basePath}/${imagesDirPath}") ?: return
 
-        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "create images res ref") {
+        ProgressManager.getInstance().run(object : Task.Backgroundable(projectWrapper, "create images res ref") {
             override fun run(progressIndicator: ProgressIndicator) {
                 progressIndicator.isIndeterminate = true
-                WriteCommandAction.runWriteCommandAction(project) {
-                    createImageRefFile(project, projectFile, imagesDir, imagesDirPath)
+                WriteCommandAction.runWriteCommandAction(projectWrapper) {
+                    createImageRefFile(projectWrapper, projectFile, imagesDir, imagesDirPath)
                     progressIndicator.fraction = 0.5
-                    insertAssets(project, projectFile, imagesDir, imagesDirPath)
+                    insertAssets(projectWrapper, projectFile, imagesDir, imagesDirPath)
                 }
                 progressIndicator.isIndeterminate = false
                 progressIndicator.fraction = 1.0
             }
         })
-    }
-
-    override fun getActionUpdateThread(): ActionUpdateThread {
-        return ActionUpdateThread.BGT
     }
 
     private fun formatPath(path: String): String {

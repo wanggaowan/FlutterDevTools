@@ -54,11 +54,16 @@
                                  displayName="FlutterDevTools"/>
 
         <lang.foldingBuilder language="Dart" implementationClass="com.wanggaowan.tools.lang.I18nFoldingBuilder"/>
+        <actionOnSave implementation="com.wanggaowan.tools.listener.GenL10nListener" order="last"/>
+        <filePasteProvider implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first"/>
+        <refactoring.moveHandler implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first"/>
     </extensions>
 
     <applicationListeners>
         <listener class="com.wanggaowan.tools.listener.ProjectManagerListenerImpl"
                   topic="com.intellij.openapi.project.ProjectManagerListener"/>
+        <listener class="com.wanggaowan.tools.listener.GenL10nListener"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
     </applicationListeners>
 
     <actions>

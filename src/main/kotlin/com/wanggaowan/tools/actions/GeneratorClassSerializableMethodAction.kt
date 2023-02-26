@@ -14,6 +14,7 @@ import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils.findElementAtOffset
+import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 
 /**
@@ -31,7 +32,7 @@ class GeneratorClassSerializableMethodAction : AnAction() {
 
     override fun update(e: AnActionEvent) {
         val project = e.project ?: return
-        if (!XUtils.isFlutterProject(project)) {
+        if (!project.isFlutterProject) {
             e.presentation.isVisible = false
             return
         }

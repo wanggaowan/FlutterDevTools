@@ -15,6 +15,8 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.flutter.FlutterUtil
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
 import com.wanggaowan.tools.utils.XUtils
+import com.wanggaowan.tools.utils.ex.findChild
+import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.idea.base.util.module
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.yaml.psi.YAMLKeyValue
@@ -29,7 +31,7 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         // 查找需要折叠的元素
         val group = FoldingGroup.newGroup("flutter dev tools")
         val descriptors = mutableListOf<FoldingDescriptor>()
-        if (XUtils.isFlutterProject(root.project)) {
+        if (root.project.isFlutterProject) {
             PsiTreeUtil.collectElementsOfType(root, DartReferenceExpression::class.java).forEach {
                 if (it is DartReferenceExpression) {
                     val text = it.text
@@ -67,7 +69,7 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
      * 查找多语言引用的字段翻译文件对象
      */
     private fun getTranslateFile(project: Project): PsiElement? {
-        val l10nFile = XUtils.findFileInRootDir(project, "l10n.yaml")?.toPsiFile(project)
+        val l10nFile = project.findChild("l10n.yaml")?.toPsiFile(project)
         var transientFilePath: String
         if (l10nFile != null) {
             val elements = PsiTreeUtil.collectElementsOfType(l10nFile, YAMLKeyValue::class.java)
