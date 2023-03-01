@@ -15,6 +15,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>1.2</p>
+    <ul>
+      <li>支持拖拽或粘贴文件方式导入图片</li>
+      <li>多语言实时生成，无需手动执行gen-l10n命令</li>
+    </ul>
+
     <p>1.1</p>
     <ul>
       <li>增加生成图片资源引用文件并配置yaml assets节点功能</li>
