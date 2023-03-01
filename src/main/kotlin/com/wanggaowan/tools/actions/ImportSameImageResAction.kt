@@ -15,8 +15,6 @@ import com.wanggaowan.tools.ui.ImportImageFolderChooser
 import com.wanggaowan.tools.ui.RenameEntity
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
-import org.jetbrains.kotlin.preloading.ProfilingInstrumenterExample.e
-
 
 /**
  * 导入不同分辨率相同图片资源

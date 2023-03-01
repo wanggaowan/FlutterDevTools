@@ -29,7 +29,6 @@ import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ArrayUtil
 import com.intellij.util.Function
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.StartupUiUtil
 import com.intellij.util.ui.tree.TreeUtil
 import com.wanggaowan.tools.utils.msg.Toast
 import java.awt.*
@@ -160,7 +159,7 @@ class ImportImageFolderChooser(
         myTree.selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
         myTree.cellRenderer = NodeRenderer()
         val scrollPane = ScrollPaneFactory.createScrollPane(myTree)
-        scrollPane.preferredSize = JBUI.size(600, 300)
+        scrollPane.preferredSize = JBUI.size(730, 300)
         myTree.addTreeSelectionListener { handleSelectionChanged() }
         return scrollPane
     }

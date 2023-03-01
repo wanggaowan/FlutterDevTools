@@ -129,7 +129,7 @@ object GeneratorImageRefUtils {
      * 查找或创建/lib/resources/images.dart目录
      */
     private fun findOrCreateResourcesDir(project: Project, parent: VirtualFile): VirtualFile {
-        val path = formatPath(PluginSettings.imagesDartFileGeneratePath) + "/Images.${DartFileType.DEFAULT_EXTENSION}"
+        val path = formatPath(PluginSettings.imagesDartFileGeneratePath) + "/images.${DartFileType.DEFAULT_EXTENSION}"
         var virtualFile: VirtualFile = parent
         val nodes = path.split("/")
         nodes.indices.forEach { index ->

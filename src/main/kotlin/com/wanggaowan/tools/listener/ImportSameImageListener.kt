@@ -11,6 +11,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.refactoring.move.MoveCallback
 import com.intellij.refactoring.move.MoveHandlerDelegate
 import com.wanggaowan.tools.actions.ImportSameImageResUtils
@@ -58,6 +59,12 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
 
         val virtualFiles = mutableListOf<VirtualFile>()
         for (file in files) {
+            val fileName = file.name
+            if (fileName.startsWith(".")) {
+                // 隐藏文件忽略
+                continue
+            }
+
             if (!file.isDirectory) {
                 return false
             }
@@ -66,6 +73,11 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
                 VirtualFileManager.getInstance().findFileByUrl("file://${file.absolutePath}") ?: return false
             for (child in virtualFile.children) {
                 val name = child.name
+                if (name.startsWith(".")) {
+                    // 隐藏文件忽略
+                    continue
+                }
+
                 if (!child.isDirectory
                     || (!name.startsWith("drawable")
                         && !name.startsWith("mipmap"))
@@ -75,6 +87,10 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
             }
 
             virtualFiles.add(virtualFile)
+        }
+
+        if (virtualFiles.isEmpty()) {
+            return false
         }
 
         Companion.files = virtualFiles
@@ -128,13 +144,32 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
 
         val files = mutableListOf<VirtualFile>()
         for (element in sources) {
+            if (element is PsiFile) {
+                if (element.name.startsWith(".")) {
+                    // 隐藏文件忽略
+                    continue
+                } else {
+                    return false
+                }
+            }
+
             if (element !is PsiDirectory) {
-                return false
+                continue
             }
 
             val file = element.virtualFile
+            if (file.name.startsWith(".")) {
+                // 隐藏文件忽略
+                continue
+            }
+
             for (child in file.children) {
                 val name = child.name
+                if (name.startsWith(".")) {
+                    // 隐藏文件忽略
+                    continue
+                }
+
                 if (!child.isDirectory
                     || (!name.startsWith("drawable")
                         && !name.startsWith("mipmap"))
@@ -143,6 +178,10 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
                 }
             }
             files.add(file)
+        }
+
+        if (files.isEmpty()) {
+            return false
         }
 
         Companion.files = files
