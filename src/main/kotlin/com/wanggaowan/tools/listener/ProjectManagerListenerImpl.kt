@@ -10,8 +10,8 @@ import com.intellij.openapi.project.ProjectManagerListener
  */
 class ProjectManagerListenerImpl : ProjectManagerListener {
 
+    @Deprecated("Deprecated in Java", ReplaceWith(""))
     override fun projectOpened(project: Project) {
-        super.projectOpened(project)
         ProjectManagerListenerImpl.project = project
     }
 

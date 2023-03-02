@@ -66,7 +66,6 @@ object ImportSameImageResUtils {
             val file = dialog.getSelectedFolder() ?: return@setOkActionListener
             PropertiesSerializeUtils.putString(projectWrapper, IMPORT_TO_FOLDER, file.path)
             importImages(projectWrapper, distinctFiles, file, dialog.getRenameFileMap())
-            GeneratorImageRefUtils.generate(projectWrapper)
         }
         dialog.isVisible = true
     }

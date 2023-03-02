@@ -12,6 +12,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.DartFileType
 import com.jetbrains.lang.dart.psi.*
@@ -27,6 +28,7 @@ import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.yaml.YAMLElementGenerator
 import org.jetbrains.yaml.psi.YAMLDocument
 import org.jetbrains.yaml.psi.YAMLMapping
+import org.jetbrains.yaml.psi.YAMLScalar
 import org.jetbrains.yaml.psi.YAMLSequence
 
 /**
@@ -280,6 +282,28 @@ object GeneratorImageRefUtils {
             assetsYamlElement = YamlUtils.createYAMLKeyValue(project, "assets:") ?: return
             flutterYamlElement.add(eolElement)
             assetsYamlElement = flutterYamlElement.add(assetsYamlElement) ?: return
+        } else {
+            val fileManager = VirtualFileManager.getInstance()
+            val basePath = "file://${project.basePath}"
+            assetsYamlElement.getChildOfType<YAMLSequence>()?.children?.forEach {
+                val child = it.getChildOfType<YAMLScalar>()
+                if (child != null) {
+                    val value = child.textValue
+                    if (value.startsWith(imagesDirRelPath) && fileManager.findFileByUrl("$basePath/${child.textValue}") == null) {
+                        val nextSibling = it.nextSibling
+                        // 删除两个标签直接的间隙
+                        if (nextSibling is LeafPsiElement) {
+                            val nextSibling2 = nextSibling.nextSibling
+                            if (nextSibling2 is LeafPsiElement) {
+                                nextSibling2.delete()
+                            }
+                            nextSibling.delete()
+                        }
+                        // 删除不存在的目录
+                        it.delete()
+                    }
+                }
+            }
         }
 
         YamlUtils.createYAMLSequenceItem(project, "- ${imagesDirRelPath}/")?.also {

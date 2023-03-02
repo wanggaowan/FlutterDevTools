@@ -47,10 +47,10 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <projectViewPane implementation="com.wanggaowan.tools.projectviewpane.FlutterProjectViewPane"
-                         id="Flutter Pane"/>
+                         id="FlutterDevTools.ProjectViewPane"/>
         <notificationGroup displayType="BALLOON" id="com.wanggaowan.tools.notification" isLogByDefault="false"/>
 
-        <toolWindow id="Resource Manager"
+        <toolWindow id="Flutter Resource Manager"
                     factoryClass="com.wanggaowan.tools.toolwindow.ResourcePreviewToolWindowFactory"
                     icon="FlutterIcons.Flutter_13"/>
 
@@ -70,6 +70,7 @@
                   topic="com.intellij.openapi.project.ProjectManagerListener"/>
         <listener class="com.wanggaowan.tools.listener.GenL10nListener"
                   topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+        <listener class="com.wanggaowan.tools.listener.GeneratorImageRefListener" topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
     </applicationListeners>
 
     <actions>
