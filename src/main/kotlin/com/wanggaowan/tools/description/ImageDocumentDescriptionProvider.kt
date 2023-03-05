@@ -5,7 +5,6 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.jetbrains.lang.dart.ide.documentation.DartDocumentationProvider
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
 import com.wanggaowan.tools.gotohandler.ImagesGoToDeclarationHandler
 import com.wanggaowan.tools.utils.dart.DartPsiUtils

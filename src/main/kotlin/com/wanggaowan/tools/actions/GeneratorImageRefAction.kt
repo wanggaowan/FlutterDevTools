@@ -17,7 +17,6 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.DartFileType
 import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.entity.Property
-import com.wanggaowan.tools.listener.ProjectManagerListenerImpl
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.StringUtils
 import com.wanggaowan.tools.utils.XUtils.isImage
@@ -57,7 +56,7 @@ object GeneratorImageRefUtils {
         val imagesDirPath = formatPath(PluginSettings.getImagesFileDir(project))
         val imagesDir = virtualFileManager.findFileByUrl("file://${basePath}/${imagesDirPath}") ?: return
 
-        ProgressManager.getInstance().run(object : Task.Backgroundable(projectWrapper, "create images res ref") {
+        ProgressManager.getInstance().run(object : Task.Backgroundable(projectWrapper, "Create images res ref") {
             override fun run(progressIndicator: ProgressIndicator) {
                 progressIndicator.isIndeterminate = true
                 WriteCommandAction.runWriteCommandAction(projectWrapper) {

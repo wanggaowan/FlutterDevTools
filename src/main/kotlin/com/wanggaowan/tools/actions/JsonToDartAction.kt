@@ -195,7 +195,9 @@ class JsonToDartAction : DumbAwareAction() {
                 addJsonSerializable(project, pubRoot, sdk, haveJsonSerializable) {
                     FlutterCommandUtils.addBuildRunner(project, pubRoot, sdk, haveBuildRunner) {
                         FlutterCommandUtils.doPubGet(project, pubRoot, sdk, havePubspecLockFile) {
-                            FlutterCommandUtils.startGeneratorJsonSerializable(project, pubRoot, sdk)
+                            FlutterCommandUtils.startGeneratorJsonSerializable(project, pubRoot, sdk, onDone = {
+                                psiFile.virtualFile.parent?.refresh(true, false)
+                            })
                         }
                     }
                 }

@@ -6,10 +6,6 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.LocalTimeCounter
-import kotlinx.serialization.json.JsonNull.content
-import org.jetbrains.kotlin.idea.base.projectStructure.moduleInfo.NotUnderContentRootModuleInfo.project
-import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
-import org.jetbrains.yaml.YAMLElementGenerator
 import org.jetbrains.yaml.YAMLFileType
 import org.jetbrains.yaml.psi.YAMLDocument
 import org.jetbrains.yaml.psi.YAMLKeyValue

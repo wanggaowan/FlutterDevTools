@@ -3,7 +3,6 @@ package com.wanggaowan.tools.ui
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
-import kotlinx.html.InputType
 import javax.swing.JComponent
 import javax.swing.JPanel
 

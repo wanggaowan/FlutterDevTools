@@ -2,7 +2,6 @@ package com.wanggaowan.tools.utils.dart
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
-import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
@@ -12,7 +11,6 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.IncorrectOperationException
 import com.intellij.util.LocalTimeCounter
 import com.jetbrains.lang.dart.DartFileType
-import com.jetbrains.lang.dart.DartLanguage
 import com.jetbrains.lang.dart.psi.DartFile
 import com.jetbrains.lang.dart.psi.DartIncompleteDeclaration
 

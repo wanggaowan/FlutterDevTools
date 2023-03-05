@@ -25,7 +25,9 @@ open class GeneratorGFileAction : FlutterSdkAction() {
                 val havePubspecLockFile = XUtils.havePubspecLockFile(project)
                 FlutterCommandUtils.addBuildRunner(project, it, sdk, haveJsonAnnotation) {
                     FlutterCommandUtils.doPubGet(project, it, sdk, havePubspecLockFile) {
-                        FlutterCommandUtils.startGeneratorJsonSerializable(project, root, sdk)
+                        FlutterCommandUtils.startGeneratorJsonSerializable(project, root, sdk, onDone = {
+                            onCommandEnd(context)
+                        })
                     }
                 }
             }
@@ -34,5 +36,9 @@ open class GeneratorGFileAction : FlutterSdkAction() {
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
+    }
+
+    protected open fun onCommandEnd(context: DataContext) {
+
     }
 }

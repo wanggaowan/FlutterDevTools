@@ -1,7 +1,6 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 
 /**

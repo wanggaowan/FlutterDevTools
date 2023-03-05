@@ -10,7 +10,6 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
-import com.wanggaowan.tools.listener.ProjectManagerListenerImpl
 import com.wanggaowan.tools.ui.ImportImageFolderChooser
 import com.wanggaowan.tools.ui.RenameEntity
 import com.wanggaowan.tools.utils.NotificationUtils

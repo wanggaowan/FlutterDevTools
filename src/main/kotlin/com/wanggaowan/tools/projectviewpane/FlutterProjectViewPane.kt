@@ -23,10 +23,8 @@ import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
-import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import icons.FlutterIcons
-import icons.SdkIcons
 import javax.swing.Icon
 
 /**

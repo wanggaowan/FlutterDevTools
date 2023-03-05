@@ -5,7 +5,6 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.Content
 import com.wanggaowan.tools.ui.ImagePreviewPanel
-import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 
 

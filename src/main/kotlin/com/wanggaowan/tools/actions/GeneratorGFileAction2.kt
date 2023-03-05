@@ -1,17 +1,9 @@
 package com.wanggaowan.tools.actions
 
-import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
-import com.intellij.openapi.project.Project
-import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
-import com.wanggaowan.tools.utils.flutter.FlutterCommandUtils
-import com.wanggaowan.tools.utils.flutter.YamlUtils
-import io.flutter.actions.FlutterSdkAction
-import io.flutter.pub.PubRoot
-import io.flutter.sdk.FlutterSdk
-import org.jetbrains.kotlin.idea.core.util.toPsiFile
 
 /**
  * 根据项目中DART类生成对应的.g.dart文件
@@ -27,5 +19,9 @@ class GeneratorGFileAction2 : GeneratorGFileAction() {
         }
 
         e.presentation.isVisible = true
+    }
+
+    override fun onCommandEnd(context: DataContext) {
+        context.getData(CommonDataKeys.VIRTUAL_FILE)?.parent?.refresh(true, false)
     }
 }

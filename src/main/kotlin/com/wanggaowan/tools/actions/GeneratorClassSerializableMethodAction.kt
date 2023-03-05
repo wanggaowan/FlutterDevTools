@@ -11,7 +11,6 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
-import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils.findElementAtOffset
 import com.wanggaowan.tools.utils.ex.isFlutterProject

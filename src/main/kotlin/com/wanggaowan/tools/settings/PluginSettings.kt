@@ -1,7 +1,6 @@
 package com.wanggaowan.tools.settings
 
 import com.intellij.openapi.project.Project
-import com.wanggaowan.tools.listener.ProjectManagerListenerImpl
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 
 /**

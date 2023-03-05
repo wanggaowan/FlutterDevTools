@@ -12,12 +12,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import com.jetbrains.lang.dart.flutter.FlutterUtil
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
-import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.ex.findChild
 import com.wanggaowan.tools.utils.ex.isFlutterProject
-import org.jetbrains.kotlin.idea.base.util.module
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.yaml.psi.YAMLKeyValue
 

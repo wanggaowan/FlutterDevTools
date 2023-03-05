@@ -1,11 +1,7 @@
 package com.wanggaowan.tools.utils
 
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileManager
 import com.wanggaowan.tools.utils.ex.findChild
-import com.wanggaowan.tools.utils.ex.rootDir
-import kotlinx.html.InputType
 
 /**
  * 提供通用工具方法
