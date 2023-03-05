@@ -65,42 +65,44 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         return true
     }
 
-    /**
-     * 查找多语言引用的字段翻译文件对象
-     */
-    private fun getTranslateFile(project: Project): PsiElement? {
-        val l10nFile = project.findChild("l10n.yaml")?.toPsiFile(project)
-        var transientFilePath: String
-        if (l10nFile != null) {
-            val elements = PsiTreeUtil.collectElementsOfType(l10nFile, YAMLKeyValue::class.java)
-            var dir: String? = null
-            var templateFile: String? = null
-            for (element2 in elements) {
-                if (element2.keyText == "arb-dir") {
-                    dir = element2.valueText
-                } else if (element2.keyText == "template-arb-file") {
-                    templateFile = element2.valueText
+    companion object {
+        /**
+         * 查找多语言引用的字段翻译文件对象
+         */
+        internal fun getTranslateFile(project: Project): PsiElement? {
+            val l10nFile = project.findChild("l10n.yaml")?.toPsiFile(project)
+            var transientFilePath: String
+            if (l10nFile != null) {
+                val elements = PsiTreeUtil.collectElementsOfType(l10nFile, YAMLKeyValue::class.java)
+                var dir: String? = null
+                var templateFile: String? = null
+                for (element2 in elements) {
+                    if (element2.keyText == "arb-dir") {
+                        dir = element2.valueText
+                    } else if (element2.keyText == "template-arb-file") {
+                        templateFile = element2.valueText
+                    }
+
+                    if (dir != null && templateFile != null) {
+                        break
+                    }
                 }
 
-                if (dir != null && templateFile != null) {
-                    break
+                if (dir == null || templateFile == null) {
+                    return null
                 }
-            }
-
-            if (dir == null || templateFile == null) {
-                return null
-            }
-            transientFilePath = dir
-            transientFilePath += if (transientFilePath.endsWith("/")) {
-                templateFile
+                transientFilePath = dir
+                transientFilePath += if (transientFilePath.endsWith("/")) {
+                    templateFile
+                } else {
+                    "/${templateFile}"
+                }
             } else {
-                "/${templateFile}"
+                transientFilePath = "l10n/app_en.arb"
             }
-        } else {
-            transientFilePath = "l10n/app_en.arb"
-        }
 
-        return VirtualFileManager.getInstance().findFileByUrl("file://${project.basePath}/$transientFilePath")
-            ?.toPsiFile(project)
+            return VirtualFileManager.getInstance().findFileByUrl("file://${project.basePath}/$transientFilePath")
+                ?.toPsiFile(project)
+        }
     }
 }

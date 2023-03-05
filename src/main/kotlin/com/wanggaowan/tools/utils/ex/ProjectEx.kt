@@ -20,13 +20,16 @@ val Project.rootDir: VirtualFile?
 fun Project.findChild(name: String) = rootDir?.findChild(name)
 
 
-private var mFlutterProject: Boolean = false
-private fun Project.isFlutterProjectInner():Boolean {
-    if (mFlutterProject) {
-        return true
+internal var isFlutterProjectMap: MutableMap<Project, Boolean> = mutableMapOf()
+private fun Project.isFlutterProjectInner(): Boolean {
+    val isFlutterProject = isFlutterProjectMap[this]
+    if (isFlutterProject != null) {
+        return isFlutterProject
     }
-    mFlutterProject = findChild("pubspec.yaml") != null
-    return mFlutterProject
+
+    val isF = findChild("pubspec.yaml") != null
+    isFlutterProjectMap[this] = isF
+    return isF
 }
 
 /**

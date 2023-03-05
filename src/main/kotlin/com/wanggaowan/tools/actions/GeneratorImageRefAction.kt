@@ -49,12 +49,12 @@ class GeneratorImageRefAction : DumbAwareAction() {
 
 object GeneratorImageRefUtils {
     fun generate(project: Project?) {
-        val projectWrapper = project ?: ProjectManagerListenerImpl.project ?: return
+        val projectWrapper = project ?: return
         val basePath = projectWrapper.basePath ?: return
         val virtualFileManager = VirtualFileManager.getInstance()
         val projectFile = virtualFileManager.findFileByUrl("file://${basePath}") ?: return
 
-        val imagesDirPath = formatPath(PluginSettings.imagesFileDir)
+        val imagesDirPath = formatPath(PluginSettings.getImagesFileDir(project))
         val imagesDir = virtualFileManager.findFileByUrl("file://${basePath}/${imagesDirPath}") ?: return
 
         ProgressManager.getInstance().run(object : Task.Backgroundable(projectWrapper, "create images res ref") {
@@ -131,7 +131,7 @@ object GeneratorImageRefUtils {
      * 查找或创建/lib/resources/images.dart目录
      */
     private fun findOrCreateResourcesDir(project: Project, parent: VirtualFile): VirtualFile {
-        val path = formatPath(PluginSettings.imagesDartFileGeneratePath) + "/images.${DartFileType.DEFAULT_EXTENSION}"
+        val path = formatPath(PluginSettings.getImagesDartFileGeneratePath(project)) + "/images.${DartFileType.DEFAULT_EXTENSION}"
         var virtualFile: VirtualFile = parent
         val nodes = path.split("/")
         nodes.indices.forEach { index ->

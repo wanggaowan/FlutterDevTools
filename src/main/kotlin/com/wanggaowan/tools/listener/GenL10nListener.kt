@@ -48,7 +48,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
 
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
         super.fileOpened(source, file)
-        if (ProjectManagerListenerImpl.project?.isFlutterProject != true) {
+        if (!source.project.isFlutterProject) {
             return
         }
 
@@ -62,7 +62,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
 
     override fun fileClosed(source: FileEditorManager, file: VirtualFile) {
         super.fileClosed(source, file)
-        if (ProjectManagerListenerImpl.project?.isFlutterProject != true) {
+        if (!source.project.isFlutterProject) {
             return
         }
 
@@ -101,7 +101,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
 
     private fun doGenL10n(project: Project? = null) {
         mNeedDoGenL10n = false
-        val project2 = project ?: ProjectManagerListenerImpl.project ?: return
+        val project2 = project ?: return
         project2.rootDir?.also {
             FlutterSdk.getFlutterSdk(project2)?.also { sdk ->
                 val commandLine = FlutterCommandLine(sdk, it, FlutterCommandLine.Type.GEN_L10N)

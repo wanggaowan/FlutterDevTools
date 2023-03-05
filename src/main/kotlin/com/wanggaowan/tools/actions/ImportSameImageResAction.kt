@@ -44,7 +44,7 @@ object ImportSameImageResUtils {
     private const val IMPORT_TO_FOLDER = "importToFolder"
 
     fun import(project: Project?, files: List<VirtualFile>, importToFolder: VirtualFile? = null) {
-        val projectWrapper = project ?: ProjectManagerListenerImpl.project ?: return
+        val projectWrapper = project ?: return
         val distinctFiles = getDistinctFiles(files)
         val projectDir = projectWrapper.basePath
         var selectFile: VirtualFile? = importToFolder

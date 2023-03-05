@@ -46,6 +46,14 @@
     <depends>org.jetbrains.plugins.yaml</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <!--必须设置order为first，否则2021.3版本之后不会调用FlutterGoToDeclarationHandler-->
+        <gotoDeclarationHandler implementation="com.wanggaowan.tools.gotohandler.FlutterGoToDeclarationHandler"
+                                order="first"/>
+
+        <!--dart目前不支持图片注释，无法显示具体图标-->
+        <!--<lang.documentationProvider language="Dart"-->
+        <!--                            implementationClass="com.wanggaowan.tools.description.ImageDocumentDescriptionProvider"/>-->
+
         <projectViewPane implementation="com.wanggaowan.tools.projectviewpane.FlutterProjectViewPane"
                          id="FlutterDevTools.ProjectViewPane"/>
         <notificationGroup displayType="BALLOON" id="com.wanggaowan.tools.notification" isLogByDefault="false"/>
@@ -54,10 +62,9 @@
                     factoryClass="com.wanggaowan.tools.toolwindow.ResourcePreviewToolWindowFactory"
                     icon="FlutterIcons.Flutter_13"/>
 
-        <applicationService serviceImplementation="com.wanggaowan.tools.settings.PluginSettings"/>
-        <applicationConfigurable parentId="tools" instance="com.wanggaowan.tools.settings.PluginSettingsConfigurable"
-                                 id="FlutterDevTools.PluginSettingsConfigurable"
-                                 displayName="FlutterDevTools"/>
+        <projectConfigurable parentId="tools" instance="com.wanggaowan.tools.settings.ProjectPluginSettingsConfigurable"
+                             id="FlutterDevTools.ProjectPluginSettingsConfigurable"
+                             displayName="FlutterDevTools"/>
 
         <lang.foldingBuilder language="Dart" implementationClass="com.wanggaowan.tools.lang.I18nFoldingBuilder"/>
         <actionOnSave implementation="com.wanggaowan.tools.listener.GenL10nListener" order="last"/>
@@ -70,7 +77,8 @@
                   topic="com.intellij.openapi.project.ProjectManagerListener"/>
         <listener class="com.wanggaowan.tools.listener.GenL10nListener"
                   topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
-        <listener class="com.wanggaowan.tools.listener.GeneratorImageRefListener" topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
+        <listener class="com.wanggaowan.tools.listener.GeneratorImageRefListener"
+                  topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
     </applicationListeners>
 
     <actions>

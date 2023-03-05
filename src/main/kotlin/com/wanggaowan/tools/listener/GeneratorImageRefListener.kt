@@ -9,6 +9,7 @@ import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
 import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
+import com.intellij.psi.PsiManager
 import com.wanggaowan.tools.actions.GeneratorImageRefUtils
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.XUtils
@@ -27,13 +28,10 @@ class GeneratorImageRefListener : BulkFileListener {
 
     override fun after(events: MutableList<out VFileEvent>) {
         super.after(events)
-        val project: Project = ProjectManagerListenerImpl.project ?: return
-        if (!project.isFlutterProject) {
-            return
-        }
-
-        if (isImageChange(project, events)) {
-            // 仅仅最后一次图片变更时执行
+        val project = isImageChange(events)
+        if (project != null && project.isFlutterProject) {
+            // 仅仅最后一次图片变更时执行,如果多个项目都有图片变化，则只处理最后一个项目
+            // 这里不区分多项目，一般情况下只会有一个项目文件在变化
             if (job?.isActive == true) {
                 job?.cancel()
             }
@@ -46,41 +44,69 @@ class GeneratorImageRefListener : BulkFileListener {
     }
 
     // 只要文件变动事件有一个图片更改的事件，就认为图片有变动
-    private fun isImageChange(project: Project, events: MutableList<out VFileEvent>): Boolean {
-        val imagesDir = "${project.basePath}/${PluginSettings.imagesFileDir}"
+    private fun isImageChange(events: MutableList<out VFileEvent>): Project? {
         for (event in events) {
             val file = event.file ?: continue
             if (event is VFileCreateEvent
-                || event is VFileDeleteEvent) {
+                || event is VFileDeleteEvent
+            ) {
+                val requestor = event.requestor
+                if (requestor !is PsiManager) {
+                    continue
+                }
+
+                val project = requestor.project
+                val imagesDir = "${project.basePath}/${PluginSettings.getImagesFileDir(project)}"
                 if (isImageChange(imagesDir, file)) {
-                    return true
+                    return project
                 }
                 continue
             }
 
             if (event is VFileMoveEvent) {
+                val requestor = event.requestor
+                if (requestor !is PsiManager) {
+                    continue
+                }
+
+                val project = requestor.project
+                val imagesDir = "${project.basePath}/${PluginSettings.getImagesFileDir(project)}"
                 if (isImage(file) && event.newPath.contains(imagesDir)) {
-                    return true
+                    return project
                 }
                 continue
             }
 
             if (event is VFilePropertyChangeEvent) {
+                val requestor = event.requestor
+                if (requestor !is PsiManager) {
+                    continue
+                }
+
+                val project = requestor.project
+                val imagesDir = "${project.basePath}/${PluginSettings.getImagesFileDir(project)}"
                 if (event.propertyName == "name" && isImageChange(imagesDir, file)) {
-                    return true
+                    return project
                 }
                 continue
             }
 
             if (event is VFileCopyEvent) {
+                val requestor = event.requestor
+                if (requestor !is PsiManager) {
+                    continue
+                }
+
+                val project = requestor.project
+                val imagesDir = "${project.basePath}/${PluginSettings.getImagesFileDir(project)}"
                 if (isImage(event.file) && event.path.contains(imagesDir)) {
-                    return true
+                    return project
                 }
                 continue
             }
         }
 
-        return false
+        return null
     }
 
     // 只要给的文件或文件夹有一个文件发生变动就任务图片有变动
