@@ -9,8 +9,10 @@
       <li>项目结构增加Flutter项目专属分类</li>
       <li>json转dart</li>
       <li>一键导入android图片</li>
-      <li>常用命令提供快捷方式</li>
+      <li>自动/手动生成图片资源引用文件并配置yaml assets节点</li>
+      <li>复制不同分辨率下的相同图片</li>
       <li>实时显示多语言翻译后文本</li>
+      <li>常用命令提供快捷方式</li>
     </ol>
     ]]></description>
 
@@ -18,7 +20,9 @@
     <p>1.2</p>
     <ul>
       <li>支持拖拽或粘贴文件方式导入图片</li>
-      <li>多语言实时生成，无需手动执行gen-l10n命令</li>
+      <li>自动监测多语言变更，自动执行gen-l10n命令</li>
+      <li>自动监测图片资源变更，自动生成图片资源引用和配置assets节点</li>
+      <li>增加复制不同分辨率下的相同图片功能</li>
     </ul>
 
     <p>1.1</p>
@@ -141,6 +145,12 @@
                 class="com.wanggaowan.tools.actions.GeneratorImageRefAction"
                 text="生成图片资源引用文件并配置yaml assets节点">
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
+        </action>
+
+        <action id="FlutterDevTools.CopyMultiSameNameFileAction"
+                class="com.wanggaowan.tools.actions.CopyMultiSameNameFileAction" text="复制不同分辨率下的相同图片"
+                description="复制不同分辨率下的相同图片">
+            <add-to-group group-id="CutCopyPasteGroup" anchor="before" relative-to-action="$Paste"/>
         </action>
     </actions>
 </idea-plugin>

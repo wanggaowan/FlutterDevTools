@@ -1,15 +1,12 @@
 package com.wanggaowan.tools.listener
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
-import com.intellij.openapi.vfs.newvfs.events.VFileCopyEvent
-import com.intellij.openapi.vfs.newvfs.events.VFileCreateEvent
-import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
-import com.intellij.openapi.vfs.newvfs.events.VFileEvent
-import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
-import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
+import com.intellij.openapi.vfs.newvfs.events.*
 import com.intellij.psi.PsiManager
+import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.wanggaowan.tools.actions.GeneratorImageRefUtils
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.XUtils
@@ -50,12 +47,7 @@ class GeneratorImageRefListener : BulkFileListener {
             if (event is VFileCreateEvent
                 || event is VFileDeleteEvent
             ) {
-                val requestor = event.requestor
-                if (requestor !is PsiManager) {
-                    continue
-                }
-
-                val project = requestor.project
+                val project = getProject(event) ?: continue
                 val imagesDir = "${project.basePath}/${PluginSettings.getImagesFileDir(project)}"
                 if (isImageChange(imagesDir, file)) {
                     return project
@@ -64,12 +56,7 @@ class GeneratorImageRefListener : BulkFileListener {
             }
 
             if (event is VFileMoveEvent) {
-                val requestor = event.requestor
-                if (requestor !is PsiManager) {
-                    continue
-                }
-
-                val project = requestor.project
+                val project = getProject(event) ?: continue
                 val imagesDir = "${project.basePath}/${PluginSettings.getImagesFileDir(project)}"
                 if (isImage(file) && event.newPath.contains(imagesDir)) {
                     return project
@@ -78,12 +65,7 @@ class GeneratorImageRefListener : BulkFileListener {
             }
 
             if (event is VFilePropertyChangeEvent) {
-                val requestor = event.requestor
-                if (requestor !is PsiManager) {
-                    continue
-                }
-
-                val project = requestor.project
+                val project = getProject(event) ?: continue
                 val imagesDir = "${project.basePath}/${PluginSettings.getImagesFileDir(project)}"
                 if (event.propertyName == "name" && isImageChange(imagesDir, file)) {
                     return project
@@ -92,17 +74,50 @@ class GeneratorImageRefListener : BulkFileListener {
             }
 
             if (event is VFileCopyEvent) {
-                val requestor = event.requestor
-                if (requestor !is PsiManager) {
-                    continue
-                }
-
-                val project = requestor.project
+                val project = getProject(event) ?: continue
                 val imagesDir = "${project.basePath}/${PluginSettings.getImagesFileDir(project)}"
                 if (isImage(event.file) && event.path.contains(imagesDir)) {
                     return project
                 }
                 continue
+            }
+        }
+
+        return null
+    }
+
+    private fun getProject(event: VFileEvent): Project? {
+        val requestor = event.requestor
+        if (requestor is PsiManager) {
+            return requestor.project
+        }
+
+        if (requestor is PsiDirectoryImpl) {
+            return requestor.project
+        }
+
+        val paths = mutableListOf<String>()
+        when (event) {
+            is VFileMoveEvent -> {
+                paths.add(event.oldPath)
+                paths.add(event.newPath)
+            }
+
+            else -> {
+                paths.add(event.path)
+            }
+        }
+
+        if (paths.isEmpty()) {
+            return null
+        }
+
+        for (path in paths) {
+            for (project in ProjectManager.getInstance().openProjects) {
+                val basePath = project.basePath
+                if (basePath != null && path.startsWith(basePath)) {
+                    return project
+                }
             }
         }
 
