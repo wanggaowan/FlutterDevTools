@@ -50,6 +50,7 @@
     <depends>org.jetbrains.plugins.yaml</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="com.wanggaowan.tools.ProjectOpenActivity"/>
         <!--必须设置order为first，否则2021.3版本之后不会调用FlutterGoToDeclarationHandler-->
         <gotoDeclarationHandler implementation="com.wanggaowan.tools.gotohandler.FlutterGoToDeclarationHandler"
                                 order="first"/>
@@ -74,6 +75,7 @@
         <actionOnSave implementation="com.wanggaowan.tools.listener.GenL10nListener" order="last"/>
         <filePasteProvider implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first"/>
         <refactoring.moveHandler implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first"/>
+        <codeInsight.lineMarkerProvider language="Dart" implementationClass="com.wanggaowan.tools.codeInsight.ImageLineMarkerProvider"/>
     </extensions>
 
     <applicationListeners>
