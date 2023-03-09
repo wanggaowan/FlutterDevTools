@@ -24,13 +24,11 @@ open class DoL10nAction : FlutterSdkAction() {
     override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
         root?.also { pubRoot ->
             doGenL10n(project, sdk, pubRoot) {
-                if (isEditorCall()) {
-                    val exampleDir = pubRoot.exampleDir
-                    if (exampleDir != null) {
-                        val examplePubRoot = PubRoot.forDirectory(exampleDir)
-                        if (examplePubRoot != null) {
-                            doGenL10n(project, sdk, examplePubRoot)
-                        }
+                val exampleDir = pubRoot.exampleDir
+                if (exampleDir != null) {
+                    val examplePubRoot = PubRoot.forDirectory(exampleDir)
+                    if (examplePubRoot != null) {
+                        doGenL10n(project, sdk, examplePubRoot)
                     }
                 }
             }
@@ -41,7 +39,7 @@ open class DoL10nAction : FlutterSdkAction() {
         return ActionUpdateThread.BGT
     }
 
-    private fun doGenL10n(
+    protected fun doGenL10n(
         project: Project,
         sdk: FlutterSdk,
         pubRoot: PubRoot,
@@ -90,12 +88,5 @@ open class DoL10nAction : FlutterSdkAction() {
                 FlutterCommandUtils.genL10N(project, pubRoot, sdk, onDone)
             }
         }
-    }
-
-    /**
-     * 是否编辑器界面调用此命令
-     */
-    protected open fun isEditorCall(): Boolean {
-        return false
     }
 }
