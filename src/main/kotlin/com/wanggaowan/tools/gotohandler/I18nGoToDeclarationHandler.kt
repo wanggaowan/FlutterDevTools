@@ -3,7 +3,9 @@ package com.wanggaowan.tools.gotohandler
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.DartId
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
 import com.wanggaowan.tools.lang.I18nFoldingBuilder
@@ -44,7 +46,15 @@ object I18nGoToDeclarationHandler {
             return null
         }
 
-        val file = I18nFoldingBuilder.getTranslateFile(project) ?: return null
+        val psiFile = PsiTreeUtil.getParentOfType(sourceElement, PsiFile::class.java)
+        val isExample = if (psiFile == null) {
+            false
+        } else {
+            val path = psiFile.virtualFile?.path
+            path != null && path.contains("/example/")
+        }
+
+        val file = I18nFoldingBuilder.getTranslateFile(project, isExample) ?: return null
         return arrayOf(file)
     }
 }

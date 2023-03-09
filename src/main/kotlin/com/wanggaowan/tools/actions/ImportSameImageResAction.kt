@@ -85,7 +85,7 @@ object ImportSameImageResUtils {
                                 dataList.add(child)
                             }
                         } else if (
-                        // 当前child父对象不能是drawable或mipmap开头，只解析这个目录中的图片，不解析目录
+                        // 当前child父对象不是drawable或mipmap开头，只解析这个目录中的图片，不解析目录
                             (!dirName.startsWith("drawable") && !dirName.startsWith("mipmap")) &&
                             (name.startsWith("drawable") || name.startsWith("mipmap"))
                         ) {

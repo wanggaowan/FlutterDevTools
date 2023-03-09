@@ -18,4 +18,8 @@ class DoL10nAction2 : DoL10nAction() {
 
         e.presentation.isVisible = true
     }
+
+    override fun isEditorCall(): Boolean {
+        return true
+    }
 }

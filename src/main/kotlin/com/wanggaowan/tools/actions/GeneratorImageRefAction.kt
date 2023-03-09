@@ -14,14 +14,15 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import com.jetbrains.lang.dart.DartFileType
 import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.entity.Property
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.StringUtils
 import com.wanggaowan.tools.utils.XUtils.isImage
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
+import com.wanggaowan.tools.utils.ex.rootDir
 import com.wanggaowan.tools.utils.flutter.YamlUtils
+import io.flutter.pub.PubRoot
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.yaml.YAMLElementGenerator
@@ -38,7 +39,9 @@ import org.jetbrains.yaml.psi.YAMLSequence
 class GeneratorImageRefAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
-        GeneratorImageRefUtils.generate(e.project)
+        val project = e.project ?: return
+        GeneratorImageRefUtils.generate(project)
+        GeneratorImageRefUtils.generate(project, true)
     }
 
     override fun getActionUpdateThread(): ActionUpdateThread {
@@ -47,22 +50,64 @@ class GeneratorImageRefAction : DumbAwareAction() {
 }
 
 object GeneratorImageRefUtils {
-    fun generate(project: Project?) {
+    /**
+     * 生成图片引用文件，[isExampleModule]表示当前是否为项目中example模块生成
+     */
+    fun generate(project: Project?, isExampleModule: Boolean = false) {
         val projectWrapper = project ?: return
-        val basePath = projectWrapper.basePath ?: return
-        val virtualFileManager = VirtualFileManager.getInstance()
-        val projectFile = virtualFileManager.findFileByUrl("file://${basePath}") ?: return
+        val pubRoot = PubRoot.forDirectory(projectWrapper.rootDir) ?: return
+        val exampleDir = pubRoot.exampleDir
+        if (isExampleModule && (exampleDir == null || pubRoot.exampleLibMain == null)) {
+            return
+        }
 
-        val imagesDirPath = formatPath(PluginSettings.getImagesFileDir(project))
-        val imagesDir = virtualFileManager.findFileByUrl("file://${basePath}/${imagesDirPath}") ?: return
+        val virtualFileManager = VirtualFileManager.getInstance()
+        // 图片资源在项目中的相对路径
+        val imagesRelDirPath: String
+        // 图片资源目录
+        val imagesDir: VirtualFile?
+        // 生成图片资源引用文件路径
+        val imageRefFilePath: String
+        // 生成图片资源引用文件名称
+        val imageRefFileName: String
+        // 生成图片资源引用文件类名称
+        val imageRefClassName: String
+        val projectFile: VirtualFile
+        if (isExampleModule) {
+            imagesRelDirPath = formatPath(PluginSettings.getExampleImagesFileDir(project))
+            imageRefFilePath = formatPath(PluginSettings.getExampleImagesRefFilePath(project))
+            imageRefFileName = PluginSettings.getExampleImagesRefFileName(project)
+            imageRefClassName = PluginSettings.getExampleImagesRefClassName(project)
+            imagesDir = virtualFileManager.findFileByUrl("file://${exampleDir!!.path}/${imagesRelDirPath}")
+            projectFile = exampleDir
+        } else {
+            imagesRelDirPath = formatPath(PluginSettings.getImagesFileDir(project))
+            imageRefFilePath = formatPath(PluginSettings.getImagesRefFilePath(project))
+            imageRefFileName = PluginSettings.getImagesRefFileName(project)
+            imageRefClassName = PluginSettings.getImagesRefClassName(project)
+            imagesDir = virtualFileManager.findFileByUrl("file://${pubRoot.path}/${imagesRelDirPath}")
+            projectFile = pubRoot.root
+        }
+
+        if (imagesDir == null) {
+            return
+        }
 
         ProgressManager.getInstance().run(object : Task.Backgroundable(projectWrapper, "Create images res ref") {
             override fun run(progressIndicator: ProgressIndicator) {
                 progressIndicator.isIndeterminate = true
                 WriteCommandAction.runWriteCommandAction(projectWrapper) {
-                    createImageRefFile(projectWrapper, projectFile, imagesDir, imagesDirPath)
+                    createImageRefFile(
+                        projectWrapper,
+                        projectFile,
+                        imagesDir,
+                        imagesRelDirPath,
+                        imageRefFilePath,
+                        imageRefFileName,
+                        imageRefClassName
+                    )
                     progressIndicator.fraction = 0.5
-                    insertAssets(projectWrapper, projectFile, imagesDir, imagesDirPath)
+                    insertAssets(projectWrapper, projectFile, imagesDir, imagesRelDirPath)
                 }
                 progressIndicator.isIndeterminate = false
                 progressIndicator.fraction = 1.0
@@ -90,10 +135,15 @@ object GeneratorImageRefUtils {
         project: Project,
         projectFile: VirtualFile,
         imagesDir: VirtualFile,
-        imageDirRelPath: String
+        imageDirRelPath: String,
+        imageRefFilePath: String,
+        imageRefFileName: String,
+        imageRefClassName: String
     ) {
-        val imagesPsiFile = findOrCreateResourcesDir(project, projectFile).toPsiFile(project) ?: return
-        val classMember = findOrCreateClass(project, imagesPsiFile) ?: return
+        val imagesPsiFile =
+            findOrCreateResourcesDir(project, projectFile, imageRefFilePath, imageRefFileName).toPsiFile(project)
+                ?: return
+        val classMember = findOrCreateClass(project, imagesPsiFile, imageRefClassName) ?: return
         val allImages = getDeDuplicationList(imagesDir, basePath = imageDirRelPath)
         if (allImages.isEmpty()) {
             return
@@ -107,19 +157,19 @@ object GeneratorImageRefUtils {
     /**
      * 查找Images.dart是否存在Images类，不存在则创建，返回classMembers节点
      */
-    private fun findOrCreateClass(project: Project, imagesPsiFile: PsiFile): PsiElement? {
+    private fun findOrCreateClass(project: Project, imagesPsiFile: PsiFile, imageRefClassName: String): PsiElement? {
         var imagesClass: PsiElement? = null
         for (child in imagesPsiFile.children) {
             if (child is DartClass) {
                 val element = PsiTreeUtil.getChildOfType(child, DartComponentName::class.java)
-                if (element != null && element.textMatches("Images")) {
+                if (element != null && element.textMatches(imageRefClassName)) {
                     imagesClass = child
                 }
             }
         }
 
         if (imagesClass == null) {
-            imagesClass = DartPsiUtils.createClassElement(project, "Images") ?: return null
+            imagesClass = DartPsiUtils.createClassElement(project, imageRefClassName) ?: return null
             imagesClass = imagesPsiFile.add(imagesClass)
         }
 
@@ -127,10 +177,13 @@ object GeneratorImageRefUtils {
     }
 
     /**
-     * 查找或创建/lib/resources/images.dart目录
+     * 查找或创建lib/resources/images.dart目录
      */
-    private fun findOrCreateResourcesDir(project: Project, parent: VirtualFile): VirtualFile {
-        val path = formatPath(PluginSettings.getImagesDartFileGeneratePath(project)) + "/images.${DartFileType.DEFAULT_EXTENSION}"
+    private fun findOrCreateResourcesDir(
+        project: Project, parent: VirtualFile,
+        imageRefFilePath: String, imageRefFileName: String
+    ): VirtualFile {
+        val path = "$imageRefFilePath/$imageRefFileName"
         var virtualFile: VirtualFile = parent
         val nodes = path.split("/")
         nodes.indices.forEach { index ->

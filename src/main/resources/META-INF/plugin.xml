@@ -17,6 +17,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>1.3</p>
+    <ul>
+      <li>支持开发Flutter插件项目时多项目结构(插件根目录下存在example项目)，gen-l10n命令，生成资源引用文件命令等会根据不同项目执行在不同上下文中</li>
+      <li>拖拽或粘贴导入图片支持drawable，mipmap目录在第一级，无需将其包裹在一个父级目录下</li>
+    </ul>
+
     <p>1.2</p>
     <ul>
       <li>支持拖拽或粘贴文件方式导入图片</li>

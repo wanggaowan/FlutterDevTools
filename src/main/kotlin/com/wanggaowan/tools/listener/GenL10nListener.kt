@@ -10,7 +10,9 @@ import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.wanggaowan.tools.utils.ex.findChild
 import com.wanggaowan.tools.utils.ex.isFlutterProject
+import com.wanggaowan.tools.utils.ex.project
 import com.wanggaowan.tools.utils.ex.rootDir
 import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
 import io.flutter.sdk.FlutterSdk
@@ -29,11 +31,22 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
     // 处理文件保存逻辑
     override fun processDocuments(project: Project, documents: Array<out Document>) {
         var isArbFileSave = false
+        // 是否是example项目发生变化
+        var isExample = false
+        // 是否是根项目发生变化
+        var isProject = false
         for (document in documents) {
             val file = fileDocumentManager.value.getFile(document)
             if (file != null && file.name.endsWith(".arb")) {
                 isArbFileSave = true
-                break
+                val example = file.path.contains("/example/")
+                if (!isExample) {
+                    isExample = example
+                }
+
+                if (!isProject) {
+                    isProject = !example
+                }
             }
         }
 
@@ -41,9 +54,17 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
             return
         }
 
-        job?.cancel()
-        job = null
-        doGenL10n(project)
+        if (isProject) {
+            job?.cancel()
+            job = null
+            doGenL10n(project)
+        }
+
+        if (isExample) {
+            jobForExample?.cancel()
+            jobForExample = null
+            doGenL10n(project, true)
+        }
     }
 
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
@@ -71,35 +92,70 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
         }
 
         fileDocumentManager.value.getDocument(file)?.removeDocumentListener(documentListener.value)
-        if (mNeedDoGenL10n) {
-            // 保存所有文件，触发ActionOnSave相关方法，不能直接执行doGenL10n，
-            // 因为arb文件编辑的数据可能还只是存在缓存中，直接执行doGenL10n读取不到最新数据
-            fileDocumentManager.value.saveAllDocuments()
-            job = coroutineScope.value.launch {
-                delay(1000)
-                if (mNeedDoGenL10n) {
-                    doGenL10n()
-                }
-            }
-        }
+        delayDoGenL10n(source.project, file.path.contains("/example/"))
     }
 
     override fun selectionChanged(event: FileEditorManagerEvent) {
         super.selectionChanged(event)
+        var file = event.newFile
+        if (file == null) {
+            file = event.oldFile
+        }
+
+        if (file == null) {
+            return
+        }
+
+        val project = file.project ?: return
+        delayDoGenL10n(project, file.path.contains("/example/"))
+    }
+
+    private fun delayDoGenL10n(project: Project?, isExample: Boolean = false) {
+        if (isExample) {
+            if (mNeedDoGenL10nForExample) {
+                // 保存所有文件，触发ActionOnSave相关方法，不能直接执行doGenL10n，
+                // 因为arb文件编辑的数据可能还只是存在缓存中，直接执行doGenL10n读取不到最新数据
+                fileDocumentManager.value.saveAllDocuments()
+
+                // 以下方法防止ActionOnSave未能触发时执行
+                jobForExample = coroutineScope.value.launch {
+                    delay(1000)
+                    if (mNeedDoGenL10nForExample) {
+                        doGenL10n(project, true)
+                    }
+                }
+            }
+            return
+        }
+
         if (mNeedDoGenL10n) {
             // 保存所有文件，触发ActionOnSave相关方法，不能直接执行doGenL10n，
             // 因为arb文件编辑的数据可能还只是存在缓存中，直接执行doGenL10n读取不到最新数据
             fileDocumentManager.value.saveAllDocuments()
+
+            // 以下方法防止ActionOnSave未能触发时执行
             job = coroutineScope.value.launch {
                 delay(1000)
                 if (mNeedDoGenL10n) {
-                    doGenL10n()
+                    doGenL10n(project)
                 }
             }
         }
     }
 
-    private fun doGenL10n(project: Project? = null) {
+    private fun doGenL10n(project: Project?, isExample: Boolean = false) {
+        if (isExample) {
+            mNeedDoGenL10nForExample = false
+            val project2 = project ?: return
+            project2.findChild("example")?.also {
+                FlutterSdk.getFlutterSdk(project2)?.also { sdk ->
+                    val commandLine = FlutterCommandLine(sdk, it, FlutterCommandLine.Type.GEN_L10N)
+                    commandLine.start()
+                }
+            }
+            return
+        }
+
         mNeedDoGenL10n = false
         val project2 = project ?: return
         project2.rootDir?.also {
@@ -115,16 +171,23 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
 
         // 是否需要执行 gen-l10n命令
         private var mNeedDoGenL10n = false
+        private var mNeedDoGenL10nForExample = false
 
         private val documentListener = lazy {
             object : DocumentListener {
                 override fun documentChanged(event: DocumentEvent) {
-                    mNeedDoGenL10n = true
+                    val file = fileDocumentManager.value.getFile(event.document)
+                    if (file != null && file.path.contains("/example/")) {
+                        mNeedDoGenL10nForExample = true
+                    } else {
+                        mNeedDoGenL10n = true
+                    }
                 }
             }
         }
 
         private val coroutineScope = lazy { CoroutineScope(Dispatchers.Default) }
         private var job: Job? = null
+        private var jobForExample: Job? = null
     }
 }

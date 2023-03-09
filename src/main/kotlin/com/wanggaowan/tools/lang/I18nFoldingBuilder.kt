@@ -11,6 +11,7 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
 import com.wanggaowan.tools.utils.ex.findChild
@@ -24,8 +25,11 @@ import org.jetbrains.yaml.psi.YAMLKeyValue
  * @author Created by wanggaowan on 2023/2/19 20:19
  */
 class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
-    override fun buildFoldRegions(root: PsiElement, document: Document, quick: Boolean): Array<FoldingDescriptor> {
-        // 查找需要折叠的元素
+    override fun buildFoldRegions(
+        root: PsiElement,
+        document: Document,
+        quick: Boolean
+    ): Array<FoldingDescriptor> { // 查找需要折叠的元素
         val group = FoldingGroup.newGroup("flutter dev tools")
         val descriptors = mutableListOf<FoldingDescriptor>()
         if (root.project.isFlutterProject) {
@@ -42,10 +46,17 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         return descriptors.toTypedArray()
     }
 
-    override fun getPlaceholderText(node: ASTNode): String? {
-        // 返回折叠的元素需要展示的文本内容
+    override fun getPlaceholderText(node: ASTNode): String? { // 返回折叠的元素需要展示的文本内容
         val element = node.psi.reference?.resolve() ?: return null
-        val translateFile = getTranslateFile(element.project) ?: return null
+        val psiFile = PsiTreeUtil.getParentOfType(element, PsiFile::class.java)
+        val isExample = if (psiFile == null) {
+            false
+        } else {
+            val path = psiFile.virtualFile?.path
+            path != null && path.contains("/example/")
+        }
+
+        val translateFile = getTranslateFile(element.project, isExample) ?: return null
         try {
             val jsonObject = Gson().fromJson(translateFile.text, JsonObject::class.java)
             val jsonElement = jsonObject.get(element.text)
@@ -66,8 +77,12 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         /**
          * 查找多语言引用的字段翻译文件对象
          */
-        internal fun getTranslateFile(project: Project): PsiElement? {
-            val l10nFile = project.findChild("l10n.yaml")?.toPsiFile(project)
+        internal fun getTranslateFile(project: Project, isExample: Boolean = false): PsiElement? {
+            val l10nFile = if (isExample) {
+                project.findChild("example")?.findChild("l10n.yaml")?.toPsiFile(project)
+            } else {
+                project.findChild("l10n.yaml")?.toPsiFile(project)
+            }
             var transientFilePath: String
             if (l10nFile != null) {
                 val elements = PsiTreeUtil.collectElementsOfType(l10nFile, YAMLKeyValue::class.java)
@@ -95,7 +110,12 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
                     "/${templateFile}"
                 }
             } else {
-                transientFilePath = "l10n/app_en.arb"
+                transientFilePath = "lib/l10n/app_en.arb"
+            }
+
+            if (isExample) {
+                return VirtualFileManager.getInstance()
+                    .findFileByUrl("file://${project.basePath}/example/$transientFilePath")?.toPsiFile(project)
             }
 
             return VirtualFileManager.getInstance().findFileByUrl("file://${project.basePath}/$transientFilePath")

@@ -22,54 +22,80 @@ import org.jetbrains.yaml.psi.YAMLMapping
  */
 open class DoL10nAction : FlutterSdkAction() {
     override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
-        root?.also {
-            it.pubspec.toPsiFile(project)?.also { psiFile ->
-                val haveLocalizations =
-                    YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "flutter_localizations")
-                val haveIntl =
-                    YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "intl")
-                if (!haveLocalizations || !haveIntl) {
-                    WriteCommandAction.runWriteCommandAction(project) {
-                        var dependencies = YamlUtils.findElement(psiFile, "dependencies")
-                        val yamlGenerator = YAMLElementGenerator.getInstance(project)
-                        // 两个节点之间的分隔符
-                        val eolElement = yamlGenerator.createEol()
-                        if (dependencies == null) {
-                            dependencies =
-                                YamlUtils.createYAMLKeyValue(project, "dependencies:") ?: return@runWriteCommandAction
-                            val document = psiFile.getChildOfType<YAMLDocument>() ?: return@runWriteCommandAction
-                            val mapping = document.getChildOfType<YAMLMapping>()
-                            dependencies = if (mapping == null) {
-                                psiFile.add(dependencies) ?: return@runWriteCommandAction
-                            } else {
-                                mapping.add(eolElement)
-                                mapping.add(dependencies) ?: return@runWriteCommandAction
-                            }
-                        }
-
-                        if (!haveLocalizations) {
-                            YamlUtils.createYAMLKeyValue(project, "flutter_localizations:\n  sdk:flutter")
-                                ?.also { child ->
-                                    dependencies.add(eolElement)
-                                    dependencies.add(child)
-                                }
-                        }
-
-                        if (!haveIntl) {
-                            YamlUtils.createYAMLKeyValue(project, "intl: any")?.also { child ->
-                                dependencies.add(eolElement)
-                                dependencies.add(child)
-                            }
+        root?.also { pubRoot ->
+            doGenL10n(project, sdk, pubRoot) {
+                if (isEditorCall()) {
+                    val exampleDir = pubRoot.exampleDir
+                    if (exampleDir != null) {
+                        val examplePubRoot = PubRoot.forDirectory(exampleDir)
+                        if (examplePubRoot != null) {
+                            doGenL10n(project, sdk, examplePubRoot)
                         }
                     }
                 }
-
-                FlutterCommandUtils.genL10N(project, root, sdk)
             }
         }
     }
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
+    }
+
+    private fun doGenL10n(
+        project: Project,
+        sdk: FlutterSdk,
+        pubRoot: PubRoot,
+        onDone: ((existCode: Int) -> Unit)? = null
+    ) {
+        WriteCommandAction.runWriteCommandAction(project) {
+            pubRoot.pubspec.toPsiFile(project)?.also { psiFile ->
+                val haveLocalizations =
+                    YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "flutter_localizations")
+                val haveIntl =
+                    YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "intl")
+                if (!haveLocalizations || !haveIntl) {
+                    var dependencies = YamlUtils.findElement(psiFile, "dependencies")
+                    val yamlGenerator = YAMLElementGenerator.getInstance(project)
+                    // 两个节点之间的分隔符
+                    val eolElement = yamlGenerator.createEol()
+                    if (dependencies == null) {
+                        dependencies =
+                            YamlUtils.createYAMLKeyValue(project, "dependencies:") ?: return@runWriteCommandAction
+                        val document = psiFile.getChildOfType<YAMLDocument>() ?: return@runWriteCommandAction
+                        val mapping = document.getChildOfType<YAMLMapping>()
+                        dependencies = if (mapping == null) {
+                            psiFile.add(dependencies) ?: return@runWriteCommandAction
+                        } else {
+                            mapping.add(eolElement)
+                            mapping.add(dependencies) ?: return@runWriteCommandAction
+                        }
+                    }
+
+                    if (!haveLocalizations) {
+                        YamlUtils.createYAMLKeyValue(project, "flutter_localizations:\n  sdk:flutter")
+                            ?.also { child ->
+                                dependencies.add(eolElement)
+                                dependencies.add(child)
+                            }
+                    }
+
+                    if (!haveIntl) {
+                        YamlUtils.createYAMLKeyValue(project, "intl: any")?.also { child ->
+                            dependencies.add(eolElement)
+                            dependencies.add(child)
+                        }
+                    }
+                }
+
+                FlutterCommandUtils.genL10N(project, pubRoot, sdk, onDone)
+            }
+        }
+    }
+
+    /**
+     * 是否编辑器界面调用此命令
+     */
+    protected open fun isEditorCall(): Boolean {
+        return false
     }
 }
