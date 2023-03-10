@@ -4,6 +4,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
+import io.flutter.pub.PubRoot
 
 /*
  * Project类扩展
@@ -39,7 +40,9 @@ private fun Project.isFlutterProjectInner(): Boolean {
 val Project.isFlutterProject
     get() = isFlutterProjectInner()
 
-// 通过文件获取所属的项目
+/**
+ * 通过文件获取所属的项目
+ */
 val VirtualFile.project: Project?
     get() {
         for (project in ProjectManager.getInstance().openProjects) {
@@ -50,3 +53,12 @@ val VirtualFile.project: Project?
         }
         return null
     }
+
+/**
+ * 指定名称的依赖是否存在
+ */
+fun PubRoot.haveDependencies(name: String): Boolean {
+    val packagesMap = this.packagesMap ?: return false
+    return packagesMap[name] != null
+}
+

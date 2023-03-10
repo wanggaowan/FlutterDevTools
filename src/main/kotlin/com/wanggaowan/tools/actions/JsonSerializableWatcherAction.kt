@@ -4,6 +4,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.project.Project
 import com.wanggaowan.tools.utils.XUtils
+import com.wanggaowan.tools.utils.ex.haveDependencies
 import com.wanggaowan.tools.utils.flutter.FlutterCommandUtils
 import com.wanggaowan.tools.utils.flutter.YamlUtils
 import io.flutter.actions.FlutterSdkAction
@@ -20,7 +21,7 @@ class JsonSerializableWatcherAction : FlutterSdkAction() {
     override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
         root?.also {
             it.pubspec.toPsiFile(project)?.also { psiFile ->
-                val haveJsonAnnotation =
+                val haveJsonAnnotation = root.haveDependencies("build_runner")
                     YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "build_runner")
                 val havePubspecLockFile = XUtils.havePubspecLockFile(project)
                 FlutterCommandUtils.addBuildRunner(project, it, sdk, haveJsonAnnotation) {

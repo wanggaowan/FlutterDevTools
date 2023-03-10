@@ -115,45 +115,36 @@
             <add-to-group group-id="GenerateGroup" anchor="last"/>
         </action>
         <action
-            id="FlutterDevTools.GeneratorGFileAction2"
-            class="com.wanggaowan.tools.actions.GeneratorGFileAction2"
+            id="FlutterDevTools.GeneratorGFileAction"
+            class="com.wanggaowan.tools.actions.GeneratorGFileAction"
             text="生成 .g.dart"
             description="根据Dart实体生成.g.dart文件">
             <add-to-group group-id="GenerateGroup" anchor="last"/>
         </action>
 
-        <!--tools分组下的命令-->
-        <action
-            id="FlutterDevTools.DoL10nAction"
-            class="com.wanggaowan.tools.actions.DoL10nAction"
-            text="gen-l10n"
-            description="执行flutter gen-l10n命令">
+        <group id="FlutterDevToolsActionGroup" class="com.wanggaowan.tools.actions.ToolsActionGroup">
+            <separator/>
+            <action
+                id="FlutterDevTools.DoL10nAction"
+                class="com.wanggaowan.tools.actions.DoL10nAction"
+                text="gen-l10n"
+                description="执行flutter gen-l10n命令"/>
+            <separator/>
+            <reference ref="FlutterDevTools.GeneratorGFileAction"/>
+            <action
+                id="FlutterDevTools.JsonSerializableWatcher"
+                class="com.wanggaowan.tools.actions.JsonSerializableWatcherAction"
+                text="开启自动生成.g.dart文件服务"
+                description="开启根据Dart实体生成.g.dart文件观察者"/>
+            <separator/>
+            <action id="FlutterDevTools.ImportSameImageResAction"
+                    class="com.wanggaowan.tools.actions.ImportSameImageResAction"
+                    text="导入不同分辨率下的相同文件"/>
+            <action id="FlutterDevTools.GeneratorImageRefAction"
+                    class="com.wanggaowan.tools.actions.GeneratorImageRefAction"
+                    text="生成图片资源引用文件并配置yaml assets节点"/>
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
-        </action>
-        <action
-            id="FlutterDevTools.GeneratorGFileAction"
-            class="com.wanggaowan.tools.actions.GeneratorGFileAction"
-            text="生成 .g.dart"
-            description="根据Dart实体生成.g.dart文件">
-            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
-        </action>
-        <action
-            id="FlutterDevTools.JsonSerializableWatcher"
-            class="com.wanggaowan.tools.actions.JsonSerializableWatcherAction"
-            text="开启自动生成.g.dart文件服务"
-            description="开启根据Dart实体生成.g.dart文件观察者">
-            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
-        </action>
-        <action id="FlutterDevTools.ImportSameImageResAction"
-                class="com.wanggaowan.tools.actions.ImportSameImageResAction"
-                text="导入不同分辨率下的相同文件">
-            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
-        </action>
-        <action id="FlutterDevTools.GeneratorImageRefAction"
-                class="com.wanggaowan.tools.actions.GeneratorImageRefAction"
-                text="生成图片资源引用文件并配置yaml assets节点">
-            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
-        </action>
+        </group>
 
         <action id="FlutterDevTools.CopyMultiSameNameFileAction"
                 class="com.wanggaowan.tools.actions.CopyMultiSameNameFileAction" text="复制不同分辨率下的相同图片"

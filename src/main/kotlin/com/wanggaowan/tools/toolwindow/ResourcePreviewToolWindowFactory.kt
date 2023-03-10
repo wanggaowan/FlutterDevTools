@@ -20,6 +20,10 @@ class ResourcePreviewToolWindowFactory : ToolWindowFactory {
     }
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
+        if (toolWindow.isDisposed) {
+            return
+        }
+
         val manager = toolWindow.contentManager
         val panel = ImagePreviewPanel(project)
         val content: Content = manager.factory.createContent(panel, "", false)

@@ -185,11 +185,14 @@ class JsonToDartAction : DumbAwareAction() {
         val pubRoot = PubRoot.forPsiFile(psiFile) ?: return
         val pubspec = pubRoot.pubspec.toPsiFile(project) ?: return
         ApplicationManager.getApplication().runReadAction {
-            val haveJsonAnnotation =
-                YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_annotation")
-            val haveJsonSerializable =
-                YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_serializable")
-            val haveBuildRunner = YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "build_runner")
+            val packagesMap = pubRoot.packagesMap
+
+            val haveJsonAnnotation = packagesMap?.get("json_annotation") != null
+                || YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_annotation")
+            val haveJsonSerializable = packagesMap?.get("json_serializable") != null
+                || YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_serializable")
+            val haveBuildRunner = packagesMap?.get("build_runner") != null
+                || YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "build_runner")
             val havePubspecLockFile = XUtils.havePubspecLockFile(project)
             addJsonAnnotation(project, pubRoot, sdk, haveJsonAnnotation) {
                 addJsonSerializable(project, pubRoot, sdk, haveJsonSerializable) {

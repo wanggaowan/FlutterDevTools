@@ -22,14 +22,16 @@ import org.jetbrains.yaml.psi.YAMLMapping
  */
 open class DoL10nAction : FlutterSdkAction() {
     override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
-        root?.also { pubRoot ->
-            doGenL10n(project, sdk, pubRoot) {
-                val exampleDir = pubRoot.exampleDir
-                if (exampleDir != null) {
-                    val examplePubRoot = PubRoot.forDirectory(exampleDir)
-                    if (examplePubRoot != null) {
-                        doGenL10n(project, sdk, examplePubRoot)
-                    }
+        if (root == null) {
+            return
+        }
+
+        doGenL10n(project, sdk, root) {
+            val exampleDir = root.exampleDir
+            if (exampleDir != null) {
+                val examplePubRoot = PubRoot.forDirectory(exampleDir)
+                if (examplePubRoot != null) {
+                    doGenL10n(project, sdk, examplePubRoot)
                 }
             }
         }
@@ -47,10 +49,12 @@ open class DoL10nAction : FlutterSdkAction() {
     ) {
         WriteCommandAction.runWriteCommandAction(project) {
             pubRoot.pubspec.toPsiFile(project)?.also { psiFile ->
-                val haveLocalizations =
-                    YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "flutter_localizations")
-                val haveIntl =
-                    YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "intl")
+                val packagesMap = pubRoot.packagesMap
+                // 通过packagesMap可以多层级依赖的情况下flutter_localizations是否存在
+                val haveLocalizations = packagesMap?.get("flutter_localizations") != null
+                    || YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "flutter_localizations")
+                val haveIntl = packagesMap?.get("intl") != null
+                    || YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "intl")
                 if (!haveLocalizations || !haveIntl) {
                     var dependencies = YamlUtils.findElement(psiFile, "dependencies")
                     val yamlGenerator = YAMLElementGenerator.getInstance(project)
@@ -70,7 +74,7 @@ open class DoL10nAction : FlutterSdkAction() {
                     }
 
                     if (!haveLocalizations) {
-                        YamlUtils.createYAMLKeyValue(project, "flutter_localizations:\n  sdk:flutter")
+                        YamlUtils.createYAMLKeyValue(project, "flutter_localizations:\n  sdk: flutter")
                             ?.also { child ->
                                 dependencies.add(eolElement)
                                 dependencies.add(child)
