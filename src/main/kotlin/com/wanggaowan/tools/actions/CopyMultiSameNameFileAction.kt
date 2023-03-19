@@ -8,6 +8,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
+import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import java.awt.Toolkit
@@ -25,6 +26,34 @@ import java.io.File
 class CopyMultiSameNameFileAction : AnAction() {
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
+    }
+
+    override fun update(e: AnActionEvent) {
+        val project = e.project?:return
+        if (!project.isFlutterProject) {
+            e.presentation.isVisible = false
+            return
+        }
+
+        val virtualFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
+        if (virtualFiles.isNullOrEmpty()) {
+            e.presentation.isVisible = false
+            return
+        }
+
+        if (!virtualFiles[0].path.startsWith("${project.basePath}/${PluginSettings.getImagesFileDir(project)}")) {
+            e.presentation.isVisible = false
+            return
+        }
+
+        for (file in virtualFiles) {
+            if (file.isDirectory) {
+                e.presentation.isVisible = false
+                return
+            }
+        }
+
+        e.presentation.isVisible = true
     }
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -100,29 +129,6 @@ class CopyMultiSameNameFileAction : AnAction() {
             Toolkit.getDefaultToolkit().systemClipboard.setContents(FileTransferable(needCopyFile), null)
             NotificationUtils.showBalloonMsg(project, "已复制到剪切板", NotificationType.INFORMATION)
         }
-    }
-
-    override fun update(e: AnActionEvent) {
-        val project = e.project
-        if (project?.isFlutterProject != true) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        val virtualFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
-        if (virtualFiles.isNullOrEmpty()) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        for (file in virtualFiles) {
-            if (!file.isDirectory) {
-                e.presentation.isVisible = true
-                return
-            }
-        }
-
-        e.presentation.isVisible = false
     }
 
     /**

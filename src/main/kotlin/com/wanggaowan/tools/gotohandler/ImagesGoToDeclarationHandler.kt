@@ -5,12 +5,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.jetbrains.lang.dart.psi.DartComponentName
-import com.jetbrains.lang.dart.psi.DartFunctionBody
-import com.jetbrains.lang.dart.psi.DartGetterDeclaration
-import com.jetbrains.lang.dart.psi.DartId
-import com.jetbrains.lang.dart.psi.DartReferenceExpression
-import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
+import com.jetbrains.lang.dart.psi.*
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 
@@ -66,27 +61,14 @@ object ImagesGoToDeclarationHandler {
         return elements.toTypedArray()
     }
 
-    private fun findFile(project: Project, path: String): List<PsiElement> {
+    fun findFile(project: Project, path: String): List<PsiElement> {
         val index = path.lastIndexOf("/")
         val imageDir = if (index == -1) "" else path.substring(0, index)
         val imageName = if (index == -1) path else path.substring(index + 1)
         val data = mutableListOf<PsiElement>()
 
         val basePath = project.basePath
-        var element = VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$path")?.toPsiFile(project)
-        if (element != null) {
-            data.add(element)
-            return data
-        }
-
-        element = VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$imageDir/1.5x/$imageName")
-            ?.toPsiFile(project)
-        if (element != null) {
-            data.add(element)
-            return data
-        }
-
-        element = VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$imageDir/2.0x/$imageName")
+        var element = VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$imageDir/4.0x/$imageName")
             ?.toPsiFile(project)
         if (element != null) {
             data.add(element)
@@ -100,8 +82,21 @@ object ImagesGoToDeclarationHandler {
             return data
         }
 
-        element = VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$imageDir/4.0x/$imageName")
+        element = VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$imageDir/2.0x/$imageName")
             ?.toPsiFile(project)
+        if (element != null) {
+            data.add(element)
+            return data
+        }
+
+        element = VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$imageDir/1.5x/$imageName")
+            ?.toPsiFile(project)
+        if (element != null) {
+            data.add(element)
+            return data
+        }
+
+        element = VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$path")?.toPsiFile(project)
         if (element != null) {
             data.add(element)
             return data
