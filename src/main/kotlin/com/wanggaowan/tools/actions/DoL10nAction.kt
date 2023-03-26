@@ -1,6 +1,5 @@
 package com.wanggaowan.tools.actions
 
-import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
@@ -37,9 +36,9 @@ open class DoL10nAction : FlutterSdkAction() {
         }
     }
 
-    override fun getActionUpdateThread(): ActionUpdateThread {
-        return ActionUpdateThread.BGT
-    }
+    // override fun getActionUpdateThread(): ActionUpdateThread {
+    //     return ActionUpdateThread.BGT
+    // }
 
     protected fun doGenL10n(
         project: Project,

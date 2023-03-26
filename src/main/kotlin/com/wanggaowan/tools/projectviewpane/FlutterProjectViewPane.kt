@@ -19,11 +19,11 @@ import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.module.impl.LoadedModuleDescriptionImpl
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.modules
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
+import com.wanggaowan.tools.utils.ex.getModules
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import icons.FlutterIcons
 import javax.swing.Icon
@@ -44,8 +44,8 @@ class FlutterProjectViewPane(private val project: Project) : ProjectViewPane(pro
      * 判断项目视图是否展示
      */
     override fun isInitiallyVisible(): Boolean {
-        val modules = project.modules
-        if (modules.isEmpty()) {
+        val modules = project.getModules()
+        if (modules.isNullOrEmpty()) {
             return false
         }
 

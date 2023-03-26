@@ -1,7 +1,10 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.vfs.VirtualFile
 import com.wanggaowan.tools.settings.PluginSettings
@@ -16,9 +19,9 @@ import com.wanggaowan.tools.utils.ex.isFlutterProject
  */
 class DeleteMultiSameNameFileAction : AnAction() {
 
-    override fun getActionUpdateThread(): ActionUpdateThread {
-        return ActionUpdateThread.BGT
-    }
+    // override fun getActionUpdateThread(): ActionUpdateThread {
+    //     return ActionUpdateThread.BGT
+    // }
 
     override fun update(e: AnActionEvent) {
         val module = e.getData(LangDataKeys.MODULE) ?: return

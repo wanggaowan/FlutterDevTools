@@ -11,10 +11,14 @@ import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.wanggaowan.tools.utils.ex.*
+import com.wanggaowan.tools.utils.ex.basePath
+import com.wanggaowan.tools.utils.ex.findChild
+import com.wanggaowan.tools.utils.ex.isFlutterProject
+import com.wanggaowan.tools.utils.ex.rootDir
 import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
 import io.flutter.sdk.FlutterSdk
 import kotlinx.coroutines.*
+import org.jetbrains.kotlin.idea.util.findModule
 import org.jetbrains.kotlin.idea.util.projectStructure.getModule
 
 /**
@@ -85,7 +89,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
         val file: VirtualFile = event.oldFile ?: return
         if (needDoGenL10nMap[file.path] == true) {
             needDoGenL10nMap.remove(file.path)
-            val module = file.module ?: return
+            val module = file.findModule(event.manager.project) ?: return
             fileDocumentManager.value.saveAllDocuments()
             doGenL10n(module, file.path.contains("/example/"))
         }

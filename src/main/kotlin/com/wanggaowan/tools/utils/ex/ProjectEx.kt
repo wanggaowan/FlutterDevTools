@@ -3,9 +3,9 @@ package com.wanggaowan.tools.utils.ex
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.module.Module
+import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.project.modules
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
@@ -20,6 +20,14 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 // <editor-fold desc="project">
 
+fun Project?.getModules(): Array<Module>? {
+    if (this == null) {
+        return null
+    }
+    return ModuleManager.getInstance(this).modules
+}
+
+
 /**
  * 是否是Flutter项目
  */
@@ -33,6 +41,12 @@ val Project?.isFlutterProject: Boolean
         if (isFP) {
             return true
         }
+
+        val modules = getModules()
+        if (modules.isNullOrEmpty()) {
+            return false
+        }
+
         for (module in modules) {
             if (module.isFlutterProject) {
                 return true
@@ -63,8 +77,8 @@ fun Project.findChild(name: String) = rootDir?.findChild(name)
 
 val Project.flutterModules: List<Module>?
     get() {
-        val modules = modules
-        if (modules.isEmpty()) {
+        val modules = getModules()
+        if (modules.isNullOrEmpty()) {
             return null
         }
         val list = mutableListOf<Module>()
@@ -129,15 +143,30 @@ val VirtualFile?.isFlutterProject: Boolean
  */
 val VirtualFile.module: Module?
     get() {
+        var inModule: Module? = null
+        var inModuleBasePath: String? = null
         for (project in ProjectManager.getInstance().openProjects) {
-            for (module in project.modules) {
+            val modules = project.getModules()
+            if (modules.isNullOrEmpty()) {
+                continue
+            }
+
+            for (module in modules) {
                 val basePath = module.basePath
                 if (basePath != null && path.startsWith(basePath)) {
-                    return module
+                    // 此处不能找到第一个就返回，因为可能path路径上存在多个module，
+                    // 需要匹配最长路径的module
+                    if (inModuleBasePath == null) {
+                        inModule = module
+                        inModuleBasePath = basePath
+                    } else if (inModuleBasePath.length < basePath.length) {
+                        inModule = module
+                        inModuleBasePath = basePath
+                    }
                 }
             }
         }
-        return null
+        return inModule
     }
 
 // </editor-fold>
@@ -177,6 +206,7 @@ fun PsiElement?.findModule(): Module? {
     if (this == null) {
         return null
     }
+
     val parent = getParentOfType<PsiFile>(strict = true) ?: return null
     return parent.virtualFile.module
 }

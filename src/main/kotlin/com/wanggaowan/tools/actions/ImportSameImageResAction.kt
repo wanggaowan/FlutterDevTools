@@ -1,7 +1,6 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.WriteCommandAction
@@ -36,9 +35,9 @@ class ImportSameImageResAction : AnAction() {
         }
     }
 
-    override fun getActionUpdateThread(): ActionUpdateThread {
-        return ActionUpdateThread.BGT
-    }
+    // override fun getActionUpdateThread(): ActionUpdateThread {
+    //     return ActionUpdateThread.BGT
+    // }
 
     companion object {
         /**

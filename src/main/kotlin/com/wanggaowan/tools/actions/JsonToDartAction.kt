@@ -3,7 +3,6 @@ package com.wanggaowan.tools.actions
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
-import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
@@ -88,9 +87,9 @@ class JsonToDartAction : DumbAwareAction() {
         }
     }
 
-    override fun getActionUpdateThread(): ActionUpdateThread {
-        return ActionUpdateThread.BGT
-    }
+    // override fun getActionUpdateThread(): ActionUpdateThread {
+    //     return ActionUpdateThread.BGT
+    // }
 
     override fun update(e: AnActionEvent) {
         if (!e.isFlutterProject) {

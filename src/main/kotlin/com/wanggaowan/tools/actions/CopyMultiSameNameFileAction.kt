@@ -1,7 +1,10 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.vfs.VirtualFile
@@ -23,9 +26,9 @@ import java.io.File
  * @author Created by wanggaowan on 2023/3/6 13:09
  */
 class CopyMultiSameNameFileAction : AnAction() {
-    override fun getActionUpdateThread(): ActionUpdateThread {
-        return ActionUpdateThread.BGT
-    }
+    // override fun getActionUpdateThread(): ActionUpdateThread {
+    //     return ActionUpdateThread.BGT
+    // }
 
     override fun update(e: AnActionEvent) {
         val module = e.getData(LangDataKeys.MODULE) ?: return

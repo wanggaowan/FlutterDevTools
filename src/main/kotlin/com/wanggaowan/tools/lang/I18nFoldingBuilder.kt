@@ -19,6 +19,7 @@ import com.wanggaowan.tools.utils.ex.findChild
 import com.wanggaowan.tools.utils.ex.findModule
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
+import org.jetbrains.kotlin.idea.util.projectStructure.module
 import org.jetbrains.yaml.psi.YAMLKeyValue
 
 /**
@@ -34,7 +35,8 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
     ): Array<FoldingDescriptor> { // 查找需要折叠的元素
         val group = FoldingGroup.newGroup("flutter dev tools")
         val descriptors = mutableListOf<FoldingDescriptor>()
-        if (root.project.isFlutterProject) {
+
+        if (root.module.isFlutterProject) {
             PsiTreeUtil.collectElementsOfType(root, DartReferenceExpression::class.java).forEach {
                 if (it is DartReferenceExpression) {
                     val text = it.text

@@ -14,9 +14,12 @@ repositories {
 
 // Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
 intellij {
-    version.set("2022.3.1")
-    type.set("IC") // Target IDE Platform
-    plugins.set(listOf("java","Kotlin","Dart:223.8214.16","io.flutter:72.0.4","yaml"))
+    // version.set("2022.3.1")
+    // type.set("IC") // IC:intellij社区版 IU:intellij收费版
+
+    version.set("213.7172.25.2113.9123335")
+    type.set("AI") // AndroidStudio
+    plugins.set(listOf("java","Kotlin","Dart:213.7433","io.flutter:72.1.1","yaml"))
 }
 
 tasks {
