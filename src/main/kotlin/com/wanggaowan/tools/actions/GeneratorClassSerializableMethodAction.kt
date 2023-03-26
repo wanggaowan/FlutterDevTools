@@ -17,7 +17,7 @@ import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 
 /**
- * 根据选择的dart class，生成class对应的序列号方法，序列号配置项
+ * 根据选择的dart class，生成class对应的序列化方法，序列化配置项
  *
  * @author Created by wanggaowan on 2023/2/6 15:44
  */
@@ -30,8 +30,7 @@ class GeneratorClassSerializableMethodAction : AnAction() {
     }
 
     override fun update(e: AnActionEvent) {
-        val project = e.project ?: return
-        if (!project.isFlutterProject) {
+        if (!e.isFlutterProject) {
             e.presentation.isVisible = false
             return
         }

@@ -3,6 +3,7 @@ package com.wanggaowan.tools.actions
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -20,6 +21,7 @@ import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.StringUtils
 import com.wanggaowan.tools.utils.XUtils.isImage
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
+import com.wanggaowan.tools.utils.ex.flutterModules
 import com.wanggaowan.tools.utils.ex.rootDir
 import com.wanggaowan.tools.utils.flutter.YamlUtils
 import io.flutter.pub.PubRoot
@@ -40,8 +42,10 @@ class GeneratorImageRefAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        GeneratorImageRefUtils.generate(project)
-        GeneratorImageRefUtils.generate(project, true)
+        project.flutterModules?.forEach {
+            GeneratorImageRefUtils.generate(it)
+            GeneratorImageRefUtils.generate(it, true)
+        }
     }
 
     override fun getActionUpdateThread(): ActionUpdateThread {
@@ -53,9 +57,9 @@ object GeneratorImageRefUtils {
     /**
      * 生成图片引用文件，[isExampleModule]表示当前是否为项目中example模块生成
      */
-    fun generate(project: Project?, isExampleModule: Boolean = false) {
-        val projectWrapper = project ?: return
-        val pubRoot = PubRoot.forDirectory(projectWrapper.rootDir) ?: return
+    fun generate(module: Module?, isExampleModule: Boolean = false) {
+        val projectWrapper = module?.project ?: return
+        val pubRoot = PubRoot.forDirectory(module.rootDir) ?: return
         val exampleDir = pubRoot.exampleDir
         if (isExampleModule && (exampleDir == null || pubRoot.exampleLibMain == null)) {
             return
@@ -74,17 +78,17 @@ object GeneratorImageRefUtils {
         val imageRefClassName: String
         val projectFile: VirtualFile
         if (isExampleModule) {
-            imagesRelDirPath = formatPath(PluginSettings.getExampleImagesFileDir(project))
-            imageRefFilePath = formatPath(PluginSettings.getExampleImagesRefFilePath(project))
-            imageRefFileName = PluginSettings.getExampleImagesRefFileName(project)
-            imageRefClassName = PluginSettings.getExampleImagesRefClassName(project)
+            imagesRelDirPath = formatPath(PluginSettings.getExampleImagesFileDir(projectWrapper))
+            imageRefFilePath = formatPath(PluginSettings.getExampleImagesRefFilePath(projectWrapper))
+            imageRefFileName = PluginSettings.getExampleImagesRefFileName(projectWrapper)
+            imageRefClassName = PluginSettings.getExampleImagesRefClassName(projectWrapper)
             imagesDir = virtualFileManager.findFileByUrl("file://${exampleDir!!.path}/${imagesRelDirPath}")
             projectFile = exampleDir
         } else {
-            imagesRelDirPath = formatPath(PluginSettings.getImagesFileDir(project))
-            imageRefFilePath = formatPath(PluginSettings.getImagesRefFilePath(project))
-            imageRefFileName = PluginSettings.getImagesRefFileName(project)
-            imageRefClassName = PluginSettings.getImagesRefClassName(project)
+            imagesRelDirPath = formatPath(PluginSettings.getImagesFileDir(projectWrapper))
+            imageRefFilePath = formatPath(PluginSettings.getImagesRefFilePath(projectWrapper))
+            imageRefFileName = PluginSettings.getImagesRefFileName(projectWrapper)
+            imageRefClassName = PluginSettings.getImagesRefClassName(projectWrapper)
             imagesDir = virtualFileManager.findFileByUrl("file://${pubRoot.path}/${imagesRelDirPath}")
             projectFile = pubRoot.root
         }

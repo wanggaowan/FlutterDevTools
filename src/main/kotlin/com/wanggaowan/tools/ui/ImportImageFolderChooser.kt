@@ -1,16 +1,15 @@
 package com.wanggaowan.tools.ui
 
 import com.intellij.ide.projectView.ProjectViewNode
-import com.intellij.ide.projectView.TreeStructureProvider
-import com.intellij.ide.projectView.impl.AbstractProjectTreeStructure
-import com.intellij.ide.projectView.impl.ProjectAbstractTreeStructureBase
-import com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode
-import com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode
 import com.intellij.ide.projectView.impl.nodes.PsiFileNode
 import com.intellij.ide.util.TreeFileChooser
 import com.intellij.ide.util.treeView.AlphaComparator
 import com.intellij.ide.util.treeView.NodeRenderer
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.fileChooser.FileChooserDescriptor
+import com.intellij.openapi.fileChooser.ex.FileNodeDescriptor
+import com.intellij.openapi.fileChooser.ex.RootFileElement
+import com.intellij.openapi.fileChooser.impl.FileTreeStructure
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.util.Condition
@@ -74,7 +73,7 @@ class ImportImageFolderChooser(
     private var mSelectedFolder: VirtualFile? = null
     private var mOldSelectedFolder: VirtualFile? = null
 
-    private var mBuilder: StructureTreeModel<ProjectAbstractTreeStructureBase>? = null
+    private var mBuilder: StructureTreeModel<FileTreeStructure>? = null
     private val mDisableStructureProviders = false
     private val mShowLibraryContents = false
     private var mCardShow = CARD_RENAME
@@ -128,25 +127,10 @@ class ImportImageFolderChooser(
      * 构建文件选择面板
      */
     private fun createFileChoosePanel(): JComponent {
-        val treeStructure: ProjectAbstractTreeStructureBase = object : AbstractProjectTreeStructure(project) {
-            override fun isHideEmptyMiddlePackages(): Boolean {
-                return true
-            }
-
+        val descriptor = FileChooserDescriptor(false, true, false, false, false, false)
+        val treeStructure: FileTreeStructure = object : FileTreeStructure(project, descriptor) {
             override fun getChildElements(element: Any): Array<Any> {
                 return filterFiles(super.getChildElements(element))
-            }
-
-            override fun isShowLibraryContents(): Boolean {
-                return mShowLibraryContents
-            }
-
-            override fun isShowModules(): Boolean {
-                return false
-            }
-
-            override fun getProviders(): List<TreeStructureProvider>? {
-                return if (mDisableStructureProviders) null else super.getProviders()
             }
         }
 
@@ -454,23 +438,24 @@ class ImportImageFolderChooser(
                 }
 
                 val userObject = node.userObject ?: return TreeVisitor.Action.SKIP_CHILDREN
-                if (userObject is ProjectViewProjectNode) {
+                if (userObject !is FileNodeDescriptor) {
+                    return TreeVisitor.Action.SKIP_CHILDREN
+                }
+
+                val element = userObject.element
+                if (element is RootFileElement) {
                     return TreeVisitor.Action.CONTINUE
                 }
 
-                if (userObject is PsiDirectoryNode) {
-                    val file2 = userObject.virtualFile ?: return TreeVisitor.Action.SKIP_CHILDREN
-                    val path = file.path
-                    val path2 = file2.path
-                    if (path2 == path) {
-                        return TreeVisitor.Action.INTERRUPT
-                    }
+                val file2 = element.file ?: return TreeVisitor.Action.SKIP_CHILDREN
+                val path = file.path
+                val path2 = file2.path
+                if (path2 == path) {
+                    return TreeVisitor.Action.INTERRUPT
+                }
 
-                    if (path.startsWith(path2)) {
-                        return TreeVisitor.Action.CONTINUE
-                    }
-
-                    return TreeVisitor.Action.SKIP_CHILDREN
+                if (path.startsWith(path2)) {
+                    return TreeVisitor.Action.CONTINUE
                 }
 
                 return TreeVisitor.Action.SKIP_CHILDREN
@@ -510,8 +495,8 @@ class ImportImageFolderChooser(
     private fun isChosenFolder(): Boolean {
         val path = myTree.selectionPath ?: return false
         val node = path.lastPathComponent as DefaultMutableTreeNode
-        val userObject = node.userObject as? ProjectViewNode<*> ?: return false
-        val vFile = userObject.virtualFile
+        val userObject = node.userObject as? FileNodeDescriptor ?: return false
+        val vFile = userObject.element.file
         return (vFile != null).apply {
             mSelectedFolder = vFile
         }

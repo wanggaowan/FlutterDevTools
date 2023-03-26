@@ -1,15 +1,14 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.NotificationUtils
+import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
@@ -29,26 +28,22 @@ class CopyMultiSameNameFileAction : AnAction() {
     }
 
     override fun update(e: AnActionEvent) {
-        val project = e.project?:return
-        if (!project.isFlutterProject) {
-            e.presentation.isVisible = false
+        val module = e.getData(LangDataKeys.MODULE) ?: return
+        if (!module.isFlutterProject) {
             return
         }
 
         val virtualFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
         if (virtualFiles.isNullOrEmpty()) {
-            e.presentation.isVisible = false
             return
         }
 
-        if (!virtualFiles[0].path.startsWith("${project.basePath}/${PluginSettings.getImagesFileDir(project)}")) {
-            e.presentation.isVisible = false
+        if (!virtualFiles[0].path.startsWith("${module.basePath}/${PluginSettings.getImagesFileDir(module.project)}")) {
             return
         }
 
         for (file in virtualFiles) {
             if (file.isDirectory) {
-                e.presentation.isVisible = false
                 return
             }
         }
@@ -57,14 +52,16 @@ class CopyMultiSameNameFileAction : AnAction() {
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val basePath = project.basePath ?: return
+        val module = e.getData(LangDataKeys.MODULE) ?: return
+        val basePath = module.basePath ?: return
+
+        val project = module.project
         val projectRootFolder = VirtualFileManager.getInstance().findFileByUrl("file://${basePath}") ?: return
         WriteCommandAction.runWriteCommandAction(project) {
             var ideaFolder = projectRootFolder.findChild(".idea")
             if (ideaFolder == null) {
                 try {
-                    ideaFolder = projectRootFolder.createChildDirectory(null, ".idea")
+                    ideaFolder = projectRootFolder.createChildDirectory(module, ".idea")
                 } catch (e: Exception) {
                     return@runWriteCommandAction
                 }
@@ -72,7 +69,7 @@ class CopyMultiSameNameFileAction : AnAction() {
             var copyCacheFolder = ideaFolder.findChild("copyCache")
             if (copyCacheFolder == null) {
                 try {
-                    copyCacheFolder = ideaFolder.createChildDirectory(null, "copyCache")
+                    copyCacheFolder = ideaFolder.createChildDirectory(module, "copyCache")
                 } catch (e: Exception) {
                     return@runWriteCommandAction
                 }
@@ -108,7 +105,7 @@ class CopyMultiSameNameFileAction : AnAction() {
                             ) {
                                 copyFromFolders?.add(child.name)
                                 try {
-                                    copyToFolders.add(copyCacheFolder.createChildDirectory(project, child.name))
+                                    copyToFolders.add(copyCacheFolder.createChildDirectory(module, child.name))
                                 } catch (e: Exception) {
                                     return@runWriteCommandAction
                                 }
@@ -116,7 +113,7 @@ class CopyMultiSameNameFileAction : AnAction() {
                         }
                     }
 
-                    copyFileToCacheFolder(it, copyCacheFolder, copyFromFolders, copyToFolders)
+                    copyFileToCacheFolder(module, it, copyCacheFolder, copyFromFolders, copyToFolders)
                 }
             }
 
@@ -135,6 +132,7 @@ class CopyMultiSameNameFileAction : AnAction() {
      * 复制需要粘贴的文件到临时的缓存目录
      */
     private fun copyFileToCacheFolder(
+        module: Module,
         file: VirtualFile,
         copyToFolderParent: VirtualFile,
         copyFromFolderList: List<String>?,
@@ -156,11 +154,11 @@ class CopyMultiSameNameFileAction : AnAction() {
 
         val fileName = file.name
         var child = VirtualFileManager.getInstance().findFileByUrl("file://${parentPath}/$fileName")
-        child?.copy(null, copyToFolderParent, fileName)
+        child?.copy(module, copyToFolderParent, fileName)
         copyFromFolderList.indices.forEach {
             val folderName = copyFromFolderList[it]
             child = VirtualFileManager.getInstance().findFileByUrl("file://${parentPath}/$folderName/$fileName")
-            child?.copy(null, copyToFolderList[it], fileName)
+            child?.copy(module, copyToFolderList[it], fileName)
         }
     }
 

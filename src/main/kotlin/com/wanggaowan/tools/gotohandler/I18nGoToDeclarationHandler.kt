@@ -1,7 +1,6 @@
 package com.wanggaowan.tools.gotohandler
 
-import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.project.Project
+import com.intellij.openapi.module.Module
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
@@ -16,10 +15,7 @@ import com.wanggaowan.tools.lang.I18nFoldingBuilder
  * @author Created by wanggaowan on 2023/3/4 23:56
  */
 object I18nGoToDeclarationHandler {
-    fun getGotoDeclarationTargets(
-        project: Project,
-        sourceElement: PsiElement, offset: Int, editor: Editor?
-    ): Array<PsiElement>? {
+    fun getGotoDeclarationTargets(module: Module, sourceElement: PsiElement): Array<PsiElement>? {
         if (sourceElement !is LeafPsiElement) {
             return null
         }
@@ -54,7 +50,7 @@ object I18nGoToDeclarationHandler {
             path != null && path.contains("/example/")
         }
 
-        val file = I18nFoldingBuilder.getTranslateFile(project, isExample) ?: return null
+        val file = I18nFoldingBuilder.getTranslateFile(module, isExample) ?: return null
         return arrayOf(file)
     }
 }

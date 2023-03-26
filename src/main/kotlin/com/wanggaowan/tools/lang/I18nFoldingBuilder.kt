@@ -7,14 +7,16 @@ import com.intellij.lang.folding.FoldingBuilderEx
 import com.intellij.lang.folding.FoldingDescriptor
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.FoldingGroup
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbAware
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
+import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.findChild
+import com.wanggaowan.tools.utils.ex.findModule
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.yaml.psi.YAMLKeyValue
@@ -47,7 +49,9 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
     }
 
     override fun getPlaceholderText(node: ASTNode): String? { // 返回折叠的元素需要展示的文本内容
-        val element = node.psi.reference?.resolve() ?: return null
+        val element = node.psi ?: return null
+        val module = element.findModule() ?: return null
+
         val psiFile = PsiTreeUtil.getParentOfType(element, PsiFile::class.java)
         val isExample = if (psiFile == null) {
             false
@@ -56,11 +60,11 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
             path != null && path.contains("/example/")
         }
 
-        val translateFile = getTranslateFile(element.project, isExample) ?: return null
+        val translateFile = getTranslateFile(module, isExample) ?: return null
         try {
             val jsonObject = Gson().fromJson(translateFile.text, JsonObject::class.java)
-            val jsonElement = jsonObject.get(element.text)
-            if (jsonElement.isJsonPrimitive) {
+            val jsonElement = jsonObject.get(element.children[1].text)
+            if (jsonElement != null && jsonElement.isJsonPrimitive) {
                 return jsonElement.toString()
             }
             return null
@@ -77,11 +81,12 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         /**
          * 查找多语言引用的字段翻译文件对象
          */
-        internal fun getTranslateFile(project: Project, isExample: Boolean = false): PsiElement? {
+        internal fun getTranslateFile(module: Module, isExample: Boolean = false): PsiElement? {
+            val basePath = module.basePath ?: return null
             val l10nFile = if (isExample) {
-                project.findChild("example")?.findChild("l10n.yaml")?.toPsiFile(project)
+                module.findChild("example")?.findChild("l10n.yaml")?.toPsiFile(module.project)
             } else {
-                project.findChild("l10n.yaml")?.toPsiFile(project)
+                module.findChild("l10n.yaml")?.toPsiFile(module.project)
             }
             var transientFilePath: String
             if (l10nFile != null) {
@@ -115,11 +120,11 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
 
             if (isExample) {
                 return VirtualFileManager.getInstance()
-                    .findFileByUrl("file://${project.basePath}/example/$transientFilePath")?.toPsiFile(project)
+                    .findFileByUrl("file://$basePath/example/$transientFilePath")?.toPsiFile(module.project)
             }
 
-            return VirtualFileManager.getInstance().findFileByUrl("file://${project.basePath}/$transientFilePath")
-                ?.toPsiFile(project)
+            return VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$transientFilePath")
+                ?.toPsiFile(module.project)
         }
     }
 }

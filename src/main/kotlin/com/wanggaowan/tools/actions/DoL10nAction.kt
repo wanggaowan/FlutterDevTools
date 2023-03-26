@@ -55,11 +55,12 @@ open class DoL10nAction : FlutterSdkAction() {
                     || YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "flutter_localizations")
                 val haveIntl = packagesMap?.get("intl") != null
                     || YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "intl")
+
+                val yamlGenerator = YAMLElementGenerator.getInstance(project)
+                // 两个节点之间的分隔符
+                val eolElement = yamlGenerator.createEol()
                 if (!haveLocalizations || !haveIntl) {
                     var dependencies = YamlUtils.findElement(psiFile, "dependencies")
-                    val yamlGenerator = YAMLElementGenerator.getInstance(project)
-                    // 两个节点之间的分隔符
-                    val eolElement = yamlGenerator.createEol()
                     if (dependencies == null) {
                         dependencies =
                             YamlUtils.createYAMLKeyValue(project, "dependencies:") ?: return@runWriteCommandAction
@@ -86,6 +87,27 @@ open class DoL10nAction : FlutterSdkAction() {
                             dependencies.add(eolElement)
                             dependencies.add(child)
                         }
+                    }
+                }
+
+                var flutterElement = YamlUtils.findElement(psiFile, "flutter")
+                if (flutterElement == null) {
+                    flutterElement =
+                        YamlUtils.createYAMLKeyValue(project, "flutter:") ?: return@runWriteCommandAction
+                    val document = psiFile.getChildOfType<YAMLDocument>() ?: return@runWriteCommandAction
+                    val mapping = document.getChildOfType<YAMLMapping>()
+                    flutterElement = if (mapping == null) {
+                        psiFile.add(flutterElement) ?: return@runWriteCommandAction
+                    } else {
+                        mapping.add(eolElement)
+                        mapping.add(flutterElement) ?: return@runWriteCommandAction
+                    }
+                }
+
+                if (YamlUtils.findElement(flutterElement, "generate") == null) {
+                    YamlUtils.createYAMLKeyValue(project, "generate: true")?.also { child ->
+                        flutterElement.add(eolElement)
+                        flutterElement.add(child)
                     }
                 }
 

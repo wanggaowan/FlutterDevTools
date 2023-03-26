@@ -17,6 +17,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>1.5</p>
+    <ul>
+      <li>支持一个项目多个Flutter模块工程模式</li>
+    </ul>
+
     <p>1.4</p>
     <ul>
       <li>增加一键删除相同名称但不同分辨率文件夹下多张图片功能</li>

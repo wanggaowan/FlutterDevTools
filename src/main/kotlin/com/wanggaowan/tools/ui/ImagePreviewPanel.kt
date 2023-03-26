@@ -2,7 +2,9 @@ package com.wanggaowan.tools.ui
 
 import com.intellij.ide.util.EditorHelper
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.project.Project
+import com.intellij.openapi.fileChooser.FileChooser
+import com.intellij.openapi.fileChooser.FileChooserDescriptor
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
@@ -16,6 +18,7 @@ import com.intellij.util.ui.update.Activatable
 import com.intellij.util.ui.update.UiNotifyConnector
 import com.wanggaowan.tools.listener.SimpleComponentListener
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
+import com.wanggaowan.tools.utils.ex.basePath
 import icons.SdkIcons
 import java.awt.*
 import java.awt.event.*
@@ -29,7 +32,7 @@ import javax.swing.event.DocumentListener
  *
  * @author Created by wanggaowan on 2022/6/17 13:13
  */
-class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
+class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
     // 搜素布局相关View
     private lateinit var mSearchPanel: JPanel
@@ -74,7 +77,7 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
             }
         }))
 
-        project.messageBus.connect()
+        module.project.messageBus.connect()
             .subscribe(ToolWindowManagerListener.TOPIC, object : ToolWindowManagerListener {
                 override fun stateChanged(toolWindowManager: ToolWindowManager) {
                     // 通过监听窗口的变化判断是否修改了主题，当打开设置界面并关闭后，此方法会回调
@@ -90,20 +93,21 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
     }
 
     private fun initRootPath() {
-        val basePath = project.basePath
-        mRootFilePath = if (project.basePath.isNullOrEmpty()) {
-            null
-        } else {
-            val rootPath = PropertiesSerializeUtils.getString(project, ROOT_PATH, "")
-            if (rootPath.isNotEmpty()) {
-                if (File(rootPath).exists()) {
-                    rootPath
-                } else {
-                    "${basePath}/assets/images"
-                }
+        val basePath = module.basePath
+        if (basePath.isNullOrEmpty()) {
+            mRootFilePath = null
+            return
+        }
+
+        val rootPath = PropertiesSerializeUtils.getString(module.project, ROOT_PATH, "")
+        mRootFilePath = if (rootPath.isNotEmpty()) {
+            if (File(rootPath).exists()) {
+                rootPath
             } else {
                 "${basePath}/assets/images"
             }
+        } else {
+            "${basePath}/assets/images"
         }
     }
 
@@ -286,7 +290,7 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
 
         // 增加图片预览的根路径显示
         val path = mRootFilePath ?: ""
-        val basePath = project.basePath ?: ""
+        val basePath = module.basePath ?: ""
         mRootPathJPanel = JPanel(GridBagLayout())
         mRootPathJPanel.border = BorderFactory.createCompoundBorder(
             BorderFactory.createCompoundBorder(
@@ -332,14 +336,14 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
         jButton.addActionListener {
             jButton.isEnabled = false
             val file = VirtualFileManager.getInstance().findFileByUrl("file://$mRootFilePath")
-            val fileDialog = FileChooseDialog(project, FileChooseDialog.CHOSE_DIR, file)
-            fileDialog.show()
+            val descriptor = FileChooserDescriptor(false, true, false, false, false, false)
+            val selectedFile = FileChooser.chooseFile(descriptor,module.project,file)
             jButton.isEnabled = true
-            fileDialog.selectedFile?.also {
+            selectedFile?.also {
                 mRootFilePath = it.path
                 val path2 = mRootFilePath ?: ""
-                val basePath2 = project.basePath ?: ""
-                PropertiesSerializeUtils.putString(project, ROOT_PATH, path2)
+                val basePath2 = module.basePath ?: ""
+                PropertiesSerializeUtils.putString(module.project, ROOT_PATH, path2)
                 mRootPathLabel.text = path2.replace(basePath2, "")
                 mImages = getImageData()
                 setNewImages()
@@ -556,7 +560,7 @@ class ImagePreviewPanel(val project: Project) : JPanel(), Disposable {
                 super.mouseClicked(e)
                 if (e.clickCount == 2) {
                     val file = VirtualFileManager.getInstance().findFileByUrl("file://$imagePath") ?: return
-                    val psiFile = PsiManager.getInstance(project).findFile(file) ?: return
+                    val psiFile = PsiManager.getInstance(module.project).findFile(file) ?: return
                     EditorHelper.openFilesInEditor(arrayOf<PsiFile?>(psiFile))
                 }
             }

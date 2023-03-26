@@ -1,5 +1,6 @@
 package com.wanggaowan.tools.listener
 
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.vfs.VirtualFile
@@ -10,6 +11,8 @@ import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.wanggaowan.tools.actions.GeneratorImageRefUtils
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.XUtils
+import com.wanggaowan.tools.utils.ex.basePath
+import com.wanggaowan.tools.utils.ex.flutterModules
 import com.wanggaowan.tools.utils.ex.rootDir
 import io.flutter.pub.PubRoot
 import kotlinx.coroutines.*
@@ -27,80 +30,173 @@ class GeneratorImageRefListener : BulkFileListener {
     override fun after(events: MutableList<out VFileEvent>) {
         super.after(events)
         coroutineScope.value.launch {
-            val pair = isImageChange(events)
-            if (pair != null) {
-                if (pair.second == 1) {
-                    // 仅仅最后一次图片变更时执行,如果多个项目都有图片变化，则只处理最后一个项目
-                    // 这里不区分多项目，一般情况下只会有一个项目文件在变化
-                    if (job?.isActive == true) {
-                        job?.cancel()
-                    }
-
-                    job = coroutineScope.value.launch {
-                        delay(1000)
-                        GeneratorImageRefUtils.generate(pair.first)
-                    }
-                }
-
-                if (pair.second == 2) {
-                    // 仅仅最后一次图片变更时执行,如果多个项目都有图片变化，则只处理最后一个项目
-                    // 这里不区分多项目，一般情况下只会有一个项目文件在变化
-                    if (jobForExample?.isActive == true) {
-                        jobForExample?.cancel()
-                    }
-
-                    jobForExample = coroutineScope.value.launch {
-                        delay(1000)
-                        GeneratorImageRefUtils.generate(pair.first, true)
-                    }
+            val changeDataList = parseFileEvent(events)
+            changeDataList.forEach {
+                if (it.imageChangeType == CHANGE) {
+                    runJob(it.module, false)
+                } else if (it.imageChangeType == CHANGE_EXAMPLE) {
+                    runJob(it.module, true)
                 }
             }
         }
     }
 
-    // 只要文件变动事件有一个图片更改的事件，就认为图片有变动
-    private fun isImageChange(events: MutableList<out VFileEvent>): Pair<Project, Int>? {
+    /**
+     * 执行生成图片引用文件和配置Assets节点命令
+     */
+    private fun runJob(module: Module, isExample: Boolean) {
+        module.basePath?.also { basePath ->
+            val path = if (isExample) "$basePath/Example" else basePath
+            var job = jobMap[path]
+            // 仅仅最后一次图片变更时执行,如果多个项目都有图片变化，则只处理最后一个项目
+            if (job?.isActive == true) {
+                job.cancel()
+            }
+
+            job = coroutineScope.value.launch {
+                delay(1000)
+                GeneratorImageRefUtils.generate(module, isExample)
+            }
+
+            jobMap[path] = job
+        }
+    }
+
+    /**
+     * 解析文件事件，返回需要处理的文件数据
+     */
+    private fun parseFileEvent(events: MutableList<out VFileEvent>): List<ChangeData> {
+        val changeData = mutableListOf<ChangeData>()
         for (event in events) {
             val file = event.file ?: continue
 
             if (event is VFileCopyEvent) {
-                val project = getProject(event) ?: continue
-                val imageChange = isImageChange(1, project, file, event.path)
+                val module = getModule(event, event.path) ?: continue
+                val imageChange = isImageChange(1, module, file, event.path)
                 if (imageChange != 0) {
-                    return Pair(project, imageChange)
+                    changeData.add(ChangeData(module, imageChange))
                 }
                 continue
             }
 
             if (event is VFileCreateEvent || event is VFileDeleteEvent) {
-                val project = getProject(event) ?: continue
-                val imageChange = isImageChange(0, project, event.file, "")
+                val module = getModule(event, file.path) ?: continue
+                val imageChange = isImageChange(0, module, file, "")
                 if (imageChange != 0) {
-                    return Pair(project, imageChange)
+                    changeData.add(ChangeData(module, imageChange))
                 }
 
                 continue
             }
 
             if (event is VFileMoveEvent) {
-                val project = getProject(event) ?: continue
-                val imageChange = isImageChange(1, project, file, event.newPath)
-                if (imageChange != 0) {
-                    return Pair(project, imageChange)
+                var module = getModule(event, event.oldPath)
+                if (module != null) {
+                    val imageChange = isImageChange(1, module, file, event.oldPath)
+                    if (imageChange != 0) {
+                        changeData.add(ChangeData(module, imageChange))
+                    }
+                }
+
+                module = getModule(event, event.newPath)
+                if (module != null) {
+                    val imageChange = isImageChange(1, module, file, event.newPath)
+                    if (imageChange != 0) {
+                        changeData.add(ChangeData(module, imageChange))
+                    }
                 }
 
                 continue
             }
 
             if (event is VFilePropertyChangeEvent) {
-                val project = getProject(event) ?: continue
                 if (event.propertyName == "name") {
-                    val imageChange = isImageChange(0, project, file, "")
+                    val module = getModule(event, file.path) ?: continue
+                    val imageChange = isImageChange(0, module, file, "")
                     if (imageChange != 0) {
-                        return Pair(project, imageChange)
+                        changeData.add(ChangeData(module, imageChange))
                     }
                 }
                 continue
+            }
+        }
+        return changeData
+    }
+
+    /**
+     * 图片是否变更，[type]为0表示通过[file]判断文件变更，[type]为1表示通过[path]判断文件变更。
+     * 返回[NO_CHANGE]、[CHANGE]或[CHANGE_EXAMPLE]
+     */
+    private fun isImageChange(type: Int, module: Module, file: VirtualFile?, path: String): Int {
+        val pubRoot = PubRoot.forDirectory(module.rootDir) ?: return NO_CHANGE
+        val exampleDir = pubRoot.exampleDir
+        val exampleImagesDir =
+            if (exampleDir == null) null else "${exampleDir.path}/${PluginSettings.getExampleImagesFileDir(module.project)}"
+        val imagesDir = "${pubRoot.path}/${PluginSettings.getImagesFileDir(module.project)}"
+
+        if (type == 0) {
+            if (file == null) {
+                return NO_CHANGE
+            }
+
+            if (exampleImagesDir != null && file.path.startsWith(exampleImagesDir)) {
+                if (isFileInDir(exampleImagesDir, file)) {
+                    return CHANGE_EXAMPLE
+                }
+
+                return NO_CHANGE
+            }
+
+            if (isFileInDir(imagesDir, file)) {
+                return CHANGE
+            }
+
+            return NO_CHANGE
+        }
+
+        if (exampleImagesDir != null && path.startsWith(exampleImagesDir)) {
+            if (file != null && isImage(file)) {
+                return CHANGE_EXAMPLE
+            }
+            return NO_CHANGE
+        }
+
+        if (file != null && isImage(file) && path.startsWith(imagesDir)) {
+            return CHANGE
+        }
+
+        return NO_CHANGE
+    }
+
+    /**
+     * 获取文件时间所处的模块
+     */
+    private fun getModule(event: VFileEvent, filePath: String): Module? {
+        val requestor = event.requestor
+        if (requestor is PsiManager) {
+            return getModuleByProject(requestor.project, filePath)
+        }
+
+        if (requestor is PsiDirectoryImpl) {
+            return getModuleByProject(requestor.project, filePath)
+        }
+
+        if (requestor is Project) {
+            return getModuleByProject(requestor, filePath)
+        }
+
+        if (requestor is Module) {
+            return requestor
+        }
+
+        if (filePath.isEmpty()) {
+            return null
+        }
+
+        for (project in ProjectManager.getInstance().openProjects) {
+            val module = getModuleByProject(project, filePath)
+            if (module != null) {
+                return module
             }
         }
 
@@ -108,90 +204,31 @@ class GeneratorImageRefListener : BulkFileListener {
     }
 
     /**
-     * 图片是否变更，[type]为0表示通过[file]判断文件变更，[type]为1表示通过[path]判断文件变更。
-     * 返回0表示没有变更，1表示根项目文件图片变更，2表示example项目文件图片变更
+     * 根据文件路径获取项目中对应的模块
      */
-    private fun isImageChange(type: Int, project: Project, file: VirtualFile?, path: String): Int {
-        val pubRoot = PubRoot.forDirectory(project.rootDir) ?: return 0
-        val exampleDir = pubRoot.exampleDir
-        val exampleImagesDir =
-            if (exampleDir == null) null else "${exampleDir.path}/${PluginSettings.getExampleImagesFileDir(project)}"
-        val imagesDir = "${pubRoot.path}/${PluginSettings.getImagesFileDir(project)}"
-
-        if (type == 0) {
-            if (file == null) {
-                return 0
-            }
-
-            if (exampleImagesDir != null && file.path.startsWith(exampleImagesDir)) {
-                if (isImageChange(exampleImagesDir, file)) {
-                    return 2
-                }
-
-                return 0
-            }
-
-            if (isImageChange(imagesDir, file)) {
-                return 1
-            }
-
-            return 0
-        }
-
-        if (exampleImagesDir != null && path.startsWith(exampleImagesDir)) {
-            if (file != null && isImage(file)) {
-                return 2
-            }
-            return 0
-        }
-
-        if (file != null && isImage(file) && path.startsWith(imagesDir)) {
-            return 1
-        }
-
-        return 0
-    }
-
-    private fun getProject(event: VFileEvent): Project? {
-        val requestor = event.requestor
-        if (requestor is PsiManager) {
-            return requestor.project
-        }
-
-        if (requestor is PsiDirectoryImpl) {
-            return requestor.project
-        }
-
-        val paths = mutableListOf<String>()
-        when (event) {
-            is VFileMoveEvent -> {
-                paths.add(event.oldPath)
-                paths.add(event.newPath)
-            }
-
-            else -> {
-                paths.add(event.path)
-            }
-        }
-
-        if (paths.isEmpty()) {
+    private fun getModuleByProject(project: Project, filePath: String): Module? {
+        if (filePath.isEmpty()) {
             return null
         }
 
-        for (path in paths) {
-            for (project in ProjectManager.getInstance().openProjects) {
-                val basePath = project.basePath
-                if (basePath != null && path.startsWith(basePath)) {
-                    return project
-                }
-            }
+        val modules = project.flutterModules
+        if (modules.isNullOrEmpty()) {
+            return null
         }
 
+        for (module in modules) {
+            val basePath = module.basePath
+            if (basePath != null && filePath.startsWith(basePath)) {
+                return module
+            }
+        }
         return null
     }
 
-    // 只要给的文件或文件夹有一个文件发生变动就任务图片有变动
-    private fun isImageChange(imagesDir: String, file: VirtualFile?): Boolean {
+    /**
+     * 指定文件[file]是否是给定目录[imagesDir]下的文件
+     */
+    private fun isFileInDir(imagesDir: String, file: VirtualFile?): Boolean {
         if (file == null) {
             return false
         }
@@ -209,14 +246,16 @@ class GeneratorImageRefListener : BulkFileListener {
         }
 
         file.children.forEach {
-            if (isImageChange(imagesDir, it)) {
+            if (isFileInDir(imagesDir, it)) {
                 return true
             }
         }
         return false
     }
 
-    // 只要给的文件或文件夹包含图片，都认为是图片
+    /**
+     * 只要给的文件或文件夹包含图片，都认为是图片
+     */
     private fun isImage(virtualFile: VirtualFile): Boolean {
         if (!virtualFile.isDirectory) {
             return XUtils.isImage(virtualFile.name)
@@ -232,7 +271,30 @@ class GeneratorImageRefListener : BulkFileListener {
 
     companion object {
         private val coroutineScope = lazy { CoroutineScope(Dispatchers.Default) }
-        private var job: Job? = null
-        private var jobForExample: Job? = null
+        private val jobMap: MutableMap<String, Job> = mutableMapOf()
+
+        /**
+         * 无图片发生变更
+         */
+        const val NO_CHANGE = 0
+
+        /**
+         * Flutter项目图片发生变更
+         */
+        const val CHANGE = 1
+
+        /**
+         * Flutter项目内Example项目图片发生变更
+         */
+        const val CHANGE_EXAMPLE = 2
     }
 }
+
+/**
+ * 需要处理的数据
+ */
+data class ChangeData(
+    val module: Module,
+    val imageChangeType: Int
+)
+

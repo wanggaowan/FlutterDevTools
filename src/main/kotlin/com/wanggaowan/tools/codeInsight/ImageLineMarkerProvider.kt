@@ -11,6 +11,7 @@ import com.jetbrains.lang.dart.psi.DartFunctionBody
 import com.jetbrains.lang.dart.psi.DartGetterDeclaration
 import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
 import com.wanggaowan.tools.gotohandler.ImagesGoToDeclarationHandler
+import com.wanggaowan.tools.utils.ex.findModule
 import java.awt.Image
 import java.awt.event.MouseEvent
 import java.io.File
@@ -24,7 +25,8 @@ import javax.swing.ImageIcon
  */
 class ImageLineMarkerProvider : LineMarkerProvider {
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? { // 查找Images.homeIcSaoma类型节点引用的图片文件
-        val files = ImagesGoToDeclarationHandler.getGotoDeclarationTargets(element.project, element, 0, null)
+        val module = element.findModule() ?: return null
+        val files = ImagesGoToDeclarationHandler.getGotoDeclarationTargets(module, element)
         if (!files.isNullOrEmpty()) {
             return createLineMarkerInfo(element, files[0])
         }
@@ -34,7 +36,7 @@ class ImageLineMarkerProvider : LineMarkerProvider {
         if (element is DartStringLiteralExpression) {
             if (element.parent is DartFunctionBody && element.parent.parent is DartGetterDeclaration) {
                 val fileList = ImagesGoToDeclarationHandler.findFile(
-                    element.project, element.text.replace("'", "").replace("\"", "")
+                    module, element.text.replace("'", "").replace("\"", "")
                 )
                 if (fileList.isNotEmpty()) {
                     return createLineMarkerInfo(element, fileList[0])

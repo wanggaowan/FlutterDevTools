@@ -5,6 +5,7 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.Content
 import com.wanggaowan.tools.ui.ImagePreviewPanel
+import com.wanggaowan.tools.utils.ex.flutterModules
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 
 
@@ -24,9 +25,23 @@ class ResourcePreviewToolWindowFactory : ToolWindowFactory {
             return
         }
 
+        val modules = project.flutterModules
+        if (modules.isNullOrEmpty()) {
+            return
+        }
+
         val manager = toolWindow.contentManager
-        val panel = ImagePreviewPanel(project)
-        val content: Content = manager.factory.createContent(panel, "", false)
-        manager.addContent(content)
+        if (modules.size == 1) {
+            val panel = ImagePreviewPanel(modules[0])
+            val content: Content = manager.factory.createContent(panel, "", false)
+            manager.addContent(content)
+            return
+        }
+
+        modules.forEach {
+            val panel = ImagePreviewPanel(it)
+            val content: Content = manager.factory.createContent(panel, it.name, false)
+            manager.addContent(content)
+        }
     }
 }

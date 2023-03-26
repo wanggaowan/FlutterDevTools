@@ -93,8 +93,7 @@ class JsonToDartAction : DumbAwareAction() {
     }
 
     override fun update(e: AnActionEvent) {
-        val project = e.project ?: return
-        if (!project.isFlutterProject) {
+        if (!e.isFlutterProject) {
             e.presentation.isVisible = false
             return
         }

@@ -1,15 +1,12 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.NotificationUtils
+import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 
 /**
@@ -24,26 +21,22 @@ class DeleteMultiSameNameFileAction : AnAction() {
     }
 
     override fun update(e: AnActionEvent) {
-        val project = e.project?:return
-        if (!project.isFlutterProject) {
-            e.presentation.isVisible = false
+        val module = e.getData(LangDataKeys.MODULE) ?: return
+        if (!module.isFlutterProject) {
             return
         }
 
         val virtualFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
         if (virtualFiles.isNullOrEmpty()) {
-            e.presentation.isVisible = false
             return
         }
 
-        if (!virtualFiles[0].path.startsWith("${project.basePath}/${PluginSettings.getImagesFileDir(project)}")) {
-            e.presentation.isVisible = false
+        if (!virtualFiles[0].path.startsWith("${module.basePath}/${PluginSettings.getImagesFileDir(module.project)}")) {
             return
         }
 
         for (file in virtualFiles) {
             if (file.isDirectory) {
-                e.presentation.isVisible = false
                 return
             }
         }
@@ -52,23 +45,23 @@ class DeleteMultiSameNameFileAction : AnAction() {
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
+        val module = e.getData(LangDataKeys.MODULE) ?: return
         val files = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
         if (files.isNullOrEmpty()) {
             return
         }
 
-        WriteCommandAction.runWriteCommandAction(project) {
+        WriteCommandAction.runWriteCommandAction(module.project) {
             for (file in files) {
-                deleteFile(project, file)
+                deleteFile(module, file)
             }
-            NotificationUtils.showBalloonMsg(project, "已删除", NotificationType.INFORMATION)
+            NotificationUtils.showBalloonMsg(module.project, "已删除", NotificationType.INFORMATION)
         }
     }
 
-    private fun deleteFile(project: Project, file: VirtualFile) {
+    private fun deleteFile(requestor: Any, file: VirtualFile) {
         var parent = file.parent
-        file.delete(project)
+        file.delete(requestor)
         if (parent != null) {
             val name = parent.name
             if (isValidDir(name)) {
@@ -77,12 +70,12 @@ class DeleteMultiSameNameFileAction : AnAction() {
             parent?.children?.forEach {
                 if (!it.isDirectory) {
                     if (it.name == file.name) {
-                        it.delete(project)
+                        it.delete(requestor)
                     }
                 } else if (isValidDir(it.name)) {
                     it.children.forEach { child ->
                         if (!child.isDirectory && child.name == file.name) {
-                            child.delete(project)
+                            child.delete(requestor)
                         }
                     }
                 }

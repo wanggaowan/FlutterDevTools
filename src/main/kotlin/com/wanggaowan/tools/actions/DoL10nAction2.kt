@@ -15,8 +15,7 @@ import io.flutter.sdk.FlutterSdk
  */
 class DoL10nAction2 : DoL10nAction() {
     override fun update(e: AnActionEvent) {
-        val project = e.project ?: return
-        if (!project.isFlutterProject) {
+        if (!e.isFlutterProject) {
             e.presentation.isVisible = false
             return
         }
