@@ -54,7 +54,7 @@ class GeneratorImageRefListener : BulkFileListener {
             }
 
             job = coroutineScope.value.launch {
-                delay(1000)
+                delay(500)
                 GeneratorImageRefUtils.generate(module, isExample)
             }
 

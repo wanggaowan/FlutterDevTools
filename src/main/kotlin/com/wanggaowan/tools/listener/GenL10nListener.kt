@@ -101,7 +101,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
             }
 
             job = coroutineScope.value.launch {
-                delay(1000)
+                delay(500)
                 val workDir = if (isExample) module.findChild("example") else module.rootDir
                 workDir?.also {
                     FlutterSdk.getFlutterSdk(module.project)?.also { sdk ->

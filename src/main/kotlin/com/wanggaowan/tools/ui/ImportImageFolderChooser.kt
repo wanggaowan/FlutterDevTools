@@ -1,42 +1,23 @@
 package com.wanggaowan.tools.ui
 
-import com.intellij.ide.projectView.ProjectViewNode
-import com.intellij.ide.projectView.impl.nodes.PsiFileNode
 import com.intellij.ide.util.TreeFileChooser
-import com.intellij.ide.util.treeView.AlphaComparator
-import com.intellij.ide.util.treeView.NodeRenderer
-import com.intellij.openapi.Disposable
+import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
-import com.intellij.openapi.fileChooser.ex.FileNodeDescriptor
-import com.intellij.openapi.fileChooser.ex.RootFileElement
-import com.intellij.openapi.fileChooser.impl.FileTreeStructure
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageType
-import com.intellij.openapi.util.Condition
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.wm.WindowManager
-import com.intellij.psi.PsiDirectory
-import com.intellij.psi.PsiFile
 import com.intellij.ui.JBColor
 import com.intellij.ui.ScrollPaneFactory
-import com.intellij.ui.tree.AsyncTreeModel
-import com.intellij.ui.tree.StructureTreeModel
-import com.intellij.ui.tree.TreeVisitor
-import com.intellij.ui.tree.TreeVisitor.ByComponent
 import com.intellij.ui.treeStructure.Tree
-import com.intellij.util.ArrayUtil
-import com.intellij.util.Function
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.tree.TreeUtil
 import com.wanggaowan.tools.utils.msg.Toast
 import java.awt.*
 import java.io.File
 import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
-import javax.swing.tree.DefaultMutableTreeNode
-import javax.swing.tree.TreeSelectionModel
 import kotlin.collections.set
 
 /**
@@ -63,20 +44,10 @@ class ImportImageFolderChooser(
     private lateinit var mJRenamePanel: JPanel
 
     /**
-     * 切换文件选择/重命名面板的父面板
-     */
-    private var mCardPane: JPanel
-
-    /**
      * 选中的文件夹
      */
     private var mSelectedFolder: VirtualFile? = null
-    private var mOldSelectedFolder: VirtualFile? = null
 
-    private var mBuilder: StructureTreeModel<FileTreeStructure>? = null
-    private val mDisableStructureProviders = false
-    private val mShowLibraryContents = false
-    private var mCardShow = CARD_RENAME
     private var mRenameFileMap = mutableMapOf<String, MutableList<RenameEntity>>()
 
     /**
@@ -84,21 +55,13 @@ class ImportImageFolderChooser(
      */
     private var mOkActionListener: (() -> Unit)? = null
 
-    private val dispose = Disposable {
-        dispose()
-    }
-
     init {
         mSelectedFolder = initialFile
         setTitle(title)
 
         val rootPanel = JPanel(BorderLayout())
         contentPane = rootPanel
-        val layout = CardLayout()
-        mCardPane = JPanel(layout)
-        mCardPane.add(createRenameFilePanel(renameFiles), CARD_RENAME)
-        mCardPane.add(createFileChoosePanel(), CARD_FILE)
-        rootPanel.add(mCardPane, BorderLayout.CENTER)
+        rootPanel.add(createRenameFilePanel(renameFiles), BorderLayout.CENTER)
         rootPanel.add(createAction(), BorderLayout.SOUTH)
         pack()
 
@@ -118,34 +81,6 @@ class ImportImageFolderChooser(
             }
         }
         super.setVisible(visible)
-        if (!visible) {
-            dispose.dispose()
-        }
-    }
-
-    /**
-     * 构建文件选择面板
-     */
-    private fun createFileChoosePanel(): JComponent {
-        val descriptor = FileChooserDescriptor(false, true, false, false, false, false)
-        val treeStructure: FileTreeStructure = object : FileTreeStructure(project, descriptor) {
-            override fun getChildElements(element: Any): Array<Any> {
-                return filterFiles(super.getChildElements(element))
-            }
-        }
-
-        val model = StructureTreeModel(treeStructure, dispose)
-        model.setComparator(AlphaComparator.INSTANCE)
-        mBuilder = model
-        myTree = Tree(AsyncTreeModel(model, dispose))
-        myTree.isRootVisible = false
-        myTree.expandRow(0)
-        myTree.selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
-        myTree.cellRenderer = NodeRenderer()
-        val scrollPane = ScrollPaneFactory.createScrollPane(myTree)
-        scrollPane.preferredSize = JBUI.size(730, 300)
-        myTree.addTreeSelectionListener { handleSelectionChanged() }
-        return scrollPane
     }
 
     /**
@@ -176,7 +111,7 @@ class ImportImageFolderChooser(
         initRenamePanel()
         val scrollPane = ScrollPaneFactory.createScrollPane(mJRenamePanel)
         scrollPane.border = LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0)
-        scrollPane.preferredSize = JBUI.size(mJRenamePanel.width, 300)
+        scrollPane.preferredSize = JBUI.size(730, 300)
         return scrollPane
     }
 
@@ -364,18 +299,20 @@ class ImportImageFolderChooser(
         bottomPane.add(mBtnOk)
 
         chooseFolderBtn.addActionListener {
-            if (mCardShow == CARD_RENAME) {
-                chooseFolderBtn.isVisible = false
-                cancelBtn.isVisible = false
-                mBtnOk.text = "ok"
-                mCardShow = CARD_FILE
-                val layout = mCardPane.layout as CardLayout
-                layout.show(mCardPane, CARD_FILE)
-                myTree.requestFocus()
-                if (mOldSelectedFolder == null && initialFile != null) {
-                    selectFolder(initialFile)
-                }
-                mOldSelectedFolder = mSelectedFolder
+            isVisible = false
+            val oldSelectedFolder = mSelectedFolder
+            val descriptor = FileChooserDescriptor(false, true, false, false, false, false)
+            mSelectedFolder = FileChooser.chooseFile(descriptor, project, initialFile)
+            isVisible = true
+            mBtnOk.isEnabled = mSelectedFolder != null
+            if (mSelectedFolder == null) {
+                mJChosenFolder.text = null
+            } else {
+                mJChosenFolder.text = mSelectedFolder?.path?.replace(project.basePath ?: "", "")
+            }
+
+            if (oldSelectedFolder?.path != mSelectedFolder?.path) {
+                refreshRenamePanel()
             }
         }
 
@@ -384,21 +321,7 @@ class ImportImageFolderChooser(
         }
 
         mBtnOk.addActionListener {
-            if (mCardShow == CARD_FILE) {
-                if (mOldSelectedFolder?.path != mSelectedFolder?.path) {
-                    // initRenamePanel()
-                    refreshRenamePanel()
-                }
-
-                chooseFolderBtn.isVisible = true
-                cancelBtn.isVisible = true
-                mBtnOk.text = "import"
-                mCardShow = CARD_RENAME
-                val layout = mCardPane.layout as CardLayout
-                layout.show(mCardPane, CARD_RENAME)
-            } else {
-                doOKAction()
-            }
+            doOKAction()
         }
 
         return bottomPane
@@ -421,55 +344,6 @@ class ImportImageFolderChooser(
     }
 
     /**
-     * 选择文件夹
-     */
-    private fun selectFolder(file: VirtualFile) {
-        TreeUtil.promiseSelect(myTree, object : ByComponent<VirtualFile, DefaultMutableTreeNode>(file, Function {
-            if (it !is DefaultMutableTreeNode) {
-                return@Function null
-            }
-
-            return@Function it
-        }) {
-
-            override fun visit(node: DefaultMutableTreeNode?): TreeVisitor.Action {
-                if (node == null) {
-                    return TreeVisitor.Action.SKIP_CHILDREN
-                }
-
-                val userObject = node.userObject ?: return TreeVisitor.Action.SKIP_CHILDREN
-                if (userObject !is FileNodeDescriptor) {
-                    return TreeVisitor.Action.SKIP_CHILDREN
-                }
-
-                val element = userObject.element
-                if (element is RootFileElement) {
-                    return TreeVisitor.Action.CONTINUE
-                }
-
-                val file2 = element.file ?: return TreeVisitor.Action.SKIP_CHILDREN
-                val path = file.path
-                val path2 = file2.path
-                if (path2 == path) {
-                    return TreeVisitor.Action.INTERRUPT
-                }
-
-                if (path.startsWith(path2)) {
-                    return TreeVisitor.Action.CONTINUE
-                }
-
-                return TreeVisitor.Action.SKIP_CHILDREN
-            }
-
-            override fun contains(pathComponent: DefaultMutableTreeNode, thisComponent: VirtualFile): Boolean {
-                return false
-            }
-        }).onProcessed {
-
-        }
-    }
-
-    /**
      * 获取重命名文件Map，key为原始文件名称，value为重命名的值
      */
     fun getRenameFileMap(): Map<String, List<RenameEntity>> {
@@ -481,64 +355,6 @@ class ImportImageFolderChooser(
      */
     fun setOkActionListener(listener: (() -> Unit)?) {
         mOkActionListener = listener
-    }
-
-    private fun handleSelectionChanged() {
-        mBtnOk.isEnabled = isChosenFolder()
-        if (mSelectedFolder == null) {
-            mJChosenFolder.text = null
-        } else {
-            mJChosenFolder.text = mSelectedFolder?.path?.replace(project.basePath ?: "", "")
-        }
-    }
-
-    private fun isChosenFolder(): Boolean {
-        val path = myTree.selectionPath ?: return false
-        val node = path.lastPathComponent as DefaultMutableTreeNode
-        val userObject = node.userObject as? FileNodeDescriptor ?: return false
-        val vFile = userObject.element.file
-        return (vFile != null).apply {
-            mSelectedFolder = vFile
-        }
-    }
-
-    private fun filterFiles(list: Array<*>): Array<Any> {
-        val condition = Condition { psiFile: PsiFile ->
-            if (!psiFile.isDirectory) {
-                return@Condition false
-            } else if (filter != null && !filter.accept(psiFile)) {
-                return@Condition false
-            }
-
-            true
-        }
-
-        val result: MutableList<Any?> = ArrayList(list.size)
-        for (obj in list) {
-            val psiFile: PsiFile? = when (obj) {
-                is PsiFile -> {
-                    obj
-                }
-
-                is PsiFileNode -> {
-                    obj.value
-                }
-
-                else -> {
-                    null
-                }
-            }
-            if (psiFile != null && !condition.value(psiFile)) {
-                continue
-            } else if (obj is ProjectViewNode<*>) {
-                if (obj.value !is PsiDirectory) {
-                    // 只接收APP模块
-                    continue
-                }
-            }
-            result.add(obj)
-        }
-        return ArrayUtil.toObjectArray(result)
     }
 
     /**
@@ -580,18 +396,6 @@ class ImportImageFolderChooser(
         }
 
         return Pair(null, false)
-    }
-
-    companion object {
-        /**
-         * 文件选择面板
-         */
-        private const val CARD_FILE = "file"
-
-        /**
-         * 文件重命名面板
-         */
-        private const val CARD_RENAME = "rename"
     }
 }
 

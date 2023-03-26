@@ -24,8 +24,13 @@ class ImportSameImageResAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val descriptor = FileChooserDescriptor(true, true, false, false, false, true)
-        FileChooser.chooseFiles(descriptor, project, null) { files ->
+        val selectFile = PropertiesSerializeUtils.getString(project, IMPORT_FROM_FOLDER).let {
+            if (it.isEmpty()) null else VirtualFileManager.getInstance().findFileByUrl("file://$it")
+        }
+
+        FileChooser.chooseFiles(descriptor, project, selectFile) { files ->
             if (!files.isNullOrEmpty()) {
+                PropertiesSerializeUtils.putString(project, IMPORT_FROM_FOLDER, files[0]?.path ?: "")
                 ImportSameImageResUtils.import(project, files)
             }
         }
@@ -33,6 +38,13 @@ class ImportSameImageResAction : AnAction() {
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
+    }
+
+    companion object {
+        /**
+         * 图片导出的目录
+         */
+        private const val IMPORT_FROM_FOLDER = "importFromFolder"
     }
 }
 
