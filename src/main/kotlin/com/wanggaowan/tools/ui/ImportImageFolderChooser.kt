@@ -39,6 +39,8 @@ class ImportImageFolderChooser(
     private lateinit var mJChosenFolder: MyLabel
     private lateinit var mJRenamePanel: JPanel
 
+    private var mChosenFolderWidth = -1
+
     /**
      * 选中的文件夹
      */
@@ -61,19 +63,12 @@ class ImportImageFolderChooser(
         rootPanel.add(createRenameFilePanel(renameFiles), BorderLayout.CENTER)
         rootPanel.add(createAction(), BorderLayout.SOUTH)
         rootPanel.addComponentListener(object : SimpleComponentListener() {
-            override fun componentResized(p0: ComponentEvent?) {
-                // 窗体大小改变时，动态计算显示导入路径文本组件宽度
-                val minWidth = JBUI.scale(100)
-                if (mJChosenFolder.originalTextWidth <= minWidth) {
-                    setChosenFolderWrapWidth()
-                    return
+            override fun componentResized(p0: ComponentEvent?) { // 窗体大小改变时，动态计算显示导入路径文本组件宽度
+                var maxWidth = rootPanel.width - JBUI.scale(300)
+                if (maxWidth < 0) {
+                    maxWidth = 0
                 }
-
-                var width = rootPanel.width - JBUI.scale(300)
-                if (width < minWidth) {
-                    width = minWidth
-                }
-                mJChosenFolder.preferredSize = Dimension(width, JBUI.scale(30))
+                setChosenFolderWrapWidth(maxWidth)
             }
         })
 
@@ -82,23 +77,26 @@ class ImportImageFolderChooser(
         if (initialFile != null) {
             mBtnOk.isEnabled = true
             mJChosenFolder.text = initialFile.path
-            setChosenFolderWrapWidth()
+            setChosenFolderWrapWidth(JBUI.scale(400))
         } else {
             mBtnOk.isEnabled = false
         }
     }
 
-    private fun setChosenFolderWrapWidth() {
-        val preferredSize = mJChosenFolder.preferredSize
+    private fun setChosenFolderWrapWidth(maxWidth: Int = Int.MAX_VALUE) {
         val insets = mJChosenFolder.insets
         val insetsHorizontal = insets.left + insets.right
         val borderInsets = mJChosenFolder.border?.getBorderInsets(mJChosenFolder)
         val borderHorizontal = if (borderInsets == null) 0 else borderInsets.left + borderInsets.right
-        if (preferredSize == null || preferredSize.width > mJChosenFolder.originalTextWidth + insetsHorizontal + borderHorizontal) {
-            mJChosenFolder.preferredSize = Dimension(
-                mJChosenFolder.originalTextWidth + insetsHorizontal + borderHorizontal,
-                JBUI.scale(30)
-            )
+        val viewAclWith = mJChosenFolder.originalTextWidth + insetsHorizontal + borderHorizontal
+        if (mChosenFolderWidth != viewAclWith) {
+            if (maxWidth > viewAclWith) {
+                mChosenFolderWidth = viewAclWith
+                mJChosenFolder.preferredSize = Dimension(viewAclWith, JBUI.scale(30))
+            } else {
+                mChosenFolderWidth = maxWidth
+                mJChosenFolder.preferredSize = Dimension(maxWidth, JBUI.scale(30))
+            }
         }
     }
 
@@ -139,7 +137,7 @@ class ImportImageFolderChooser(
         mJRenamePanel = JPanel(GridBagLayout())
         initRenamePanel()
         val scrollPane = ScrollPaneFactory.createScrollPane(mJRenamePanel)
-        scrollPane.border = LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0)
+        scrollPane.border = LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0)
         return scrollPane
     }
 
@@ -173,7 +171,7 @@ class ImportImageFolderChooser(
                 cc.weightx = 0.0
                 panel.add(titleBox, cc)
 
-                val imageView = ImageView(File(it2.oldFile.path), UIConfig.isDarkTheme)
+                val imageView = ImageView(File(it2.oldFile.path))
                 imageView.preferredSize = JBUI.size(35)
                 imageView.maximumSize = JBUI.size(35)
                 imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
@@ -194,8 +192,7 @@ class ImportImageFolderChooser(
 
                 val box2 = Box.createHorizontalBox()
                 val (existFile, isInMap) = isImageExist(it2)
-                val existFileImageView =
-                    ImageView(if (existFile != null) File(existFile.path) else null, UIConfig.isDarkTheme)
+                val existFileImageView = ImageView(if (existFile != null) File(existFile.path) else null)
                 existFileImageView.preferredSize = JBUI.size(25)
                 existFileImageView.border = BorderFactory.createEmptyBorder(2, 2, 2, 5)
                 existFileImageView.isVisible = existFile != null
@@ -251,8 +248,7 @@ class ImportImageFolderChooser(
         var isDrawable = false
         var index = 0
         for (component in mJRenamePanel.components) {
-            if (component is JLabel) {
-                // 分类标题
+            if (component is JLabel) { // 分类标题
                 val value = component.text.trim() == "Drawable："
                 if (value != isDrawable) {
                     index = 0
@@ -276,9 +272,7 @@ class ImportImageFolderChooser(
     }
 
     private fun refreshHintVisible(
-        entity: RenameEntity,
-        hint: JCheckBox?,
-        imageView: ImageView?
+        entity: RenameEntity, hint: JCheckBox?, imageView: ImageView?
     ) {
         val (existFile2, isInMap) = isImageExist(entity)
         entity.existFile = existFile2 != null
@@ -314,7 +308,7 @@ class ImportImageFolderChooser(
         mJChosenFolder.ellipsize = MyLabel.TruncateAt.MIDDLE
         mJChosenFolder.border = BorderFactory.createEmptyBorder(0, 0, 0, 10)
         bottomPane.add(mJChosenFolder)
-        val chooseFolderBtn = JButton("change folder")
+        val chooseFolderBtn = JButton("change")
         bottomPane.add(chooseFolderBtn)
         bottomPane.add(Box.createHorizontalGlue())
         val cancelBtn = JButton("cancel")
@@ -324,14 +318,18 @@ class ImportImageFolderChooser(
 
         chooseFolderBtn.addActionListener {
             isVisible = false
-            val oldSelectedFolder = mSelectedFolder
             val descriptor = FileChooserDescriptor(false, true, false, false, false, false)
-            mSelectedFolder = FileChooser.chooseFile(descriptor, project, initialFile)
+            val selectedFolder = FileChooser.chooseFile(descriptor, project, mSelectedFolder)
             isVisible = true
             mBtnOk.isEnabled = mSelectedFolder != null
-            mJChosenFolder.text = mSelectedFolder?.path
-            if (oldSelectedFolder?.path != mSelectedFolder?.path) {
-                refreshRenamePanel()
+            if (selectedFolder != null) {
+                val oldSelectedFolder = mSelectedFolder
+                mSelectedFolder = selectedFolder
+                mJChosenFolder.text = mSelectedFolder?.path
+                setChosenFolderWrapWidth()
+                if (oldSelectedFolder?.path != mSelectedFolder?.path) {
+                    refreshRenamePanel()
+                }
             }
         }
 

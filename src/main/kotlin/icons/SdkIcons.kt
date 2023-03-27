@@ -1,7 +1,6 @@
 package icons
 
 import com.intellij.openapi.util.IconLoader
-import com.wanggaowan.tools.ui.UIConfig
 import javax.swing.Icon
 
 /**
@@ -10,64 +9,42 @@ import javax.swing.Icon
  * @author Created by wanggaowan on 2022/5/1 21:44
  */
 object SdkIcons {
-    @JvmStatic
-    val search: Icon
-        get() {
-            return if (UIConfig.isDarkTheme) {
-                IconLoader.getIcon("/icons/ic_search_dark.svg", SdkIcons::class.java)
-            } else {
-                IconLoader.getIcon("/icons/ic_search.svg", SdkIcons::class.java)
-            }
-        }
+    // IconLoader.getIcon，只要在同一个路径下放置同名，后缀为_dark的图片，则自动在暗色主题时加载dart图片
+    // 比如：/icons/ic_search.svg   /icons/ic_search_dark.svg
 
+    /**
+     * 搜索Icon
+     */
     @JvmStatic
-    val list: Icon
-        get() {
-            return if (UIConfig.isDarkTheme) {
-                IconLoader.getIcon("/icons/ic_list_dark.svg", SdkIcons::class.java)
-            } else {
-                IconLoader.getIcon("/icons/ic_list.svg", SdkIcons::class.java)
-            }
-        }
+    val search: Icon = IconLoader.getIcon("/icons/ic_search.svg", SdkIcons::class.java)
 
+    /**
+     * 图片预览方式为列表的Icon
+     */
     @JvmStatic
-    val grid: Icon
-        get() {
-            return if (UIConfig.isDarkTheme) {
-                IconLoader.getIcon("/icons/ic_grid_dark.svg", SdkIcons::class.java)
-            } else {
-                IconLoader.getIcon("/icons/ic_grid.svg", SdkIcons::class.java)
-            }
-        }
+    val list: Icon = IconLoader.getIcon("/icons/ic_list.svg", SdkIcons::class.java)
 
+    /**
+     * 图片预览方式为网格的Icon
+     */
     @JvmStatic
-    val refresh: Icon
-        get() {
-            return if (UIConfig.isDarkTheme) {
-                IconLoader.getIcon("/icons/ic_refresh_dark.svg", SdkIcons::class.java)
-            } else {
-                IconLoader.getIcon("/icons/ic_refresh.svg", SdkIcons::class.java)
-            }
-        }
+    val grid: Icon = IconLoader.getIcon("/icons/ic_grid.svg", SdkIcons::class.java)
 
+    /**
+     * 刷新Icon
+     */
     @JvmStatic
-    val close: Icon
-        get() {
-            return if (UIConfig.isDarkTheme) {
-                IconLoader.getIcon("/icons/ic_close_dark.svg", SdkIcons::class.java)
-            } else {
-                IconLoader.getIcon("/icons/ic_close.svg", SdkIcons::class.java)
-            }
-        }
+    val refresh: Icon = IconLoader.getIcon("/icons/ic_refresh.svg", SdkIcons::class.java)
 
+    /**
+     * 关闭Icon
+     */
     @JvmStatic
-    val closeFocus: Icon
-        get() {
-            return if (UIConfig.isDarkTheme) {
-                IconLoader.getIcon("/icons/ic_close_focus_dark.svg", SdkIcons::class.java)
-            } else {
-                IconLoader.getIcon("/icons/ic_close_focus.svg", SdkIcons::class.java)
-            }
-        }
+    val close: Icon = IconLoader.getIcon("/icons/ic_close.svg", SdkIcons::class.java)
 
+    /**
+     * 关闭获取到焦点时的Icon
+     */
+    @JvmStatic
+    val closeFocus: Icon = IconLoader.getIcon("/icons/ic_close_focus.svg", SdkIcons::class.java)
 }

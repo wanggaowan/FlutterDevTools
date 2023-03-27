@@ -1,6 +1,5 @@
 package com.wanggaowan.tools.ui
 
-import com.intellij.ide.ui.UISettingsListener
 import com.intellij.ide.util.EditorHelper
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.fileChooser.FileChooser
@@ -9,8 +8,6 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
-import com.intellij.openapi.wm.ToolWindowManager
-import com.intellij.openapi.wm.ex.ToolWindowManagerListener
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.ui.components.JBScrollPane
@@ -68,8 +65,6 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     // 默认预览图片文件夹
     private var mRootFilePath: String? = null
 
-    private var mDarkTheme = UIConfig.isDarkTheme
-
     init {
         Disposer.register(this, UiNotifyConnector(this, object : Activatable {
             override fun hideNotify() {}
@@ -79,21 +74,6 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 setNewImages()
             }
         }))
-
-        module.project.messageBus.connect()
-            .subscribe(ToolWindowManagerListener.TOPIC, object : ToolWindowManagerListener {
-                override fun stateChanged(toolWindowManager: ToolWindowManager) {
-                    // 通过监听窗口的变化判断是否修改了主题，当打开设置界面并关闭后，此方法会回调
-                    // 目前未找到直接监听主题变更的方法
-                    checkTheme()
-                }
-            })
-
-        module.project.messageBus.connect()
-            .subscribe(UISettingsListener.TOPIC, UISettingsListener {
-                // 此方法并不是在所有设置改变时都回调，测试发现切换主题，只有黑色主题时才回调
-                checkTheme()
-            })
 
         layout = BorderLayout()
         preferredSize = JBUI.size(320, 100)
@@ -135,7 +115,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         mImagePanel.border = null
         mScrollPane = JBScrollPane(mImagePanel)
         mScrollPane.background = null
-        mScrollPane.border = LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0)
+        mScrollPane.border = LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0)
         mScrollPane.horizontalScrollBar = null
         add(mScrollPane, BorderLayout.CENTER)
 
@@ -151,9 +131,9 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         mSearchPanel.layout = BoxLayout(mSearchPanel, BoxLayout.X_AXIS)
         mSearchPanel.border = BorderFactory.createCompoundBorder(
             BorderFactory.createCompoundBorder(
-                LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0),
+                LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
-            ), LineBorder(UIConfig.getInputUnFocusColor(), 1, true)
+            ), LineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
         )
         parent.add(mSearchPanel, BorderLayout.NORTH)
 
@@ -161,31 +141,31 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         mSearchBtn.preferredSize = Dimension(30, 30)
         mSearchBtn.minimumSize = mSearchBtn.preferredSize
         mSearchBtn.maximumSize = mSearchBtn.preferredSize
-        mSearchBtn.background = UIConfig.TRANSPARENT
+        mSearchBtn.background = UIColor.TRANSPARENT
         mSearchPanel.add(mSearchBtn)
 
         mSearchTextField = JTextField()
         mSearchTextField.preferredSize = Dimension(100, 30)
         mSearchTextField.minimumSize = Dimension(100, 30)
-        mSearchTextField.background = UIConfig.TRANSPARENT
+        mSearchTextField.background = UIColor.TRANSPARENT
         mSearchTextField.border = BorderFactory.createEmptyBorder()
         mSearchTextField.isOpaque = true
         mSearchTextField.addFocusListener(object : FocusListener {
             override fun focusGained(p0: FocusEvent?) {
                 mSearchPanel.border = BorderFactory.createCompoundBorder(
                     BorderFactory.createCompoundBorder(
-                        LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0),
+                        LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0),
                         BorderFactory.createEmptyBorder(9, 9, 9, 9)
-                    ), LineBorder(UIConfig.getInputFocusColor(), 2, true)
+                    ), LineBorder(UIColor.INPUT_FOCUS_COLOR, 2, true)
                 )
             }
 
             override fun focusLost(p0: FocusEvent?) {
                 mSearchPanel.border = BorderFactory.createCompoundBorder(
                     BorderFactory.createCompoundBorder(
-                        LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0),
+                        LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0),
                         BorderFactory.createEmptyBorder(10, 10, 10, 10)
-                    ), LineBorder(UIConfig.getInputUnFocusColor(), 1, true)
+                    ), LineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
                 )
             }
         })
@@ -201,7 +181,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         mClearBtn.setBorderWidth(7)
         mClearBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent?) {
-                mClearBtn.background = UIConfig.getMouseEnterColor2()
+                mClearBtn.background = UIColor.MOUSE_ENTER_COLOR2
                 mClearBtn.icon = SdkIcons.closeFocus
             }
 
@@ -213,7 +193,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
             override fun mousePressed(e: MouseEvent?) {
                 super.mousePressed(e)
-                mClearBtn.background = UIConfig.getMousePressColor2()
+                mClearBtn.background = UIColor.MOUSE_PRESS_COLOR2
                 mClearBtn.icon = SdkIcons.closeFocus
             }
 
@@ -277,7 +257,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
         mRefreshBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent?) {
-                mRefreshBtn.background = UIConfig.getMouseEnterColor()
+                mRefreshBtn.background = UIColor.MOUSE_ENTER_COLOR
             }
 
             override fun mouseExited(e: MouseEvent?) {
@@ -287,11 +267,11 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
             override fun mousePressed(e: MouseEvent?) {
                 super.mousePressed(e)
-                mRefreshBtn.background = UIConfig.getMousePressColor()
+                mRefreshBtn.background = UIColor.MOUSE_PRESS_COLOR
             }
 
             override fun mouseClicked(e: MouseEvent?) {
-                mRefreshBtn.background = UIConfig.getMouseEnterColor()
+                mRefreshBtn.background = UIColor.MOUSE_ENTER_COLOR
                 mImages = getImageData()
                 setNewImages()
             }
@@ -302,7 +282,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         mRootPathJPanel.border = BorderFactory.createCompoundBorder(
             BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(2, 4, 2, 4),
-                LineBorder(UIConfig.getInputUnFocusColor(), 1, true)
+                LineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
             ),
             BorderFactory.createEmptyBorder(0, 4, 0, 4)
         )
@@ -362,7 +342,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         mListLayoutBtn.preferredSize = JBUI.size(30)
         mListLayoutBtn.maximumSize = JBUI.size(30)
         mListLayoutBtn.minimumSize = JBUI.size(30)
-        mListLayoutBtn.background = UIConfig.getMousePressColor()
+        mListLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
         mListLayoutBtn.setBorderWidth(3)
         bottomRightPanel.add(mListLayoutBtn, c)
 
@@ -376,7 +356,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
         mListLayoutBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent?) {
-                mListLayoutBtn.background = UIConfig.getMouseEnterColor()
+                mListLayoutBtn.background = UIColor.MOUSE_ENTER_COLOR
 
             }
 
@@ -385,13 +365,13 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 if (mLayoutMode != 0) {
                     mListLayoutBtn.background = null
                 } else {
-                    mListLayoutBtn.background = UIConfig.getMousePressColor()
+                    mListLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
                 }
             }
 
             override fun mousePressed(e: MouseEvent?) {
                 super.mousePressed(e)
-                mListLayoutBtn.background = UIConfig.getMousePressColor()
+                mListLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
             }
 
             override fun mouseClicked(e: MouseEvent?) {
@@ -399,7 +379,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                     return
                 }
 
-                mListLayoutBtn.background = UIConfig.getMousePressColor()
+                mListLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
                 mGridLayoutBtn.background = null
 
                 mLayoutMode = 0
@@ -409,7 +389,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
         mGridLayoutBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent?) {
-                mGridLayoutBtn.background = UIConfig.getMouseEnterColor()
+                mGridLayoutBtn.background = UIColor.MOUSE_ENTER_COLOR
             }
 
             override fun mouseExited(e: MouseEvent?) {
@@ -417,13 +397,13 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 if (mLayoutMode != 1) {
                     mGridLayoutBtn.background = null
                 } else {
-                    mGridLayoutBtn.background = UIConfig.getMousePressColor()
+                    mGridLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
                 }
             }
 
             override fun mousePressed(e: MouseEvent?) {
                 super.mousePressed(e)
-                mGridLayoutBtn.background = UIConfig.getMousePressColor()
+                mGridLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
             }
 
             override fun mouseClicked(e: MouseEvent?) {
@@ -431,7 +411,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                     return
                 }
 
-                mGridLayoutBtn.background = UIConfig.getMousePressColor()
+                mGridLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
                 mListLayoutBtn.background = null
 
                 mLayoutMode = 1
@@ -554,13 +534,23 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         val panel = JPanel()
         panel.layout = BorderLayout()
         panel.addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent?) {
+                panel.background = UIColor.MOUSE_ENTER_COLOR
+            }
+
+            override fun mouseExited(e: MouseEvent?) {
+                panel.background = null
+            }
+
+            override fun mousePressed(e: MouseEvent?) {
+                panel.background = UIColor.MOUSE_PRESS_COLOR
+            }
+
             override fun mouseClicked(e: MouseEvent) {
-                super.mouseClicked(e)
-                if (e.clickCount == 2) {
-                    val file = VirtualFileManager.getInstance().findFileByUrl("file://$imagePath") ?: return
-                    val psiFile = PsiManager.getInstance(module.project).findFile(file) ?: return
-                    EditorHelper.openFilesInEditor(arrayOf<PsiFile?>(psiFile))
-                }
+                panel.background = null
+                val file = VirtualFileManager.getInstance().findFileByUrl("file://$imagePath") ?: return
+                val psiFile = PsiManager.getInstance(module.project).findFile(file) ?: return
+                EditorHelper.openFilesInEditor(arrayOf<PsiFile?>(psiFile))
             }
         })
 
@@ -569,15 +559,15 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             panel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
             panel.preferredSize = Dimension(width, 100)
 
-            val imageView = ImageView(getFile(imagePath), UIConfig.isDarkTheme)
+            val imageView = ImageView(getFile(imagePath))
             imageView.preferredSize = Dimension(80, 80)
             panel.add(imageView, BorderLayout.WEST)
-            imageView.border = LineBorder(UIConfig.getLineColor(), 1)
+            imageView.border = LineBorder(UIColor.LINE_COLOR, 1)
 
             val label = JLabel()
             label.border = BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(0, 30, 0, 0),
-                LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0)
+                LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0)
             )
 
             var path = imagePath
@@ -594,15 +584,15 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             panel.preferredSize = Dimension(mGridImageLayoutWidth + 20, mGridImageLayoutWidth + labelHeight + 20)
             panel.border = BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(10, 10, 10, 10),
-                LineBorder(UIConfig.getLineColor(), 1)
+                LineBorder(UIColor.LINE_COLOR, 1)
             )
 
-            val imageView = ImageView(getFile(imagePath), UIConfig.isDarkTheme)
+            val imageView = ImageView(getFile(imagePath))
             imageView.preferredSize = Dimension(mGridImageLayoutWidth, mGridImageLayoutWidth)
             panel.add(imageView, BorderLayout.CENTER)
 
             val label = JLabel()
-            label.background = UIConfig.getImageTitleBgColor()
+            label.background = UIColor.IMAGE_TITLE_BG_COLOR
             label.isOpaque = true
             label.preferredSize = Dimension(mGridImageLayoutWidth, labelHeight)
             label.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
@@ -687,47 +677,43 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     }
 
     private fun checkTheme() {
-        val isDarkTheme = UIConfig.isDarkTheme
-        if (mDarkTheme != isDarkTheme) {
-            mDarkTheme = isDarkTheme
-            updateTheme()
-        }
+
     }
 
     private fun updateTheme() {
-        val inputRectColor =
-            if (mSearchTextField.hasFocus()) UIConfig.getInputFocusColor() else UIConfig.getInputUnFocusColor()
-        mSearchPanel.border = BorderFactory.createCompoundBorder(
-            BorderFactory.createCompoundBorder(
-                LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
-            ), LineBorder(inputRectColor, 1, true)
-        )
-        mSearchBtn.icon = SdkIcons.search
-        mClearBtn.icon = SdkIcons.close
-
-        mListLayoutBtn.icon = SdkIcons.list
-        if (mLayoutMode == 0) {
-            mListLayoutBtn.background = UIConfig.getMousePressColor()
-        }
-
-        mGridLayoutBtn.icon = SdkIcons.grid
-        if (mLayoutMode == 1) {
-            mGridLayoutBtn.background = UIConfig.getMousePressColor()
-        }
-
-        mRefreshBtn.icon = SdkIcons.refresh
-
-        mRootPathJPanel.border = BorderFactory.createCompoundBorder(
-            BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(2, 2, 2, 2),
-                LineBorder(UIConfig.getInputUnFocusColor(), 1, true)
-            ),
-            BorderFactory.createEmptyBorder(0, 4, 0, 4)
-        )
-
-        mScrollPane.border = LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0)
-        setNewImages()
+        // val inputRectColor =
+        //     if (mSearchTextField.hasFocus()) UIColor.getInputFocusColor() else UIColor.getInputUnFocusColor()
+        // mSearchPanel.border = BorderFactory.createCompoundBorder(
+        //     BorderFactory.createCompoundBorder(
+        //         LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0),
+        //         BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        //     ), LineBorder(inputRectColor, 1, true)
+        // )
+        // mSearchBtn.icon = SdkIcons.search
+        // mClearBtn.icon = SdkIcons.close
+        //
+        // mListLayoutBtn.icon = SdkIcons.list
+        // if (mLayoutMode == 0) {
+        //     mListLayoutBtn.background = UIColor.getMousePressColor()
+        // }
+        //
+        // mGridLayoutBtn.icon = SdkIcons.grid
+        // if (mLayoutMode == 1) {
+        //     mGridLayoutBtn.background = UIColor.getMousePressColor()
+        // }
+        //
+        // mRefreshBtn.icon = SdkIcons.refresh
+        //
+        // mRootPathJPanel.border = BorderFactory.createCompoundBorder(
+        //     BorderFactory.createCompoundBorder(
+        //         BorderFactory.createEmptyBorder(2, 2, 2, 2),
+        //         LineBorder(UIColor.getInputUnFocusColor(), 1, true)
+        //     ),
+        //     BorderFactory.createEmptyBorder(0, 4, 0, 4)
+        // )
+        //
+        // mScrollPane.border = LineBorder(UIColor.getLineColor(), 0, 0, 1, 0)
+        // setNewImages()
     }
 
     companion object {
