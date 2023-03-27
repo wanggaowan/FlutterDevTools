@@ -3,16 +3,21 @@ package com.wanggaowan.tools.actions
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
+import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.ui.ImportImageFolderChooser
 import com.wanggaowan.tools.ui.RenameEntity
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
+import com.wanggaowan.tools.utils.ex.basePath
+import com.wanggaowan.tools.utils.ex.flutterModules
+import com.wanggaowan.tools.utils.ex.isFlutterProject
 
 /**
  * 导入不同分辨率相同图片资源
@@ -30,7 +35,20 @@ class ImportSameImageResAction : AnAction() {
         FileChooser.chooseFiles(descriptor, project, selectFile) { files ->
             if (!files.isNullOrEmpty()) {
                 PropertiesSerializeUtils.putString(project, IMPORT_FROM_FOLDER, files[0]?.path ?: "")
-                ImportSameImageResUtils.import(project, files)
+                var module = e.getData(LangDataKeys.MODULE)
+                module = if (module.isFlutterProject) module else {
+                    val modules = project.flutterModules
+                    if (modules.isNullOrEmpty()) {
+                        null
+                    } else {
+                        modules[0]
+                    }
+                }
+
+                val importToFolder = if (module == null) null else
+                    VirtualFileManager.getInstance()
+                        .findFileByUrl("file://${module.basePath}/${PluginSettings.getImagesFileDir(project)}")
+                ImportSameImageResUtils.import(project, files, importToFolder)
             }
         }
     }
@@ -53,29 +71,28 @@ object ImportSameImageResUtils {
      */
     private const val IMPORT_TO_FOLDER = "importToFolder"
 
-    fun import(project: Project?, files: List<VirtualFile>, importToFolder: VirtualFile? = null) {
-        val projectWrapper = project ?: return
+    fun import(project: Project, files: List<VirtualFile>, importToFolder: VirtualFile? = null) {
         val distinctFiles = getDistinctFiles(files)
-        val projectDir = projectWrapper.basePath
         var selectFile: VirtualFile? = importToFolder
         if (importToFolder == null) {
-            val preSelectFileFolder = PropertiesSerializeUtils.getString(projectWrapper, IMPORT_TO_FOLDER)
+            val preSelectFileFolder = PropertiesSerializeUtils.getString(project, IMPORT_TO_FOLDER)
             if (preSelectFileFolder.isNotEmpty()) {
                 selectFile =
                     VirtualFileManager.getInstance().findFileByUrl("file://${preSelectFileFolder}")
             }
         }
 
-        if (selectFile == null && projectDir != null) {
+        if (selectFile == null) {
             selectFile =
-                VirtualFileManager.getInstance().findFileByUrl("file://${projectDir}/assets/images")
+                VirtualFileManager.getInstance()
+                    .findFileByUrl("file://${project.basePath}/${PluginSettings.getImagesFileDir(project)}")
         }
 
-        val dialog = ImportImageFolderChooser(projectWrapper, "导入图片", selectFile, distinctFiles)
+        val dialog = ImportImageFolderChooser(project, "导入图片", selectFile, distinctFiles)
         dialog.setOkActionListener {
             val file = dialog.getSelectedFolder() ?: return@setOkActionListener
-            PropertiesSerializeUtils.putString(projectWrapper, IMPORT_TO_FOLDER, file.path)
-            importImages(projectWrapper, distinctFiles, file, dialog.getRenameFileMap())
+            PropertiesSerializeUtils.putString(project, IMPORT_TO_FOLDER, file.path)
+            importImages(project, distinctFiles, file, dialog.getRenameFileMap())
         }
         dialog.isVisible = true
     }

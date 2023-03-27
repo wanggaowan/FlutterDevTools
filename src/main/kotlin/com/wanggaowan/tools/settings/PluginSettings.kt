@@ -25,15 +25,26 @@ object PluginSettings {
     const val DEFAULT_IMAGES_REF_CLASS_NAME = "Images"
 
     fun getImagesFileDir(project: Project? = null): String {
-        return getValue(project, IMAGE_DIR, "assets/images")
+        return formatPath(getValue(project, IMAGE_DIR, "assets/images"))
     }
 
     fun setImagesFileDir(project: Project? = null, value: String) {
         setValue(project, IMAGE_DIR, value)
     }
 
+    private fun formatPath(path: String): String {
+        var mapPath = path
+        if (mapPath.startsWith("/")) {
+            mapPath = mapPath.substring(1)
+        }
+        if (mapPath.endsWith("/")) {
+            mapPath = mapPath.substring(0, mapPath.length - 1)
+        }
+        return mapPath
+    }
+
     fun getImagesRefFilePath(project: Project? = null): String {
-        return getValue(project, IMAGES_REF_FILE_PATH, "lib/resources")
+        return formatPath(getValue(project, IMAGES_REF_FILE_PATH, "lib/resources"))
     }
 
     fun setImagesRefFilePath(project: Project? = null, value: String) {
@@ -57,7 +68,7 @@ object PluginSettings {
     }
 
     fun getExampleImagesFileDir(project: Project? = null): String {
-        return getValue(project, EXAMPLE_IMAGE_DIR, "assets/images")
+        return formatPath(getValue(project, EXAMPLE_IMAGE_DIR, "assets/images"))
     }
 
     fun setExampleImagesFileDir(project: Project? = null, value: String) {
@@ -65,7 +76,7 @@ object PluginSettings {
     }
 
     fun getExampleImagesRefFilePath(project: Project? = null): String {
-        return getValue(project, EXAMPLE_IMAGES_REF_FILE_PATH, "lib/resources")
+        return formatPath(getValue(project, EXAMPLE_IMAGES_REF_FILE_PATH, "lib/resources"))
     }
 
     fun setExampleImagesRefFilePath(project: Project? = null, value: String) {

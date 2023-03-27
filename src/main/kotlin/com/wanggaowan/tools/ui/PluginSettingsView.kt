@@ -3,6 +3,7 @@ package com.wanggaowan.tools.ui
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
+import com.intellij.util.ui.UIUtil
 import io.flutter.pub.PubRoot
 import java.awt.Font
 import javax.swing.BorderFactory
@@ -35,9 +36,8 @@ class PluginSettingsView(pubRoot: PubRoot?) {
         if (pubRoot != null && pubRoot.exampleDir != null) {
             val example = JLabel("Example项目:")
             example.border = BorderFactory.createEmptyBorder(10, 0, 0, 0)
-            val font = example.font
-            val fontSize = if (font == null) 16 else font.size + 2
-            example.font = Font(null, Font.BOLD, fontSize)
+            val fontSize:Int = (UIUtil.getFontSize(UIUtil.FontSize.SMALL) + 2).toInt()
+            example.font = Font(example.font.name, Font.BOLD, fontSize)
             builder = builder.addComponent(example)
                 .addLabeledComponent(JBLabel("图片资源路径: "), exampleImagesDir, 1, false)
                 .addLabeledComponent(JBLabel("图片引用文件路径: "), exampleImagesRefFilePath, 1, false)

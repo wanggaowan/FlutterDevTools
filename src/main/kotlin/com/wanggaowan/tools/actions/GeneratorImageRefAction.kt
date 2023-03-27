@@ -77,15 +77,15 @@ object GeneratorImageRefUtils {
         val imageRefClassName: String
         val projectFile: VirtualFile
         if (isExampleModule) {
-            imagesRelDirPath = formatPath(PluginSettings.getExampleImagesFileDir(projectWrapper))
-            imageRefFilePath = formatPath(PluginSettings.getExampleImagesRefFilePath(projectWrapper))
+            imagesRelDirPath = PluginSettings.getExampleImagesFileDir(projectWrapper)
+            imageRefFilePath = PluginSettings.getExampleImagesRefFilePath(projectWrapper)
             imageRefFileName = PluginSettings.getExampleImagesRefFileName(projectWrapper)
             imageRefClassName = PluginSettings.getExampleImagesRefClassName(projectWrapper)
             imagesDir = virtualFileManager.findFileByUrl("file://${exampleDir!!.path}/${imagesRelDirPath}")
             projectFile = exampleDir
         } else {
-            imagesRelDirPath = formatPath(PluginSettings.getImagesFileDir(projectWrapper))
-            imageRefFilePath = formatPath(PluginSettings.getImagesRefFilePath(projectWrapper))
+            imagesRelDirPath = PluginSettings.getImagesFileDir(projectWrapper)
+            imageRefFilePath = PluginSettings.getImagesRefFilePath(projectWrapper)
             imageRefFileName = PluginSettings.getImagesRefFileName(projectWrapper)
             imageRefClassName = PluginSettings.getImagesRefClassName(projectWrapper)
             imagesDir = virtualFileManager.findFileByUrl("file://${pubRoot.path}/${imagesRelDirPath}")
@@ -116,17 +116,6 @@ object GeneratorImageRefUtils {
                 progressIndicator.fraction = 1.0
             }
         })
-    }
-
-    private fun formatPath(path: String): String {
-        var imagesDirPath = path
-        if (imagesDirPath.startsWith("/")) {
-            imagesDirPath = imagesDirPath.substring(1)
-        }
-        if (imagesDirPath.endsWith("/")) {
-            imagesDirPath = imagesDirPath.substring(0, imagesDirPath.length - 1)
-        }
-        return imagesDirPath
     }
 
     // <editor-fold desc="创建Images.dart相关逻辑">

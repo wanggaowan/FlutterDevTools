@@ -203,7 +203,7 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
     }
 
     override fun doMove(
-        project: Project?,
+        project: Project,
         elements: Array<out PsiElement>?,
         targetContainer: PsiElement?,
         callback: MoveCallback?

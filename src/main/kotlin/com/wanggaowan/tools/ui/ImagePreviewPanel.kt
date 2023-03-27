@@ -1,5 +1,6 @@
 package com.wanggaowan.tools.ui
 
+import com.intellij.ide.ui.UISettingsListener
 import com.intellij.ide.util.EditorHelper
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.fileChooser.FileChooser
@@ -14,9 +15,11 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.update.Activatable
 import com.intellij.util.ui.update.UiNotifyConnector
 import com.wanggaowan.tools.listener.SimpleComponentListener
+import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.ex.basePath
 import icons.SdkIcons
@@ -48,7 +51,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private lateinit var mGridLayoutBtn: ImageButton
     private lateinit var mRefreshBtn: ImageButton
     private lateinit var mRootPathJPanel: JPanel
-    private lateinit var mRootPathLabel: JLabel
+    private lateinit var mRootPathLabel: MyLabel
 
     // 网格展示模式时图片布局宽度
     private val mGridImageLayoutWidth = 160
@@ -86,8 +89,14 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 }
             })
 
+        module.project.messageBus.connect()
+            .subscribe(UISettingsListener.TOPIC, UISettingsListener {
+                // 此方法并不是在所有设置改变时都回调，测试发现切换主题，只有黑色主题时才回调
+                checkTheme()
+            })
+
         layout = BorderLayout()
-        preferredSize = Dimension(320, 100)
+        preferredSize = JBUI.size(320, 100)
         initRootPath()
         initPanel()
     }
@@ -104,10 +113,10 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             if (File(rootPath).exists()) {
                 rootPath
             } else {
-                "${basePath}/assets/images"
+                "${basePath}/${PluginSettings.getImagesFileDir(module.project)}"
             }
         } else {
-            "${basePath}/assets/images"
+            "${basePath}/${PluginSettings.getImagesFileDir(module.project)}"
         }
     }
 
@@ -289,8 +298,6 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         })
 
         // 增加图片预览的根路径显示
-        val path = mRootFilePath ?: ""
-        val basePath = module.basePath ?: ""
         mRootPathJPanel = JPanel(GridBagLayout())
         mRootPathJPanel.border = BorderFactory.createCompoundBorder(
             BorderFactory.createCompoundBorder(
@@ -307,18 +314,15 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         val label = JLabel("rootPath:")
         @Suppress("UseJBColor")
         label.foreground = Color(76, 80, 82)
-        var font = label.font
-        label.font = Font(
-            font.name,
-            font.style,
-            if (font == null) JBUI.scaleFontSize(12f) else font.size - 2
-        )
+        label.font = UIUtil.getFont(UIUtil.FontSize.MINI, label.font)
 
         c.weightx = 0.0
         c.fill = GridBagConstraints.VERTICAL
         mRootPathJPanel.add(label, c)
 
-        mRootPathLabel = JLabel(path.replace(basePath, ""))
+        mRootPathLabel = MyLabel(mRootFilePath ?: "")
+        mRootPathLabel.strictMode = true
+        mRootPathLabel.ellipsize = MyLabel.TruncateAt.MIDDLE
         c.fill = GridBagConstraints.BOTH
         c.weightx = 1.0
         mRootPathJPanel.add(mRootPathLabel, c)
@@ -327,24 +331,18 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         jButton.preferredSize = JBUI.size(60, 26)
         jButton.maximumSize = JBUI.size(60, 26)
         jButton.minimumSize = JBUI.size(60, 26)
-        font = jButton.font
-        jButton.font = Font(
-            font.name,
-            font.style,
-            if (font == null) JBUI.scaleFontSize(12f) else font.size - 2
-        )
+        jButton.font = UIUtil.getFont(UIUtil.FontSize.SMALL, jButton.font)
         jButton.addActionListener {
             jButton.isEnabled = false
             val file = VirtualFileManager.getInstance().findFileByUrl("file://$mRootFilePath")
             val descriptor = FileChooserDescriptor(false, true, false, false, false, false)
-            val selectedFile = FileChooser.chooseFile(descriptor,module.project,file)
+            val selectedFile = FileChooser.chooseFile(descriptor, module.project, file)
             jButton.isEnabled = true
             selectedFile?.also {
                 mRootFilePath = it.path
-                val path2 = mRootFilePath ?: ""
-                val basePath2 = module.basePath ?: ""
-                PropertiesSerializeUtils.putString(module.project, ROOT_PATH, path2)
-                mRootPathLabel.text = path2.replace(basePath2, "")
+                val path = mRootFilePath ?: ""
+                PropertiesSerializeUtils.putString(module.project, ROOT_PATH, path)
+                mRootPathLabel.text = path
                 mImages = getImageData()
                 setNewImages()
             }

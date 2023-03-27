@@ -1,6 +1,5 @@
 package com.wanggaowan.tools.ui
 
-import com.intellij.ide.util.TreeFileChooser
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.project.Project
@@ -10,10 +9,12 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.JBColor
 import com.intellij.ui.ScrollPaneFactory
-import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
+import com.wanggaowan.tools.listener.SimpleComponentListener
 import com.wanggaowan.tools.utils.msg.Toast
 import java.awt.*
+import java.awt.event.ComponentEvent
 import java.io.File
 import javax.swing.*
 import javax.swing.event.DocumentEvent
@@ -33,14 +34,9 @@ class ImportImageFolderChooser(
      * 需要重命名的文件
      */
     renameFiles: List<VirtualFile>? = null,
-    /**
-     * 文件夹过滤器
-     */
-    private val filter: TreeFileChooser.PsiFileFilter? = null
 ) : JDialog() {
-    private lateinit var myTree: Tree
     private lateinit var mBtnOk: JButton
-    private lateinit var mJChosenFolder: JLabel
+    private lateinit var mJChosenFolder: MyLabel
     private lateinit var mJRenamePanel: JPanel
 
     /**
@@ -61,15 +57,48 @@ class ImportImageFolderChooser(
 
         val rootPanel = JPanel(BorderLayout())
         contentPane = rootPanel
+        rootPanel.preferredSize = JBUI.size(680, 300)
         rootPanel.add(createRenameFilePanel(renameFiles), BorderLayout.CENTER)
         rootPanel.add(createAction(), BorderLayout.SOUTH)
+        rootPanel.addComponentListener(object : SimpleComponentListener() {
+            override fun componentResized(p0: ComponentEvent?) {
+                // 窗体大小改变时，动态计算显示导入路径文本组件宽度
+                val minWidth = JBUI.scale(100)
+                if (mJChosenFolder.originalTextWidth <= minWidth) {
+                    setChosenFolderWrapWidth()
+                    return
+                }
+
+                var width = rootPanel.width - JBUI.scale(300)
+                if (width < minWidth) {
+                    width = minWidth
+                }
+                mJChosenFolder.preferredSize = Dimension(width, JBUI.scale(30))
+            }
+        })
+
         pack()
 
         if (initialFile != null) {
             mBtnOk.isEnabled = true
-            mJChosenFolder.text = initialFile.path.replace(project.basePath ?: "", "")
+            mJChosenFolder.text = initialFile.path
+            setChosenFolderWrapWidth()
         } else {
             mBtnOk.isEnabled = false
+        }
+    }
+
+    private fun setChosenFolderWrapWidth() {
+        val preferredSize = mJChosenFolder.preferredSize
+        val insets = mJChosenFolder.insets
+        val insetsHorizontal = insets.left + insets.right
+        val borderInsets = mJChosenFolder.border?.getBorderInsets(mJChosenFolder)
+        val borderHorizontal = if (borderInsets == null) 0 else borderInsets.left + borderInsets.right
+        if (preferredSize == null || preferredSize.width > mJChosenFolder.originalTextWidth + insetsHorizontal + borderHorizontal) {
+            mJChosenFolder.preferredSize = Dimension(
+                mJChosenFolder.originalTextWidth + insetsHorizontal + borderHorizontal,
+                JBUI.scale(30)
+            )
         }
     }
 
@@ -111,7 +140,6 @@ class ImportImageFolderChooser(
         initRenamePanel()
         val scrollPane = ScrollPaneFactory.createScrollPane(mJRenamePanel)
         scrollPane.border = LineBorder(UIConfig.getLineColor(), 0, 0, 1, 0)
-        scrollPane.preferredSize = JBUI.size(730, 300)
         return scrollPane
     }
 
@@ -125,9 +153,8 @@ class ImportImageFolderChooser(
         mRenameFileMap.forEach {
             val type = JLabel(it.key + "：")
             type.border = BorderFactory.createEmptyBorder(if (depth > 0) 10 else 0, 5, 5, 5)
-            val font = type.font
-            val fontSize = if (font == null) 16 else font.size + 2
-            type.font = Font(null, Font.BOLD, fontSize)
+            val fontSize = (UIUtil.getFontSize(UIUtil.FontSize.SMALL) + 2).toInt()
+            type.font = Font(type.font.name, Font.BOLD, fontSize)
             c.gridy = depth++
             mJRenamePanel.add(type, c)
 
@@ -179,12 +206,7 @@ class ImportImageFolderChooser(
                     if (isInMap) "导入的文件存在相同文件，勾选则导入最后一个同名文件，否则导入第一个同名文件" else "已存在同名文件,是否覆盖原文件？不勾选则跳过导入"
                 val hint = JCheckBox(hintStr)
                 hint.foreground = JBColor.RED
-                val renameFont = rename.font
-                hint.font = Font(
-                    null,
-                    renameFont.style,
-                    if (renameFont == null) JBUI.scaleFontSize(12f) else renameFont.size - 2
-                )
+                hint.font = UIUtil.getFont(UIUtil.FontSize.MINI, rename.font)
                 it2.existFile = existFile != null
                 hint.isVisible = existFile != null
                 box2.add(hint)
@@ -287,7 +309,9 @@ class ImportImageFolderChooser(
     private fun createAction(): JComponent {
         val bottomPane = Box.createHorizontalBox()
         bottomPane.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
-        mJChosenFolder = JLabel()
+        mJChosenFolder = MyLabel()
+        mJChosenFolder.strictMode = true
+        mJChosenFolder.ellipsize = MyLabel.TruncateAt.MIDDLE
         mJChosenFolder.border = BorderFactory.createEmptyBorder(0, 0, 0, 10)
         bottomPane.add(mJChosenFolder)
         val chooseFolderBtn = JButton("change folder")
@@ -305,12 +329,7 @@ class ImportImageFolderChooser(
             mSelectedFolder = FileChooser.chooseFile(descriptor, project, initialFile)
             isVisible = true
             mBtnOk.isEnabled = mSelectedFolder != null
-            if (mSelectedFolder == null) {
-                mJChosenFolder.text = null
-            } else {
-                mJChosenFolder.text = mSelectedFolder?.path?.replace(project.basePath ?: "", "")
-            }
-
+            mJChosenFolder.text = mSelectedFolder?.path
             if (oldSelectedFolder?.path != mSelectedFolder?.path) {
                 refreshRenamePanel()
             }

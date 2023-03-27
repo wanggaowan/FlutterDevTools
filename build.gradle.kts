@@ -17,9 +17,9 @@ intellij {
     // version.set("2022.3.1")
     // type.set("IC") // IC:intellij社区版 IU:intellij收费版
 
-    version.set("213.7172.25.2113.9123335")
+    version.set("221.6008.13.2211.9619390")
     type.set("AI") // AndroidStudio
-    plugins.set(listOf("java","Kotlin","Dart:213.7433","io.flutter:72.1.1","yaml"))
+    plugins.set(listOf("java","Kotlin","Dart:221.6103.1","io.flutter:72.1.2","yaml"))
 }
 
 tasks {

@@ -1,5 +1,6 @@
 package com.wanggaowan.tools.utils.ex
 
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.module.Module
@@ -11,6 +12,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.wanggaowan.tools.utils.NotificationUtils
 import io.flutter.pub.PubRoot
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
@@ -44,6 +46,7 @@ val Project?.isFlutterProject: Boolean
 
         val modules = getModules()
         if (modules.isNullOrEmpty()) {
+            NotificationUtils.showBalloonMsg(this, "无Flutter模块", NotificationType.ERROR)
             return false
         }
 
@@ -208,6 +211,6 @@ fun PsiElement?.findModule(): Module? {
     }
 
     val parent = getParentOfType<PsiFile>(strict = true) ?: return null
-    return parent.virtualFile.module
+    return parent.virtualFile?.module
 }
 
