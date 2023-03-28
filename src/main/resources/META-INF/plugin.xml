@@ -74,7 +74,8 @@
                                 order="first"/>
 
         <lang.documentationProvider language="Dart"
-                                    implementationClass="com.wanggaowan.tools.description.ImageDocumentDescriptionProvider" order="first"/>
+                                    implementationClass="com.wanggaowan.tools.description.ImageDocumentDescriptionProvider"
+                                    order="first"/>
 
         <projectViewPane implementation="com.wanggaowan.tools.projectviewpane.FlutterProjectViewPane"
                          id="FlutterDevTools.ProjectViewPane"/>
@@ -92,7 +93,8 @@
         <actionOnSave implementation="com.wanggaowan.tools.listener.GenL10nListener" order="last"/>
         <filePasteProvider implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first"/>
         <refactoring.moveHandler implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first"/>
-        <codeInsight.lineMarkerProvider language="Dart" implementationClass="com.wanggaowan.tools.codeInsight.ImageLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="Dart"
+                                        implementationClass="com.wanggaowan.tools.codeInsight.ImageLineMarkerProvider"/>
     </extensions>
 
     <applicationListeners>
@@ -150,20 +152,24 @@
             <separator/>
             <action id="FlutterDevTools.ImportSameImageResAction"
                     class="com.wanggaowan.tools.actions.ImportSameImageResAction"
-                    text="导入不同分辨率下的相同文件"/>
+                    text="导入不同分辨率下的相同图片"
+                    description="导入 android drawable目录结构不同分辨率下的多张图片"/>
             <action id="FlutterDevTools.GeneratorImageRefAction"
                     class="com.wanggaowan.tools.actions.GeneratorImageRefAction"
-                    text="生成图片资源引用文件并配置yaml assets节点"/>
+                    text="生成图片资源引用文件并配置yaml assets节点"
+                    description="生成图片资源引用文件并配置pubspec.yaml assets节点"/>
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
         </group>
 
         <action id="FlutterDevTools.CopyMultiSameNameFileAction"
                 class="com.wanggaowan.tools.actions.CopyMultiSameNameFileAction" text="复制不同分辨率下的相同图片"
+                icon="FlutterIcons.Flutter_13"
                 description="复制不同分辨率下的相同图片">
             <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
         </action>
         <action id="FlutterDevTools.DeleteMultiSameNameFileAction"
                 class="com.wanggaowan.tools.actions.DeleteMultiSameNameFileAction" text="删除不同分辨率下的相同图片"
+                icon="FlutterIcons.Flutter_13"
                 description="删除不同分辨率下的相同图片">
             <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
         </action>
