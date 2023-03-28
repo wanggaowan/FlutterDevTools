@@ -17,6 +17,7 @@ import com.wanggaowan.tools.actions.ImportSameImageResUtils
 import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.idea.refactoring.project
+import org.jetbrains.kotlin.idea.util.module
 import java.io.File
 
 /**
@@ -43,11 +44,8 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
     }
 
     override fun isPasteEnabled(dataContext: DataContext): Boolean {
-        if (!dataContext.project.isFlutterProject) {
-            return false
-        }
-
-        if (isAndroidRes(dataContext, null)) {
+        val module = dataContext.getData(LangDataKeys.MODULE) ?: return false
+        if (!module.isFlutterProject) {
             return false
         }
 
@@ -61,30 +59,6 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
             return false
         }
         return canImport(files.iterator(), dataContext)
-    }
-
-    private fun isAndroidRes(dataContext: DataContext?, psiElement: PsiElement?): Boolean {
-        if (dataContext != null) {
-            dataContext.getData(LangDataKeys.PASTE_TARGET_PSI_ELEMENT)?.also {
-                if (it is PsiDirectory) {
-                    val path = it.virtualFile.path
-                    return path.contains("/android")
-                        || path.contains("/ios")
-                        || path.contains("/web")
-                }
-            }
-
-            return false
-        }
-
-        if (psiElement is PsiDirectory) {
-            val path = psiElement.virtualFile.path
-            return path.contains("/android")
-                || path.contains("/ios")
-                || path.contains("/web")
-        }
-
-        return false
     }
 
     private fun <T> canImport(iterator: Iterator<T>, dataContext: DataContext?): Boolean {
@@ -191,11 +165,7 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
             return false
         }
 
-        if (!sources[0].project.isFlutterProject) {
-            return false
-        }
-
-        if (isAndroidRes(null, targetElement)) {
+        if (!targetElement?.module.isFlutterProject) {
             return false
         }
 
