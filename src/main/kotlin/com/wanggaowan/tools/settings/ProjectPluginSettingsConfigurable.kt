@@ -2,7 +2,6 @@ package com.wanggaowan.tools.settings
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
-import com.wanggaowan.tools.ui.PluginSettingsView
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.ex.rootDir
 import io.flutter.pub.PubRoot

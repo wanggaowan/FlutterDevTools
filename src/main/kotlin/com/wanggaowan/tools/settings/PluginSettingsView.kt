@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.ui
+package com.wanggaowan.tools.settings
 
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
@@ -36,7 +36,7 @@ class PluginSettingsView(pubRoot: PubRoot?) {
         if (pubRoot != null && pubRoot.exampleDir != null) {
             val example = JLabel("Example项目:")
             example.border = BorderFactory.createEmptyBorder(10, 0, 0, 0)
-            val fontSize:Int = (UIUtil.getFontSize(UIUtil.FontSize.SMALL) + 2).toInt()
+            val fontSize: Int = (UIUtil.getFontSize(UIUtil.FontSize.NORMAL) + 2).toInt()
             example.font = Font(example.font.name, Font.BOLD, fontSize)
             builder = builder.addComponent(example)
                 .addLabeledComponent(JBLabel("图片资源路径: "), exampleImagesDir, 1, false)

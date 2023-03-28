@@ -151,7 +151,7 @@ class ImportImageFolderChooser(
         mRenameFileMap.forEach {
             val type = JLabel(it.key + "：")
             type.border = BorderFactory.createEmptyBorder(if (depth > 0) 10 else 0, 5, 5, 5)
-            val fontSize = (UIUtil.getFontSize(UIUtil.FontSize.SMALL) + 2).toInt()
+            val fontSize = (UIUtil.getFontSize(UIUtil.FontSize.NORMAL) + 2).toInt()
             type.font = Font(type.font.name, Font.BOLD, fontSize)
             c.gridy = depth++
             mJRenamePanel.add(type, c)
