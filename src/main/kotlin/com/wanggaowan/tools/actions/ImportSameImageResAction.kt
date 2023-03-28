@@ -1,12 +1,12 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
@@ -24,7 +24,7 @@ import com.wanggaowan.tools.utils.ex.isFlutterProject
  *
  * @author Created by wanggaowan on 2022/7/12 09:42
  */
-class ImportSameImageResAction : AnAction() {
+class ImportSameImageResAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val descriptor = FileChooserDescriptor(true, true, false, false, false, true)

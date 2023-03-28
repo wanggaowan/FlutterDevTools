@@ -1,9 +1,9 @@
 package com.wanggaowan.tools.actions
 
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -20,7 +20,7 @@ import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
  *
  * @author Created by wanggaowan on 2023/2/6 15:44
  */
-class GeneratorClassSerializableMethodAction : AnAction() {
+class GeneratorClassSerializableMethodAction : DumbAwareAction() {
 
     private var selectedClassPsiElement: DartClass? = null
 

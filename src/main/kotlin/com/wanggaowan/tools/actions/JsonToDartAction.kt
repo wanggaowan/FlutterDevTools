@@ -40,6 +40,27 @@ import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
  * @author Created by wanggaowan on 2023/2/3 16:26
  */
 class JsonToDartAction : DumbAwareAction() {
+    override fun update(e: AnActionEvent) {
+        if (!e.isFlutterProject) {
+            e.presentation.isVisible = false
+            return
+        }
+
+        val editor = e.getData(CommonDataKeys.EDITOR)
+        if (editor == null) {
+            e.presentation.isVisible = false
+            return
+        }
+
+        val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE)
+        if (virtualFile != null && !virtualFile.isDirectory) {
+            e.presentation.isVisible = virtualFile.name.endsWith(".dart")
+            return
+        }
+
+        e.presentation.isVisible = true
+    }
+
     override fun actionPerformed(event: AnActionEvent) {
         val project = getEventProject(event) ?: return
         val psiFile = event.getData(CommonDataKeys.PSI_FILE) ?: return
@@ -90,27 +111,6 @@ class JsonToDartAction : DumbAwareAction() {
     // override fun getActionUpdateThread(): ActionUpdateThread {
     //     return ActionUpdateThread.BGT
     // }
-
-    override fun update(e: AnActionEvent) {
-        if (!e.isFlutterProject) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        val editor = e.getData(CommonDataKeys.EDITOR)
-        if (editor == null) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE)
-        if (virtualFile != null && !virtualFile.isDirectory) {
-            e.presentation.isVisible = virtualFile.name.endsWith(".dart")
-            return
-        }
-
-        e.presentation.isVisible = true
-    }
 
     /**
      * 根据JSON场景Dart实体

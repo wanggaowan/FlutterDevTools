@@ -1,12 +1,12 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.module.Module
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.wanggaowan.tools.settings.PluginSettings
@@ -25,7 +25,7 @@ import java.io.File
  *
  * @author Created by wanggaowan on 2023/3/6 13:09
  */
-class CopyMultiSameNameFileAction : AnAction() {
+class CopyMultiSameNameFileAction : DumbAwareAction() {
     // override fun getActionUpdateThread(): ActionUpdateThread {
     //     return ActionUpdateThread.BGT
     // }
@@ -33,20 +33,24 @@ class CopyMultiSameNameFileAction : AnAction() {
     override fun update(e: AnActionEvent) {
         val module = e.getData(LangDataKeys.MODULE) ?: return
         if (!module.isFlutterProject) {
+            e.presentation.isVisible = false
             return
         }
 
         val virtualFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
         if (virtualFiles.isNullOrEmpty()) {
+            e.presentation.isVisible = false
             return
         }
 
         if (!virtualFiles[0].path.startsWith("${module.basePath}/${PluginSettings.getImagesFileDir(module.project)}")) {
+            e.presentation.isVisible = false
             return
         }
 
         for (file in virtualFiles) {
             if (file.isDirectory) {
+                e.presentation.isVisible = false
                 return
             }
         }
