@@ -2,6 +2,7 @@ package com.wanggaowan.tools.actions
 
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
@@ -100,6 +101,8 @@ object GeneratorImageRefUtils {
             override fun run(progressIndicator: ProgressIndicator) {
                 progressIndicator.isIndeterminate = true
                 WriteCommandAction.runWriteCommandAction(projectWrapper) {
+                    // 写入数据之前先对文件进行保存，否则可能抛出异常：对未保存的文件进行写入
+                    FileDocumentManager.getInstance().saveAllDocuments()
                     createImageRefFile(
                         projectWrapper,
                         projectFile,
