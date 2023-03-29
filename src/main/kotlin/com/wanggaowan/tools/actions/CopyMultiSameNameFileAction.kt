@@ -31,7 +31,12 @@ class CopyMultiSameNameFileAction : DumbAwareAction() {
     // }
 
     override fun update(e: AnActionEvent) {
-        val module = e.getData(LangDataKeys.MODULE) ?: return
+        val module = e.getData(LangDataKeys.MODULE)
+        if (module == null) {
+            e.presentation.isVisible = false
+            return
+        }
+
         if (!module.isFlutterProject) {
             e.presentation.isVisible = false
             return
@@ -43,7 +48,9 @@ class CopyMultiSameNameFileAction : DumbAwareAction() {
             return
         }
 
-        if (!virtualFiles[0].path.startsWith("${module.basePath}/${PluginSettings.getImagesFileDir(module.project)}")) {
+        val basePath = module.basePath
+        val imageDir = PluginSettings.getImagesFileDir(module.project)
+        if (!virtualFiles[0].path.startsWith("$basePath/$imageDir") && !virtualFiles[0].path.startsWith("$basePath/example/$imageDir")) {
             e.presentation.isVisible = false
             return
         }
