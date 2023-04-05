@@ -6,8 +6,12 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.MessageType
 import com.intellij.ui.EditorTextField
+import com.intellij.util.ui.UIUtil
+import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.msg.Toast
 import java.awt.BorderLayout
+import java.awt.event.FocusEvent
+import java.awt.event.FocusListener
 import javax.swing.JCheckBox
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -17,7 +21,7 @@ import javax.swing.JTextField
  * json文件转JAVA对象
  */
 class JsonToDartDialog(
-    project: Project,
+    val project: Project,
     private val className: String?,
 ) : DialogWrapper(project, false) {
 
@@ -30,17 +34,22 @@ class JsonToDartDialog(
     private lateinit var mCbGeneratorGFile: JCheckBox
     private lateinit var mCbNullSafe: JCheckBox
     private lateinit var mObjSuffix: JTextField
+    private lateinit var mCbCreateFromList: JCheckBox
+    private lateinit var mCbSetConverters: JCheckBox
+    private lateinit var mConvertersValue: JTextField
 
     private var mJsonValue: JsonObject? = null
+    private var mConvertersStr: String? = null
 
     init {
         mEtJsonContent.isEnabled = true
         mJPEtRoot.add(mEtJsonContent, BorderLayout.CENTER)
+        initEvent()
         initData()
         init()
     }
 
-    override fun getPreferredFocusedComponent(): JComponent? {
+    override fun getPreferredFocusedComponent(): JComponent {
         return if (className == null) {
             mCreateObjectName
         } else {
@@ -50,7 +59,32 @@ class JsonToDartDialog(
 
     override fun createCenterPanel(): JComponent = mRootPanel
 
+    private fun initEvent() {
+        mConvertersValue.addFocusListener(object : FocusListener {
+            override fun focusGained(e: FocusEvent?) {
+                val text = mConvertersValue.text
+                if (text == CONVERTERS_HINT) {
+                    mConvertersValue.text = ""
+                }
+            }
+
+            override fun focusLost(e: FocusEvent?) {
+                val text = mConvertersValue.text.trim()
+                if (text.isEmpty()) {
+                    mConvertersValue.text = CONVERTERS_HINT
+                }
+            }
+        })
+    }
+
     private fun initData() {
+        mConvertersValue.font = UIUtil.getFont(UIUtil.FontSize.SMALL, mConvertersValue.font)
+        val value = PropertiesSerializeUtils.getString(project, CONVERTERS_VALUE)
+        if (value.isNotEmpty()) {
+            mConvertersValue.text = value
+            mCbSetConverters.isSelected = true
+        }
+
         if (className == null) {
             mCreateObjectName.isEnabled = true
             return
@@ -71,6 +105,14 @@ class JsonToDartDialog(
         if (jsonStr.isEmpty()) {
             Toast.show(mEtJsonContent, MessageType.ERROR, "请输入JSON内容")
             return
+        }
+
+        if (mCbSetConverters.isSelected) {
+            val text = mConvertersValue.text.trim()
+            if (text.isEmpty() || text == CONVERTERS_HINT) {
+                Toast.show(mConvertersValue, MessageType.ERROR, CONVERTERS_HINT)
+                return
+            }
         }
 
         try {
@@ -112,6 +154,20 @@ class JsonToDartDialog(
     }
 
     /**
+     * 是否配置序列号的converters字段
+     */
+    fun isSetConverters(): Boolean {
+        return mCbSetConverters.isSelected
+    }
+
+    /**
+     * 是否生成反序列号列表方法
+     */
+    fun isCreateFromList(): Boolean {
+        return mCbCreateFromList.isSelected
+    }
+
+    /**
      * 仅在点击OK成功后获取，否则将抛出异常
      */
     fun getJsonValue(): JsonObject {
@@ -124,5 +180,14 @@ class JsonToDartDialog(
 
     fun getSuffix(): String {
         return mObjSuffix.text.trim()
+    }
+
+    fun getConvertersValue(): String {
+        return mConvertersValue.text.trim()
+    }
+
+    companion object {
+        const val CONVERTERS_HINT = "请输入converters值"
+        const val CONVERTERS_VALUE = "converters_value"
     }
 }

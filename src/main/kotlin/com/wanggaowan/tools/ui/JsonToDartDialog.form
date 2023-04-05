@@ -9,7 +9,7 @@
       <enabled value="true"/>
       <foreground color="-1"/>
       <inheritsPopupMenu value="true"/>
-      <preferredSize width="800" height="600"/>
+      <preferredSize width="1000" height="600"/>
     </properties>
     <border type="none">
       <size top="4" left="4" bottom="4" right="4"/>
@@ -85,7 +85,7 @@
           </grid>
         </children>
       </grid>
-      <grid id="20f89" layout-manager="GridLayoutManager" row-count="2" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+      <grid id="20f89" layout-manager="GridLayoutManager" row-count="3" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="10" left="0" bottom="0" right="10"/>
         <constraints>
           <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -96,7 +96,7 @@
         <children>
           <grid id="58dd1" layout-manager="FlowLayout" hgap="5" vgap="5" flow-align="1">
             <constraints>
-              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="8" fill="2" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties/>
             <border type="none"/>
@@ -106,19 +106,6 @@
                 <properties>
                   <selected value="true"/>
                   <text value="json值生成注释文档"/>
-                </properties>
-              </component>
-              <component id="9c6a2" class="javax.swing.JCheckBox" binding="mCbGeneratorJsonSerializable">
-                <constraints/>
-                <properties>
-                  <selected value="true"/>
-                  <text value="创建序列化方法"/>
-                </properties>
-              </component>
-              <component id="d99e3" class="javax.swing.JCheckBox" binding="mCbGeneratorGFile">
-                <constraints/>
-                <properties>
-                  <text value="生成.g.dart文件"/>
                 </properties>
               </component>
               <component id="70698" class="javax.swing.JCheckBox" binding="mCbNullSafe">
@@ -136,9 +123,50 @@
           </hspacer>
           <vspacer id="c228">
             <constraints>
-              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
             </constraints>
           </vspacer>
+          <grid id="631ce" layout-manager="FlowLayout" hgap="5" vgap="5" flow-align="0">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="9c6a2" class="javax.swing.JCheckBox" binding="mCbGeneratorJsonSerializable">
+                <constraints/>
+                <properties>
+                  <selected value="true"/>
+                  <text value="创建序列化方法"/>
+                </properties>
+              </component>
+              <component id="beabb" class="javax.swing.JCheckBox" binding="mCbCreateFromList">
+                <constraints/>
+                <properties>
+                  <text value="创建序列化列表方法"/>
+                </properties>
+              </component>
+              <component id="d99e3" class="javax.swing.JCheckBox" binding="mCbGeneratorGFile">
+                <constraints/>
+                <properties>
+                  <text value="生成.g.dart文件"/>
+                </properties>
+              </component>
+              <component id="bdefb" class="javax.swing.JCheckBox" binding="mCbSetConverters">
+                <constraints/>
+                <properties>
+                  <text value="配置converters"/>
+                </properties>
+              </component>
+              <component id="b40f8" class="javax.swing.JTextField" binding="mConvertersValue">
+                <constraints/>
+                <properties>
+                  <preferredSize width="200" height="38"/>
+                  <text value="请输入converters值"/>
+                </properties>
+              </component>
+            </children>
+          </grid>
         </children>
       </grid>
     </children>

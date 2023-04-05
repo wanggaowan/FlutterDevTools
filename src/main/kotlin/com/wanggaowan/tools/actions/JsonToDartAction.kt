@@ -20,6 +20,7 @@ import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.ui.JsonToDartDialog
+import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.StringUtils
 import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
@@ -125,39 +126,34 @@ class JsonToDartAction : DumbAwareAction() {
         rootElement: PsiElement?
     ) {
         val className = dialog.getClassName()
-        val jsonObject = dialog.getJsonValue()
-        val suffix = dialog.getSuffix()
-        val generatorDoc = dialog.isGeneratorDoc()
-        val generatorJsonSerializable = dialog.isGeneratorJsonSerializable()
-        val nullSafe = dialog.isNullSafe()
+        val jsonValue = dialog.getJsonValue()
+        val config = Config(
+            dialog.getSuffix(),
+            dialog.isGeneratorDoc(),
+            dialog.isGeneratorJsonSerializable(),
+            dialog.isNullSafe(),
+            dialog.isCreateFromList(),
+            dialog.isSetConverters(),
+            dialog.getConvertersValue()
+        )
+        PropertiesSerializeUtils.putString(project, JsonToDartDialog.CONVERTERS_VALUE, config.convertersValue)
+
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "GsonFormat") {
             override fun run(progressIndicator: ProgressIndicator) {
                 progressIndicator.isIndeterminate = true
                 WriteCommandAction.runWriteCommandAction(project) {
                     if (rootElement == null) {
-                        addClass(
-                            project, psiFile, jsonObject, className, suffix, null,
-                            generatorDoc, generatorJsonSerializable, nullSafe
-                        )
+                        addClass(project, psiFile, null, className, jsonValue, config)
                     } else {
                         // 用户选中了对应的Dart class
-                        createFieldOnJsonObject(
-                            project, psiFile, jsonObject, rootElement, dialog.getSuffix(),
-                            generatorDoc, generatorJsonSerializable, nullSafe
-                        )
-
+                        createFieldOnJsonObject(project, psiFile, rootElement, jsonValue, config)
                         selectedClassInit(
-                            project,
-                            selectedClazzElement,
-                            rootElement,
-                            selectedClazzName,
-                            jsonObject,
-                            generatorJsonSerializable,
-                            nullSafe
+                            project, selectedClazzElement, rootElement, selectedClazzName,
+                            jsonValue, config
                         )
                     }
 
-                    if (generatorJsonSerializable) {
+                    if (config.generatorJsonSerializable) {
                         addJsonSerializableImport(project, psiFile)
                         addPartImport(project, psiFile)
                     }
@@ -258,15 +254,10 @@ class JsonToDartAction : DumbAwareAction() {
      * 初始化用户选中的类
      */
     private fun selectedClassInit(
-        project: Project,
-        selectedClazzElement: PsiElement?,
-        classMembers: PsiElement,
-        selectedClazzName: String,
-        jsonObject: JsonObject,
-        isGeneratorJsonSerializable: Boolean,
-        nullSafe: Boolean,
+        project: Project, selectedClazzElement: PsiElement?, classMembers: PsiElement,
+        selectedClazzName: String, jsonObject: JsonObject, config: Config
     ) {
-        if (isGeneratorJsonSerializable && selectedClazzElement != null) {
+        if (config.generatorJsonSerializable && selectedClazzElement != null) {
             var exist = false
             for (child in selectedClazzElement.children) {
                 if (child is DartMetadata && child.text.contains("@JsonSerializable(")) {
@@ -276,7 +267,13 @@ class JsonToDartAction : DumbAwareAction() {
             }
 
             if (!exist) {
-                DartPsiUtils.createCommonElement(project, "@JsonSerializable()")?.also {
+                val text = if (config.setConverters) {
+                    "@JsonSerializable(converters: ${config.convertersValue})"
+                } else {
+                    "@JsonSerializable()"
+                }
+
+                DartPsiUtils.createCommonElement(project, text)?.also {
                     selectedClazzElement.addBefore(it, selectedClazzElement.firstChild)
                 }
             }
@@ -288,10 +285,9 @@ class JsonToDartAction : DumbAwareAction() {
         var existFactory = false
         // 如果选中的类存在序列化方法则则创建
         var existToJson = false
+        var existFromList = false
         for (child in classMembers.children) {
-            if (child is DartFactoryConstructorDeclaration
-                && child.textMatches("${selectedClazzName}.fromJson(Map<String, dynamic> json)")
-            ) {
+            if (child is DartFactoryConstructorDeclaration && child.textMatches("${selectedClazzName}.fromJson(Map<String, dynamic> json)")) {
                 existFactory = true
             }
 
@@ -302,18 +298,26 @@ class JsonToDartAction : DumbAwareAction() {
                         existConstructor = true
                     } else if (element.textMatches("toJson")) {
                         existToJson = true
+                    } else if (config.createFromList && element.textMatches("fromJsonList")) {
+                        existFromList = true
                     }
                 }
             }
 
             if (existConstructor && existFactory && existToJson) {
-                break
+                if (config.createFromList) {
+                    if (existFromList) {
+                        break
+                    }
+                } else {
+                    break
+                }
             }
         }
 
         createClassConstructorAndSerializableMethod(
-            project, jsonObject, classMembers, selectedClazzName, nullSafe,
-            !existConstructor, !existFactory, !existToJson
+            project, jsonObject, classMembers, selectedClazzName,
+            !existConstructor, !existFactory, existFromList, !existToJson, config
         )
     }
 
@@ -383,54 +387,28 @@ class JsonToDartAction : DumbAwareAction() {
      * 根据json创建类中的字段
      */
     private fun createFieldOnJsonObject(
-        project: Project,
-        psiFile: PsiFile,
-        jsonObject: JsonObject,
-        parentElement: PsiElement,
-        suffix: String,
-        createDoc: Boolean,
-        generatorJsonSerializable: Boolean,
-        nullSafe: Boolean,
+        project: Project, psiFile: PsiFile, parentElement: PsiElement,
+        jsonObject: JsonObject, config: Config
     ) {
         jsonObject.keySet().forEach {
             val obj = jsonObject.get(it)
             if (obj == null || obj.isJsonNull) {
-                addField(project, it, null, parentElement, createDoc, nullSafe)
+                addField(project, it, null, parentElement, config)
             } else if (obj.isJsonPrimitive) {
-                addField(project, it, obj as JsonPrimitive, parentElement, createDoc, nullSafe)
+                addField(project, it, obj as JsonPrimitive, parentElement, config)
             } else if (obj.isJsonObject) {
                 val (key, doc) = getFieldName(it)
                 val className = StringUtils.lowerCamelCase(key)
-                addFieldForObjType(project, key, className + suffix, false, parentElement, doc, createDoc, nullSafe)
-                addClass(
-                    project,
-                    psiFile,
-                    obj as JsonObject,
-                    className,
-                    suffix,
-                    doc,
-                    createDoc,
-                    generatorJsonSerializable,
-                    nullSafe
-                )
+                addFieldForObjType(project, key, className + config.suffix, false, parentElement, doc, config)
+                addClass(project, psiFile, doc, className, obj as JsonObject, config)
             } else if (obj.isJsonArray) {
                 val (key, doc) = getFieldName(it)
                 val className = StringUtils.lowerCamelCase(key)
                 obj.asJsonArray.let { jsonArray ->
-                    val (type, json) = getJsonArrayType(jsonArray, className + suffix)
-                    addFieldForObjType(project, key, type, true, parentElement, doc, createDoc, nullSafe)
+                    val (type, json) = getJsonArrayType(jsonArray, className + config.suffix)
+                    addFieldForObjType(project, key, type, true, parentElement, doc, config)
                     if (json != null) {
-                        addClass(
-                            project,
-                            psiFile,
-                            json,
-                            className,
-                            suffix,
-                            doc,
-                            createDoc,
-                            generatorJsonSerializable,
-                            nullSafe
-                        )
+                        addClass(project, psiFile, doc, className, json, config)
                     }
                 }
             }
@@ -483,26 +461,25 @@ class JsonToDartAction : DumbAwareAction() {
      * 创建Dart类
      */
     private fun addClass(
-        project: Project,
-        psiFile: PsiFile,
-        jsonObject: JsonObject,
-        className: String,
-        suffix: String,
-        doc: String?,
-        createDoc: Boolean,
-        generatorJsonSerializable: Boolean,
-        nullSafe: Boolean,
+        project: Project, psiFile: PsiFile, doc: String?,
+        className: String, jsonObject: JsonObject, config: Config
     ) {
-        DartPsiUtils.createClassElement(project, className + suffix)?.also { clazz ->
-            if (createDoc && !doc.isNullOrBlank()) {
+        DartPsiUtils.createClassElement(project, className + config.suffix)?.also { clazz ->
+            if (config.generatorDoc && !doc.isNullOrBlank()) {
                 DartPsiUtils.createDocElement(project, "/// $doc")?.also { docElement ->
                     psiFile.add(docElement)
                 }
             }
 
             val element = psiFile.add(clazz)
-            if (generatorJsonSerializable) {
-                DartPsiUtils.createCommonElement(project, "@JsonSerializable()")?.also {
+            if (config.generatorJsonSerializable) {
+                val text = if (config.setConverters) {
+                    "@JsonSerializable(converters: ${config.convertersValue})"
+                } else {
+                    "@JsonSerializable()"
+                }
+
+                DartPsiUtils.createCommonElement(project, text)?.also {
                     element.addBefore(it, element.firstChild)
                 }
             }
@@ -511,15 +488,13 @@ class JsonToDartAction : DumbAwareAction() {
             bodyElement?.also { body ->
                 val rootElement = body.classMembers
                 if (rootElement != null) {
-                    createFieldOnJsonObject(
-                        project, psiFile, jsonObject, rootElement, suffix,
-                        createDoc, generatorJsonSerializable, nullSafe
-                    )
+                    createFieldOnJsonObject(project, psiFile, rootElement, jsonObject, config)
 
-                    val name = className + suffix
+                    val name = className + config.suffix
                     createClassConstructorAndSerializableMethod(
-                        project, jsonObject, rootElement, name, nullSafe, true,
-                        generatorJsonSerializable, generatorJsonSerializable
+                        project, jsonObject, rootElement, name, true,
+                        config.generatorJsonSerializable, config.generatorJsonSerializable,
+                        config.createFromList, config
                     )
                 }
             }
@@ -530,41 +505,44 @@ class JsonToDartAction : DumbAwareAction() {
      * 创建类的构造函数及系列化方法
      */
     private fun createClassConstructorAndSerializableMethod(
-        project: Project,
-        jsonObject: JsonObject,
-        classMembers: PsiElement,
-        className: String,
-        nullSafe: Boolean,
-        createConstructor: Boolean,
-        createFactory: Boolean,
-        createToJson: Boolean,
+        project: Project, jsonObject: JsonObject, classMembers: PsiElement,
+        className: String, createConstructor: Boolean, createFactory: Boolean, createToJson: Boolean,
+        createFromList: Boolean, config: Config
     ) {
 
         if (createConstructor) {
-            val constructor = StringBuilder("$className({")
-            var index = 0
-            jsonObject.keySet().forEach {
-                val fieldName = if (it.contains("(") && it.contains(")")) {
-                    // 兼容周卓接口文档JSON, "dataList (工序列表)":[]
-                    val index2 = it.indexOf("(")
-                    it.substring(0, index2).replace(" ", "")
-                } else {
-                    it
-                }
+            val keySet = jsonObject.keySet()
+            val constructorStr: String
+            if (keySet.isEmpty()) {
+                constructorStr = "$className();"
+            } else {
+                val constructor = StringBuilder("$className({")
+                var index = 0
+                jsonObject.keySet().forEach {
+                    val fieldName = if (it.contains("(") && it.contains(")")) {
+                        // 兼容周卓接口文档JSON, "dataList (工序列表)":[]
+                        val index2 = it.indexOf("(")
+                        it.substring(0, index2).replace(" ", "")
+                    } else {
+                        it
+                    }
 
-                if (index > 0) {
-                    constructor.append(", ")
-                }
+                    if (index > 0) {
+                        constructor.append(", ")
+                    }
 
-                if (nullSafe) {
-                    constructor.append("required ")
-                }
+                    if (config.nullSafe) {
+                        constructor.append("required ")
+                    }
 
-                constructor.append("this.$fieldName")
-                index++
+                    constructor.append("this.$fieldName")
+                    index++
+                }
+                constructor.append("});")
+                constructorStr = constructor.toString()
             }
-            constructor.append("});")
-            DartPsiUtils.createCommonElement(project, constructor.toString())?.also {
+
+            DartPsiUtils.createCommonElement(project, constructorStr)?.also {
                 classMembers.add(it)
             }
         }
@@ -572,6 +550,14 @@ class JsonToDartAction : DumbAwareAction() {
         if (createFactory) {
             val fromJson =
                 "factory ${className}.fromJson(Map<String, dynamic> json) => _\$${className}FromJson(json);"
+            DartPsiUtils.createClassMember(project, fromJson)?.also {
+                classMembers.add(it)
+            }
+        }
+
+        if (createFromList) {
+            val fromJson =
+                "static List<${className}> fromJsonList(List<dynamic> json) => json.map((e) => ${className}.fromJson(e as Map<String, dynamic>)).toList();"
             DartPsiUtils.createClassMember(project, fromJson)?.also {
                 classMembers.add(it)
             }
@@ -589,12 +575,8 @@ class JsonToDartAction : DumbAwareAction() {
      * 创建Dart类中普通字段
      */
     private fun addField(
-        project: Project,
-        key: String,
-        jsonElement: JsonPrimitive?,
-        parentElement: PsiElement,
-        createDoc: Boolean,
-        nullSafe: Boolean,
+        project: Project, key: String, jsonElement: JsonPrimitive?,
+        parentElement: PsiElement, config: Config
     ) {
 
         val methodElement = PsiTreeUtil.findChildOfAnyType(
@@ -602,7 +584,7 @@ class JsonToDartAction : DumbAwareAction() {
             DartMethodDeclaration::class.java
         )
 
-        if (createDoc) {
+        if (config.generatorDoc) {
             var doc = jsonElement?.toString()?.replace("\"", "")
             if (!doc.isNullOrBlank()) {
                 doc = "/// $doc"
@@ -617,26 +599,26 @@ class JsonToDartAction : DumbAwareAction() {
         }
 
         val content = if (jsonElement == null) {
-            if (nullSafe) {
+            if (config.nullSafe) {
                 "Object $key"
             } else {
                 "Object? $key"
             }
         } else if (jsonElement.isBoolean) {
-            if (nullSafe) {
+            if (config.nullSafe) {
                 "bool $key"
             } else {
                 "bool? $key"
             }
         } else if (jsonElement.isNumber) {
             val type = if (jsonElement.asString.contains(".")) "double" else "int"
-            if (nullSafe) {
+            if (config.nullSafe) {
                 "$type $key"
             } else {
                 "$type? $key"
             }
         } else {
-            if (nullSafe) {
+            if (config.nullSafe) {
                 "String $key"
             } else {
                 "String? $key"
@@ -664,21 +646,15 @@ class JsonToDartAction : DumbAwareAction() {
      * 创建Dart类中实体字段，字段对应的类型是另一个实体
      */
     private fun addFieldForObjType(
-        project: Project,
-        key: String,
-        typeName: String?,
-        isArray: Boolean,
-        parentElement: PsiElement,
-        doc: String?,
-        createDoc: Boolean,
-        nullSafe: Boolean,
+        project: Project, key: String, typeName: String?, isArray: Boolean,
+        parentElement: PsiElement, doc: String?, config: Config
     ) {
         val methodElement = PsiTreeUtil.findChildOfAnyType(
             parentElement, DartFactoryConstructorDeclaration::class.java,
             DartMethodDeclaration::class.java
         )
 
-        if (createDoc && !doc.isNullOrBlank()) {
+        if (config.generatorDoc && !doc.isNullOrBlank()) {
             DartPsiUtils.createDocElement(project, "/// $doc")?.also { docElement ->
                 if (methodElement != null) {
                     parentElement.addBefore(docElement, methodElement)
@@ -689,19 +665,19 @@ class JsonToDartAction : DumbAwareAction() {
         }
 
         val content = if (typeName == null) {
-            if (nullSafe) {
+            if (config.nullSafe) {
                 "Object $key"
             } else {
                 "Object? $key"
             }
         } else if (isArray) {
-            if (nullSafe) {
+            if (config.nullSafe) {
                 "List<$typeName> $key"
             } else {
                 "List<$typeName>? $key"
             }
         } else {
-            if (nullSafe) {
+            if (config.nullSafe) {
                 "$typeName $key"
             } else {
                 "$typeName? $key"
@@ -724,3 +700,16 @@ class JsonToDartAction : DumbAwareAction() {
         }
     }
 }
+
+/**
+ * JSON转dart配置类
+ */
+private class Config(
+    val suffix: String,
+    val generatorDoc: Boolean,
+    val generatorJsonSerializable: Boolean,
+    val nullSafe: Boolean,
+    val createFromList: Boolean,
+    val setConverters: Boolean,
+    val convertersValue: String
+)
