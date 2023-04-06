@@ -38,7 +38,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
                 val file = fileDocumentManager.value.getFile(document)
                 if (file != null && file.name.endsWith(".arb")) {
                     val module = file.getModule(project) ?: continue
-                    doGenL10n(module, file.path.contains("/example/"))
+                    doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
                 }
             }
         }
@@ -81,7 +81,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
 
         val module = file.getModule(source.project) ?: return
         fileDocumentManager.value.saveAllDocuments()
-        doGenL10n(module, file.path.contains("/example/"))
+        doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
     }
 
     override fun selectionChanged(event: FileEditorManagerEvent) {
@@ -91,7 +91,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
             needDoGenL10nMap.remove(file.path)
             val module = file.findModule(event.manager.project) ?: return
             fileDocumentManager.value.saveAllDocuments()
-            doGenL10n(module, file.path.contains("/example/"))
+            doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
         }
     }
 

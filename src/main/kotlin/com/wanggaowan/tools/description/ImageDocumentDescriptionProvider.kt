@@ -43,7 +43,7 @@ class ImageDocumentDescriptionProvider : DocumentationProvider {
 
         val module = element.findModule() ?: return null
         val imageFiles =
-            ImagesGoToDeclarationHandler.getGotoDeclarationTargets(module,originalElement)
+            ImagesGoToDeclarationHandler.getGotoDeclarationTargets(module, originalElement, true)
         if (imageFiles.isNullOrEmpty()) {
             return null
         }
@@ -54,36 +54,46 @@ class ImageDocumentDescriptionProvider : DocumentationProvider {
             return null
         }
 
-        val imgPath: String = image.virtualFile.path
+        val virtualFile = image.virtualFile
+        val imgPath: String = virtualFile.path
+        val parent = virtualFile.parent
+        val parentName = parent?.name
+        val showImgPath =
+            if (parentName == "1.5x" || parentName == "2.0x" || parentName == "3.0x" || parentName == "4.0x") {
+                parent.parent?.findChild(virtualFile.name)?.path ?: imgPath
+            } else {
+                imgPath
+            }
+
         val modulePath = module.basePath ?: ""
         val read = try {
             ImageIO.read(File(imgPath).inputStream())
-        } catch (e:Exception) {
+        } catch (e: Exception) {
             null
         }
         val width = read?.width ?: 200
         val height = read?.height ?: 200
         if (width <= 0 || height <= 0) {
             return "<img src=\"\"><br>${
-                imgPath.replace(modulePath, "")
+                showImgPath.replace(modulePath, "")
             }"
         }
 
         if (width < 100 && height < 100) {
             val scale = (100 / width).coerceAtLeast(100 / height)
             return "<img src=\"file:///${imgPath}\" width=\"${width * scale}\" height=\"${height * scale}\"><br>${
-                imgPath.replace(modulePath, "")
+                showImgPath.replace(modulePath, "")
             }"
         }
 
         val scale = (width / 200).coerceAtLeast(height / 200)
         return if (scale <= 1) {
             "<img src=\"file:///${imgPath}\" width=\"${width}\" height=\"${height}\"><br>${
-                imgPath.replace(modulePath, "")
+                showImgPath.replace(modulePath, "")
             }"
         } else {
             "<img src=\"file:///${imgPath}\" width=\"${width / scale}\" height=\"${height / scale}\"><br>${
-                imgPath.replace(modulePath, "")
+                showImgPath.replace(modulePath, "")
             }"
         }
     }

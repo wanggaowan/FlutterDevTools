@@ -76,21 +76,21 @@ object GeneratorImageRefUtils {
         val imageRefFileName: String
         // 生成图片资源引用文件类名称
         val imageRefClassName: String
-        val projectFile: VirtualFile
+        val moduleRootFile: VirtualFile
         if (isExampleModule) {
             imagesRelDirPath = PluginSettings.getExampleImagesFileDir(projectWrapper)
             imageRefFilePath = PluginSettings.getExampleImagesRefFilePath(projectWrapper)
             imageRefFileName = PluginSettings.getExampleImagesRefFileName(projectWrapper)
             imageRefClassName = PluginSettings.getExampleImagesRefClassName(projectWrapper)
             imagesDir = virtualFileManager.findFileByUrl("file://${exampleDir!!.path}/${imagesRelDirPath}")
-            projectFile = exampleDir
+            moduleRootFile = exampleDir
         } else {
             imagesRelDirPath = PluginSettings.getImagesFileDir(projectWrapper)
             imageRefFilePath = PluginSettings.getImagesRefFilePath(projectWrapper)
             imageRefFileName = PluginSettings.getImagesRefFileName(projectWrapper)
             imageRefClassName = PluginSettings.getImagesRefClassName(projectWrapper)
             imagesDir = virtualFileManager.findFileByUrl("file://${pubRoot.path}/${imagesRelDirPath}")
-            projectFile = pubRoot.root
+            moduleRootFile = pubRoot.root
         }
 
         if (imagesDir == null) {
@@ -105,7 +105,7 @@ object GeneratorImageRefUtils {
                     FileDocumentManager.getInstance().saveAllDocuments()
                     createImageRefFile(
                         projectWrapper,
-                        projectFile,
+                        moduleRootFile,
                         imagesDir,
                         imagesRelDirPath,
                         imageRefFilePath,
@@ -113,7 +113,7 @@ object GeneratorImageRefUtils {
                         imageRefClassName
                     )
                     progressIndicator.fraction = 0.5
-                    insertAssets(projectWrapper, projectFile, imagesDir, imagesRelDirPath)
+                    insertAssets(projectWrapper, moduleRootFile, imagesDir, imagesRelDirPath)
                 }
                 progressIndicator.isIndeterminate = false
                 progressIndicator.fraction = 1.0
@@ -128,7 +128,7 @@ object GeneratorImageRefUtils {
      */
     private fun createImageRefFile(
         project: Project,
-        projectFile: VirtualFile,
+        moduleRootFile: VirtualFile,
         imagesDir: VirtualFile,
         imageDirRelPath: String,
         imageRefFilePath: String,
@@ -136,7 +136,7 @@ object GeneratorImageRefUtils {
         imageRefClassName: String
     ) {
         val imagesPsiFile =
-            findOrCreateResourcesDir(project, projectFile, imageRefFilePath, imageRefFileName).toPsiFile(project)
+            findOrCreateResourcesDir(project, moduleRootFile, imageRefFilePath, imageRefFileName).toPsiFile(project)
                 ?: return
         val classMember = findOrCreateClass(project, imagesPsiFile, imageRefClassName) ?: return
         val allImages = getDeDuplicationList(imagesDir, basePath = imageDirRelPath)
@@ -144,7 +144,7 @@ object GeneratorImageRefUtils {
             return
         }
 
-        removeNotExistImageNode(classMember, allImages)
+        removeNotExistImageNode(moduleRootFile, classMember)
         addNewImagesNode(project, classMember, allImages)
         DartPsiUtils.reformatFile(project, imagesPsiFile)
     }
@@ -202,20 +202,40 @@ object GeneratorImageRefUtils {
     ): LinkedHashSet<Property> {
         val childrenSet = linkedSetOf<Property>()
         val dirName = rootDir.name
+        // 记录rootDir下不同分辨率的变体目录
+        val variantsDir = mutableListOf<VirtualFile>()
+        // 记录rootDir下除variantsDir以为的目录
+        val childDir = mutableListOf<VirtualFile>()
         for (child in rootDir.children) {
             if (child.isDirectory) {
-                childrenSet.addAll(getDeDuplicationList(child, basePath, "$parentPath${child.name}/"))
+                val name = child.name
+                if (name == "1.5x" || name == "2.0x" || name == "3.0x" || name == "4.0x") {
+                    variantsDir.add(child)
+                } else {
+                    childDir.add(child)
+                }
             } else if (isImage(child.name)) {
-                val path = if (dirName == "1.5x" || dirName == "2.0x"
-                    || dirName == "3.0x" || dirName == "4.0x"
-                ) {
+                val path = if (dirName == "1.5x" || dirName == "2.0x" || dirName == "3.0x" || dirName == "4.0x") {
                     parentPath.replace("$dirName/", "")
                 } else {
                     parentPath
                 }
+
                 val value = path + child.name
                 val key = getPropertyKey(value)
                 childrenSet.add(Property(key, "$basePath/$value"))
+            }
+        }
+
+        if (variantsDir.isNotEmpty()) {
+            variantsDir.forEach {
+                childrenSet.addAll(getDeDuplicationList(it, basePath, "$parentPath${it.name}/"))
+            }
+        }
+
+        if (childDir.isNotEmpty()) {
+            childDir.forEach {
+                childrenSet.addAll(getDeDuplicationList(it, basePath, "$parentPath${it.name}/"))
             }
         }
 
@@ -234,25 +254,16 @@ object GeneratorImageRefUtils {
     /**
      * 移除Images类中已不存在的图片资源
      */
-    private fun removeNotExistImageNode(classMember: PsiElement, allImages: Set<Property>) {
+    private fun removeNotExistImageNode(moduleRootFile: VirtualFile, classMember: PsiElement) {
+        val manager = VirtualFileManager.getInstance()
         // 移除不存在的数据
         classMember.children.forEach {
             if (it is DartGetterDeclaration) {
-                val key = it.getChildOfType<DartComponentName>()?.name
-
                 val value = it.getChildOfType<DartFunctionBody>()?.let { child ->
-                    child.getChildOfType<DartStringLiteralExpression>()?.text
+                    child.getChildOfType<DartStringLiteralExpression>()?.firstChild?.nextSibling?.text
                 }
 
-                var exist = false
-                for (property in allImages) {
-                    if (key == property.key && value == property.value) {
-                        exist = true
-                        break
-                    }
-                }
-
-                if (!exist) {
+                if (manager.findFileByUrl("file://${moduleRootFile.path}/$value") == null) {
                     it.delete()
                 }
             }
@@ -266,15 +277,13 @@ object GeneratorImageRefUtils {
         allImages.forEach {
             val value = classMember.children.find { child ->
                 if (child is DartGetterDeclaration) {
-                    val key = child.getChildOfType<DartComponentName>()?.name
-
                     val value = child.getChildOfType<DartFunctionBody>()?.let { child2 ->
-                        child2.getChildOfType<DartStringLiteralExpression>()?.text
+                        child2.getChildOfType<DartStringLiteralExpression>()?.firstChild?.nextSibling?.text
                     }
 
                     var exist = false
                     for (property in allImages) {
-                        if (key == it.key && value == it.value) {
+                        if (value == it.value) {
                             exist = true
                             break
                         }
@@ -372,13 +381,24 @@ object GeneratorImageRefUtils {
         parentPath: String
     ) {
         val dirs = mutableListOf<VirtualFile>()
+        val variantsDirs = mutableListOf<VirtualFile>()
         imagesDir.children.forEach {
             if (it.isDirectory) {
-                dirs.add(it)
                 YamlUtils.createYAMLSequenceItem(project, "$parentPath${it.name}/")?.also { element ->
                     addYamlElement(yamlParent, eolElement, element)
                 }
+
+                val name = it.name
+                if (name == "1.5x" || name == "2.0x" || name == "3.0x" || name == "4.0x") {
+                    variantsDirs.add(it)
+                } else {
+                    dirs.add(it)
+                }
             }
+        }
+
+        variantsDirs.forEach {
+            addImagesDir(project, eolElement, it, yamlParent, "$parentPath${it.name}/")
         }
 
         dirs.forEach {

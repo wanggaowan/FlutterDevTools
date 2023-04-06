@@ -29,13 +29,11 @@ class DoL10nAction2 : DoL10nAction() {
         }
 
         val virtualFile = context.getData(LangDataKeys.VIRTUAL_FILE) ?: return
-        if (virtualFile.path.contains("/example/")) {
-            val exampleDir = root.exampleDir
-            if (exampleDir != null) {
-                val examplePubRoot = PubRoot.forDirectory(exampleDir)
-                if (examplePubRoot != null) {
-                    doGenL10n(project, sdk, examplePubRoot)
-                }
+        val exampleDir = root.exampleDir
+        if (exampleDir != null && virtualFile.path.startsWith(exampleDir.path)) {
+            val examplePubRoot = PubRoot.forDirectory(exampleDir)
+            if (examplePubRoot != null) {
+                doGenL10n(project, sdk, examplePubRoot)
             }
             return
         }

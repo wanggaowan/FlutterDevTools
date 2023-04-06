@@ -18,6 +18,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>1.6</p>
+    <ul>
+      <li>修复一些已知缺陷</li>
+    </ul>
+
     <p>1.5</p>
     <ul>
       <li>支持一个项目多个Flutter模块工程模式</li>

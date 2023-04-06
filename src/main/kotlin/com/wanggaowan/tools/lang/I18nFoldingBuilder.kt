@@ -11,7 +11,6 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
 import com.wanggaowan.tools.utils.ex.basePath
@@ -54,12 +53,12 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         val element = node.psi ?: return null
         val module = element.findModule() ?: return null
 
-        val psiFile = PsiTreeUtil.getParentOfType(element, PsiFile::class.java)
+        val psiFile = element.containingFile
         val isExample = if (psiFile == null) {
             false
         } else {
             val path = psiFile.virtualFile?.path
-            path != null && path.contains("/example/")
+            path != null && path.startsWith("${module.basePath}/example/")
         }
 
         val translateFile = getTranslateFile(module, isExample) ?: return null

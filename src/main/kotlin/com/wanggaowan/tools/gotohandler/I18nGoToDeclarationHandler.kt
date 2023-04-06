@@ -2,12 +2,11 @@ package com.wanggaowan.tools.gotohandler
 
 import com.intellij.openapi.module.Module
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.DartId
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
 import com.wanggaowan.tools.lang.I18nFoldingBuilder
+import com.wanggaowan.tools.utils.ex.basePath
 
 /**
  * 文本资源定位
@@ -42,12 +41,12 @@ object I18nGoToDeclarationHandler {
             return null
         }
 
-        val psiFile = PsiTreeUtil.getParentOfType(sourceElement, PsiFile::class.java)
+        val psiFile = sourceElement.containingFile
         val isExample = if (psiFile == null) {
             false
         } else {
             val path = psiFile.virtualFile?.path
-            path != null && path.contains("/example/")
+            path != null && path.startsWith("${module.basePath}/example/")
         }
 
         val file = I18nFoldingBuilder.getTranslateFile(module, isExample) ?: return null

@@ -10,9 +10,7 @@ import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
 import io.flutter.pub.PubRoot
-import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 /*
  * Project扩展
@@ -207,7 +205,7 @@ fun PsiElement?.findModule(): Module? {
         return null
     }
 
-    val parent = getParentOfType<PsiFile>(strict = true) ?: return null
+    val parent = containingFile ?: return null
     return parent.virtualFile?.module
 }
 
