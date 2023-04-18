@@ -128,7 +128,7 @@
           </vspacer>
           <grid id="631ce" layout-manager="FlowLayout" hgap="5" vgap="5" flow-align="0">
             <constraints>
-              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+              <grid row="1" column="0" row-span="1" col-span="2" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties/>
             <border type="none"/>
@@ -155,14 +155,15 @@
               <component id="bdefb" class="javax.swing.JCheckBox" binding="mCbSetConverters">
                 <constraints/>
                 <properties>
+                  <selected value="true"/>
                   <text value="配置converters"/>
                 </properties>
               </component>
               <component id="b40f8" class="javax.swing.JTextField" binding="mConvertersValue">
                 <constraints/>
                 <properties>
-                  <preferredSize width="200" height="38"/>
-                  <text value="请输入converters值"/>
+                  <preferredSize width="220" height="38"/>
+                  <text value="nullFieldConvertList"/>
                 </properties>
               </component>
             </children>

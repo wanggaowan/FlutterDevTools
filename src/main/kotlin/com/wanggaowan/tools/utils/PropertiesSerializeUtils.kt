@@ -36,7 +36,7 @@ object PropertiesSerializeUtils {
         return PropertiesComponent.getInstance(project).getBoolean(name, defaultValue)
     }
 
-    fun setBoolean(project: Project, name: String, value: Boolean) {
+    fun putBoolean(project: Project, name: String, value: Boolean) {
         PropertiesComponent.getInstance(project).setValue(name, value)
     }
 

@@ -6,7 +6,7 @@ plugins {
 
 group = "com.wanggaowan"
 // version = "1.0-SNAPSHOT"
-version = "1.6"
+version = "1.7"
 
 repositories {
     mavenCentral()

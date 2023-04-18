@@ -136,7 +136,9 @@ class JsonToDartAction : DumbAwareAction() {
             dialog.isSetConverters(),
             dialog.getConvertersValue()
         )
+
         PropertiesSerializeUtils.putString(project, JsonToDartDialog.CONVERTERS_VALUE, config.convertersValue)
+        PropertiesSerializeUtils.putBoolean(project, JsonToDartDialog.SET_CONVERTERS, config.setConverters)
 
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "GsonFormat") {
             override fun run(progressIndicator: ProgressIndicator) {
@@ -449,8 +451,8 @@ class JsonToDartAction : DumbAwareAction() {
             // 兼容周卓接口文档JSON, "dataList (工序列表)":[]
             val index = jsonKey.indexOf("(")
             Pair(
+                jsonKey.substring(0, index).replace(" ", ""),
                 jsonKey.substring(index + 1, jsonKey.length - 1),
-                jsonKey.substring(0, index).replace(" ", "")
             )
         } else {
             Pair(jsonKey, "")

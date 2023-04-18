@@ -18,6 +18,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>1.7</p>
+    <ul>
+      <li>修复json to dart Bug</li>
+      <li>json to dart 配置converts选项默认选中，converts值默认为nullFieldConvertList</li>
+    </ul>
+
     <p>1.6</p>
     <ul>
       <li>修复一些已知缺陷</li>

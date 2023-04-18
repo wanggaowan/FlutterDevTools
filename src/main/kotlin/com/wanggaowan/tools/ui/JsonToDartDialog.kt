@@ -39,7 +39,6 @@ class JsonToDartDialog(
     private lateinit var mConvertersValue: JTextField
 
     private var mJsonValue: JsonObject? = null
-    private var mConvertersStr: String? = null
 
     init {
         mEtJsonContent.isEnabled = true
@@ -81,9 +80,10 @@ class JsonToDartDialog(
         mConvertersValue.font = UIUtil.getFont(UIUtil.FontSize.SMALL, mConvertersValue.font)
         val value = PropertiesSerializeUtils.getString(project, CONVERTERS_VALUE)
         if (value.isNotEmpty()) {
-            mConvertersValue.text = value
-            mCbSetConverters.isSelected = true
+            mConvertersValue.text = PropertiesSerializeUtils.getString(project, CONVERTERS_VALUE)
         }
+
+        mCbSetConverters.isSelected = PropertiesSerializeUtils.getBoolean(project, SET_CONVERTERS, true)
 
         if (className == null) {
             mCreateObjectName.isEnabled = true
@@ -108,8 +108,8 @@ class JsonToDartDialog(
         }
 
         if (mCbSetConverters.isSelected) {
-            val text = mConvertersValue.text.trim()
-            if (text.isEmpty() || text == CONVERTERS_HINT) {
+            val text = getConvertersValue()
+            if (text.isEmpty()) {
                 Toast.show(mConvertersValue, MessageType.ERROR, CONVERTERS_HINT)
                 return
             }
@@ -183,11 +183,16 @@ class JsonToDartDialog(
     }
 
     fun getConvertersValue(): String {
-        return mConvertersValue.text.trim()
+        val value = mConvertersValue.text.trim()
+        if (value == CONVERTERS_HINT) {
+            return ""
+        }
+        return value
     }
 
     companion object {
         const val CONVERTERS_HINT = "请输入converters值"
         const val CONVERTERS_VALUE = "converters_value"
+        const val SET_CONVERTERS = "set_converters"
     }
 }
