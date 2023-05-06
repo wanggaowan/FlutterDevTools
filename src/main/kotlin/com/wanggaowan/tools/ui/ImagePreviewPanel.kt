@@ -15,6 +15,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.update.Activatable
 import com.intellij.util.ui.update.UiNotifyConnector
+import com.wanggaowan.tools.entity.Property
 import com.wanggaowan.tools.listener.SimpleComponentListener
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
@@ -57,7 +58,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private var mLayoutMode = 0
 
     // 需要展示的图片路径
-    private var mImages: Set<String>? = null
+    private var mImages: Set<Property>? = null
 
     // 当前展示图片数量
     private var mShowImageCount = 1
@@ -449,7 +450,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         })
     }
 
-    private fun getImageData(): Set<String>? {
+    private fun getImageData(): Set<Property>? {
         if (mRootFilePath.isNullOrEmpty()) {
             return null
         }
@@ -480,15 +481,10 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
         val searchStr = mSearchTextField.text.trim()
         if (searchStr.isNotEmpty()) {
-            val newData = mutableSetOf<String>()
-            for (path: String in data) {
-                var name = path
-                mRootFilePath?.also {
-                    name = path.replace("$it/", "")
-                }
-
-                if (name.contains(searchStr)) {
-                    newData.add(path)
+            val newData = mutableSetOf<Property>()
+            for (property: Property in data) {
+                if (property.key.contains(searchStr)) {
+                    newData.add(property)
                 }
             }
             data = newData
@@ -500,8 +496,8 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
         mShowImageCount = data.size
         setImageLayout()
-        data.forEach { imagePath ->
-            mImagePanel.add(getPreviewItemPanel(imagePath, mLayoutMode))
+        data.forEach { image ->
+            mImagePanel.add(getPreviewItemPanel(image, mLayoutMode))
         }
         mImagePanel.updateUI()
     }
@@ -530,7 +526,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
      * 获取图片预览Item样式
      * @param layoutType 0:线性布局，1：网格布局
      */
-    private fun getPreviewItemPanel(imagePath: String, layoutType: Int): JPanel {
+    private fun getPreviewItemPanel(image: Property, layoutType: Int): JPanel {
         val panel = JPanel()
         panel.layout = BorderLayout()
         panel.addMouseListener(object : MouseAdapter() {
@@ -548,7 +544,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
             override fun mouseClicked(e: MouseEvent) {
                 panel.background = null
-                val file = VirtualFileManager.getInstance().findFileByUrl("file://$imagePath") ?: return
+                val file = VirtualFileManager.getInstance().findFileByUrl("file://${image.value}") ?: return
                 val psiFile = PsiManager.getInstance(module.project).findFile(file) ?: return
                 EditorHelper.openFilesInEditor(arrayOf<PsiFile?>(psiFile))
             }
@@ -559,7 +555,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             panel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
             panel.preferredSize = Dimension(width, 100)
 
-            val imageView = ImageView(getFile(imagePath))
+            val imageView = ImageView(getFile(image.value))
             imageView.preferredSize = Dimension(80, 80)
             panel.add(imageView, BorderLayout.WEST)
             imageView.border = LineBorder(UIColor.LINE_COLOR, 1)
@@ -569,12 +565,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 BorderFactory.createEmptyBorder(0, 30, 0, 0),
                 LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0)
             )
-
-            var path = imagePath
-            mRootFilePath?.also {
-                path = path.replace("$it/", "")
-            }
-            label.text = getPropertyValue(path)
+            label.text = image.key
 
             panel.add(label, BorderLayout.CENTER)
         } else {
@@ -587,7 +578,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 LineBorder(UIColor.LINE_COLOR, 1)
             )
 
-            val imageView = ImageView(getFile(imagePath))
+            val imageView = ImageView(getFile(image.value))
             imageView.preferredSize = Dimension(mGridImageLayoutWidth, mGridImageLayoutWidth)
             panel.add(imageView, BorderLayout.CENTER)
 
@@ -596,12 +587,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             label.isOpaque = true
             label.preferredSize = Dimension(mGridImageLayoutWidth, labelHeight)
             label.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
-
-            var path = imagePath
-            mRootFilePath?.also {
-                path = path.replace("$it/", "")
-            }
-            label.text = getPropertyValue(path)
+            label.text = image.key
 
             panel.add(label, BorderLayout.SOUTH)
         }
@@ -622,26 +608,41 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     /**
      * 获取去重后的属性列表
      */
-    private fun getDeDuplicationList(rootDir: VirtualFile, parentPath: String = ""): LinkedHashSet<String> {
-        val childrenSet = linkedSetOf<String>()
+    private fun getDeDuplicationList(rootDir: VirtualFile, parentPath: String = ""): LinkedHashSet<Property> {
+        val childrenSet = linkedSetOf<Property>()
         for (child in rootDir.children) {
             if (child.isDirectory) {
+                val name = child.name
+                val child4x = child.findChild("4.0x")
+                val child3x = child.findChild("3.0x")
+                val child2x = child.findChild("2.0x")
+                val child1_5x = child.findChild("1.5x")
+                if (child4x != null) {
+                    childrenSet.addAll(getDeDuplicationList(child4x, "$parentPath$name/${child4x.name}/"))
+                }
+
+                if (child3x != null) {
+                    childrenSet.addAll(getDeDuplicationList(child3x, "$parentPath$name/${child3x.name}/"))
+                }
+
+                if (child2x != null) {
+                    childrenSet.addAll(getDeDuplicationList(child2x, "$parentPath$name/${child2x.name}/"))
+                }
+
+                if (child1_5x != null) {
+                    childrenSet.addAll(getDeDuplicationList(child1_5x, "$parentPath$name/${child1_5x.name}/"))
+                }
+
+                if (name == "4.0x" || name == "3.0x" || name == "2.0x" || name == "1.5x") {
+                    continue
+                }
                 childrenSet.addAll(getDeDuplicationList(child, "$parentPath${child.name}/"))
             } else if (isImage(child.name)) {
-                childrenSet.add(getPropertyValue(child.path))
+                childrenSet.add(Property(child.name, child.path))
             }
         }
 
         return childrenSet
-    }
-
-    private fun getPropertyValue(value: String): String {
-        // 此逻辑是用于处理类似IOS那种通过文件名称带@1x，@2x等后缀处理不同分辨率图片的情况
-        // 此情况需要把后缀去除再显示
-        // return value.replace("@1x", "")
-        //     .replace("@2x", "")
-        //     .replace("@3x", "")
-        return value
     }
 
     private fun getFile(relativePath: String): File {
@@ -674,46 +675,6 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
     override fun dispose() {
 
-    }
-
-    private fun checkTheme() {
-
-    }
-
-    private fun updateTheme() {
-        // val inputRectColor =
-        //     if (mSearchTextField.hasFocus()) UIColor.getInputFocusColor() else UIColor.getInputUnFocusColor()
-        // mSearchPanel.border = BorderFactory.createCompoundBorder(
-        //     BorderFactory.createCompoundBorder(
-        //         LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0),
-        //         BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        //     ), LineBorder(inputRectColor, 1, true)
-        // )
-        // mSearchBtn.icon = SdkIcons.search
-        // mClearBtn.icon = SdkIcons.close
-        //
-        // mListLayoutBtn.icon = SdkIcons.list
-        // if (mLayoutMode == 0) {
-        //     mListLayoutBtn.background = UIColor.getMousePressColor()
-        // }
-        //
-        // mGridLayoutBtn.icon = SdkIcons.grid
-        // if (mLayoutMode == 1) {
-        //     mGridLayoutBtn.background = UIColor.getMousePressColor()
-        // }
-        //
-        // mRefreshBtn.icon = SdkIcons.refresh
-        //
-        // mRootPathJPanel.border = BorderFactory.createCompoundBorder(
-        //     BorderFactory.createCompoundBorder(
-        //         BorderFactory.createEmptyBorder(2, 2, 2, 2),
-        //         LineBorder(UIColor.getInputUnFocusColor(), 1, true)
-        //     ),
-        //     BorderFactory.createEmptyBorder(0, 4, 0, 4)
-        // )
-        //
-        // mScrollPane.border = LineBorder(UIColor.getLineColor(), 0, 0, 1, 0)
-        // setNewImages()
     }
 
     companion object {

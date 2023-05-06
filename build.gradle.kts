@@ -6,7 +6,7 @@ plugins {
 
 group = "com.wanggaowan"
 // version = "1.0-SNAPSHOT"
-version = "1.7"
+version = "1.8"
 
 repositories {
     mavenCentral()
@@ -19,7 +19,7 @@ intellij {
 
     version.set("221.6008.13.2211.9619390")
     type.set("AI") // AndroidStudio
-    plugins.set(listOf("java","Kotlin","Dart:221.6103.1","io.flutter:72.1.2","yaml"))
+    plugins.set(listOf("java","Kotlin","Dart:221.6103.1","io.flutter:72.1.2","yaml","com.localizely.flutter-intl:1.18.1-2020.3"))
 }
 
 tasks {

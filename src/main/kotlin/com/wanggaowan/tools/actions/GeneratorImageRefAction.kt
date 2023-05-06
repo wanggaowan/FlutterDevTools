@@ -15,6 +15,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.elementType
 import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.entity.Property
 import com.wanggaowan.tools.settings.PluginSettings
@@ -336,27 +337,38 @@ object GeneratorImageRefUtils {
         var assetsYamlElement = YamlUtils.findElement(flutterYamlElement, "assets")
         if (assetsYamlElement == null) {
             assetsYamlElement = YamlUtils.createYAMLKeyValue(project, "assets:") ?: return
-            flutterYamlElement.add(eolElement)
-            assetsYamlElement = flutterYamlElement.add(assetsYamlElement) ?: return
+            assetsYamlElement = addYamlElementNoCheck(flutterYamlElement, eolElement, assetsYamlElement)
+
+            assetsYamlElement =
+                addYamlElementNoCheck(assetsYamlElement, eolElement, yamlGenerator.createEmptySequence())
         } else {
+            assetsYamlElement = assetsYamlElement.getChildOfType<YAMLSequence>() ?: addYamlElementNoCheck(
+                assetsYamlElement,
+                eolElement,
+                yamlGenerator.createEmptySequence()
+            )
+
             val fileManager = VirtualFileManager.getInstance()
             val basePath = "file://${project.basePath}"
-            assetsYamlElement.getChildOfType<YAMLSequence>()?.children?.forEach {
+            assetsYamlElement.children.forEach {
                 val child = it.getChildOfType<YAMLScalar>()
                 if (child != null) {
                     val value = child.textValue
-                    if (value.startsWith(imagesDirRelPath) && fileManager.findFileByUrl("$basePath/${child.textValue}") == null) {
-                        val nextSibling = it.nextSibling
-                        // 删除两个标签直接的间隙
-                        if (nextSibling is LeafPsiElement) {
-                            val nextSibling2 = nextSibling.nextSibling
-                            if (nextSibling2 is LeafPsiElement) {
-                                nextSibling2.delete()
+                    if (value.startsWith(imagesDirRelPath)) {
+                        val virtualFile = fileManager.findFileByUrl("$basePath/$value")
+                        if (virtualFile == null || virtualFile.children.isEmpty()) {
+                            val nextSibling = it.nextSibling
+                            // 删除两个标签之间的间隙
+                            if (nextSibling is LeafPsiElement) {
+                                val nextSibling2 = nextSibling.nextSibling
+                                if (nextSibling2 is LeafPsiElement) {
+                                    nextSibling2.delete()
+                                }
+                                nextSibling.delete()
                             }
-                            nextSibling.delete()
+                            // 删除不存在的目录
+                            it.delete()
                         }
-                        // 删除不存在的目录
-                        it.delete()
                     }
                 }
             }
@@ -383,7 +395,7 @@ object GeneratorImageRefUtils {
         val dirs = mutableListOf<VirtualFile>()
         val variantsDirs = mutableListOf<VirtualFile>()
         imagesDir.children.forEach {
-            if (it.isDirectory) {
+            if (it.isDirectory && it.children.isNotEmpty()) {
                 YamlUtils.createYAMLSequenceItem(project, "$parentPath${it.name}/")?.also { element ->
                     addYamlElement(yamlParent, eolElement, element)
                 }
@@ -423,16 +435,27 @@ object GeneratorImageRefUtils {
      */
     private fun addYamlElement(parent: PsiElement, eolElement: PsiElement, child: PsiElement) {
         var exist = false
-        parent.getChildOfType<YAMLSequence>()?.also {
-            for (child2 in it.children) {
-                if (child2.textMatches(child)) {
-                    exist = true
-                    break
-                }
+        for (child2 in parent.children) {
+            if (child2.textMatches(child)) {
+                exist = true
+                break
             }
         }
 
         if (!exist) {
+            addYamlElementNoCheck(parent, eolElement, child)
+        }
+    }
+
+    /**
+     * 新增yaml节点，不存在时才添加
+     */
+    private fun addYamlElementNoCheck(parent: PsiElement, eolElement: PsiElement, child: PsiElement): PsiElement {
+        val lastChild = parent.lastChild
+        val debugName = lastChild.elementType?.debugName
+        return if (debugName == "indent" || debugName == "Eol") {
+            parent.add(child)
+        } else {
             parent.add(eolElement)
             parent.add(child)
         }

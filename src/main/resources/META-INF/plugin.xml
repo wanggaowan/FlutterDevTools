@@ -18,6 +18,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>1.8</p>
+    <ul>
+      <li>修复生成图片引用资源并配置yaml assets节点数据时，assets会多追加换行，导致assets节点下出现大量空白行Bug</li>
+      <li>修复图片资源预览未去重不同分辨率下相同图片Bug</li>
+      <li>增加Flutter Intl插件依赖，方便l10n多语言引用跳转到对应的定义位置</li>
+    </ul>
+
     <p>1.7</p>
     <ul>
       <li>修复json to dart Bug</li>
@@ -78,6 +85,7 @@
     <depends>Dart</depends>
     <depends>io.flutter</depends>
     <depends>org.jetbrains.plugins.yaml</depends>
+    <depends>com.localizely.flutter-intl</depends>
 
     <actions>
         <!--文件编辑界面的命令-->
