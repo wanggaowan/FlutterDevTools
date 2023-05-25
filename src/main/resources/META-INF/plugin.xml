@@ -10,14 +10,20 @@
       <li>json转dart</li>
       <li>一键导入android图片</li>
       <li>自动/手动生成图片资源引用文件并配置yaml assets节点</li>
-      <li>复制不同分辨率下的相同图片</li>
-      <li>删除不同分辨率下的相同图片</li>
+      <li>复制/删除/重命名不同分辨率下的相同图片</li>
       <li>实时显示多语言翻译后文本</li>
       <li>常用命令提供快捷方式</li>
+      <li>添加页面路由</li>
     </ol>
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>1.9</p>
+    <ul>
+      <li>增加配置页面路由功能</li>
+      <li>增加重命名不同分辨率下的相同图片功能</li>
+    </ul>
+
     <p>1.8</p>
     <ul>
       <li>修复生成图片引用资源并配置yaml assets节点数据时，assets会多追加换行，导致assets节点下出现大量空白行Bug</li>
@@ -159,6 +165,12 @@
                 class="com.wanggaowan.tools.actions.DeleteMultiSameNameFileAction" text="删除不同分辨率下的相同图片"
                 icon="FlutterIcons.Flutter_13"
                 description="删除不同分辨率下的相同图片">
+            <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
+        </action>
+        <action id="FlutterDevTools.RenameMultiSameNameFileAction"
+                class="com.wanggaowan.tools.actions.RenameMultiSameNameFileAction" text="重命名不同分辨率下的相同图片"
+                icon="FlutterIcons.Flutter_13"
+                description="重命名不同分辨率下的相同图片">
             <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
         </action>
     </actions>
