@@ -115,6 +115,13 @@
             description="根据Dart实体生成.g.dart文件">
             <add-to-group group-id="GenerateGroup" anchor="last"/>
         </action>
+        <action
+            id="FlutterDevTools.AddRouterAction"
+            class="com.wanggaowan.tools.actions.AddRouterAction"
+            text="添加页面路由"
+            description="根据给定内容，生成路由数据">
+            <add-to-group group-id="GenerateGroup" anchor="last"/>
+        </action>
 
         <group id="FlutterDevToolsActionGroup" class="com.wanggaowan.tools.actions.ToolsActionGroup">
             <separator/>

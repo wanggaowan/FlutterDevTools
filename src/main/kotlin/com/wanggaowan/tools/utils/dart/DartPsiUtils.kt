@@ -77,6 +77,15 @@ object DartPsiUtils {
     }
 
     /**
+     * 创建逗号(,)PsiElement
+     */
+    @Throws(IncorrectOperationException::class)
+    fun createCommaElement(project: Project): PsiElement? {
+        val psiFile = createCommonPsiFile(project, ",")
+        return PsiTreeUtil.findChildOfType(psiFile, LeafPsiElement::class.java)
+    }
+
+    /**
      * 创建两个PsiElement之间的空白分隔符
      */
     @Throws(IncorrectOperationException::class)
@@ -173,6 +182,22 @@ object DartPsiUtils {
             } else {
                 element
             }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 创建列表项
+     */
+    fun createListItem(project: Project, text: String): PsiElement? {
+        val psiFile = PsiFileFactory.getInstance(project).createFileFromText(
+            "dummy.${DartFileType.INSTANCE.defaultExtension}",
+            DartFileType.INSTANCE, "List dummy = [$text]; ", LocalTimeCounter.currentTime(), false
+        )
+
+        return try {
+            return psiFile.children[0].children[1].children[0].children[0]
         } catch (e: Exception) {
             null
         }
