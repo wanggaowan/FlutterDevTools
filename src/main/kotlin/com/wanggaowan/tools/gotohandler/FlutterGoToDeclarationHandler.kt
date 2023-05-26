@@ -35,6 +35,11 @@ class FlutterGoToDeclarationHandler : GotoDeclarationHandler {
             return targets
         }
 
+        targets = RouterGoToDeclarationHandler.getGotoDeclarationTargets(module, sourceElement)
+        if (targets != null) {
+            return targets
+        }
+
         return null
     }
 }
