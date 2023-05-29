@@ -94,7 +94,7 @@ object RouterGoToDeclarationHandler {
                         null
                     }
                 } else {
-                    val find = element.getChildOfType<DartCallExpression>()?.getChildOfType<DartReferenceExpression>()
+                    val find = element.getChildOfType<DartCallExpression>()?.getChildOfType<DartReferenceExpression>()?.resolve()
                     return if (find == null) null else arrayOf(find)
                 }
             }
