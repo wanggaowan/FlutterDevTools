@@ -306,20 +306,21 @@ class JsonToDartAction : DumbAwareAction() {
                 }
             }
 
-            if (existConstructor && existFactory && existToJson) {
-                if (config.createFromList) {
-                    if (existFromList) {
-                        break
-                    }
-                } else {
-                    break
-                }
+            if (existConstructor && existFactory && existToJson && existFromList) {
+                break
             }
         }
 
         createClassConstructorAndSerializableMethod(
-            project, jsonObject, classMembers, selectedClazzName,
-            !existConstructor, !existFactory, !existToJson, !existFromList, config
+            project,
+            jsonObject,
+            classMembers,
+            selectedClazzName,
+            !existConstructor,
+            !existFactory && (config.generatorJsonSerializable || config.createFromList),
+            !existToJson && config.generatorJsonSerializable,
+            !existFromList && config.createFromList,
+            config.nullSafe
         )
     }
 
@@ -496,7 +497,7 @@ class JsonToDartAction : DumbAwareAction() {
                     createClassConstructorAndSerializableMethod(
                         project, jsonObject, rootElement, name, true,
                         config.generatorJsonSerializable, config.generatorJsonSerializable,
-                        config.createFromList, config
+                        config.createFromList, config.nullSafe
                     )
                 }
             }
@@ -509,7 +510,7 @@ class JsonToDartAction : DumbAwareAction() {
     private fun createClassConstructorAndSerializableMethod(
         project: Project, jsonObject: JsonObject, classMembers: PsiElement,
         className: String, createConstructor: Boolean, createFactory: Boolean, createToJson: Boolean,
-        createFromList: Boolean, config: Config
+        createFromList: Boolean, nullSafe: Boolean
     ) {
 
         if (createConstructor) {
@@ -533,7 +534,7 @@ class JsonToDartAction : DumbAwareAction() {
                         constructor.append(", ")
                     }
 
-                    if (config.nullSafe) {
+                    if (nullSafe) {
                         constructor.append("required ")
                     }
 
