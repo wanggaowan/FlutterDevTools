@@ -319,7 +319,7 @@ class JsonToDartAction : DumbAwareAction() {
 
         createClassConstructorAndSerializableMethod(
             project, jsonObject, classMembers, selectedClazzName,
-            !existConstructor, !existFactory, existFromList, !existToJson, config
+            !existConstructor, !existFactory, !existToJson, !existFromList, config
         )
     }
 
