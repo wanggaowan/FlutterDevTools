@@ -13,11 +13,20 @@
       <li>复制/删除/重命名不同分辨率下的相同图片</li>
       <li>实时显示多语言翻译后文本</li>
       <li>常用命令提供快捷方式</li>
-      <li>添加页面路由</li>
+      <li>文件导航</li>
+      <li>页面路由配置</li>
+      <li>Android &lt;string/&gt;转化arb文件格式</li>
     </ol>
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>2.0</p>
+    <ul>
+      <li>页面路由配置：增加返回参数，路由根据光标位置智能插入到相邻路由之下，而不是总是插入到尾部</li>
+      <li>增加粘贴Android &lt;string/&gt; 文本到arb文件时，自动转化为arb文本格式</li>
+      <li>根据路由地址跳转，可选择跳转到定义处还是路由界面</li>
+    </ul>
+
     <p>1.9</p>
     <ul>
       <li>增加配置页面路由功能</li>
@@ -191,18 +200,19 @@
         <postStartupActivity implementation="com.wanggaowan.tools.ProjectOpenActivity"/>
 
         <!--必须设置order为first，否则2021.3版本之后不会调用FlutterGoToDeclarationHandler-->
-        <gotoDeclarationHandler implementation="com.wanggaowan.tools.gotohandler.FlutterGoToDeclarationHandler"
-                                order="first"/>
+        <gotoDeclarationHandler
+            implementation="com.wanggaowan.tools.extensions.gotohandler.FlutterGoToDeclarationHandler"
+            order="first"/>
 
         <lang.documentationProvider language="Dart"
-                                    implementationClass="com.wanggaowan.tools.description.ImageDocumentDescriptionProvider"
+                                    implementationClass="com.wanggaowan.tools.extensions.description.ImageDocumentDescriptionProvider"
                                     order="first"/>
 
-        <projectViewPane implementation="com.wanggaowan.tools.projectviewpane.FlutterProjectViewPane"
+        <projectViewPane implementation="com.wanggaowan.tools.extensions.projectviewpane.FlutterProjectViewPane"
                          id="FlutterDevTools.ProjectViewPane"/>
 
         <toolWindow id="Flutter Resource Manager"
-                    factoryClass="com.wanggaowan.tools.toolwindow.ResourcePreviewToolWindowFactory"
+                    factoryClass="com.wanggaowan.tools.extensions.toolwindow.ResourcePreviewToolWindowFactory"
                     icon="FlutterIcons.Flutter_13"/>
 
         <projectConfigurable parentId="tools" instance="com.wanggaowan.tools.settings.ProjectPluginSettingsConfigurable"
@@ -210,11 +220,13 @@
                              displayName="FlutterDevTools"/>
 
         <codeInsight.lineMarkerProvider language="Dart"
-                                        implementationClass="com.wanggaowan.tools.codeInsight.ImageLineMarkerProvider"/>
+                                        implementationClass="com.wanggaowan.tools.extensions.codeInsight.ImageLineMarkerProvider"/>
 
-        <lang.foldingBuilder language="Dart" implementationClass="com.wanggaowan.tools.lang.I18nFoldingBuilder"/>
+        <lang.foldingBuilder language="Dart"
+                             implementationClass="com.wanggaowan.tools.extensions.lang.I18nFoldingBuilder"/>
         <actionOnSave implementation="com.wanggaowan.tools.listener.GenL10nListener" order="last"/>
         <filePasteProvider implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first"/>
         <refactoring.moveHandler implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first"/>
+        <customPasteProvider implementation="com.wanggaowan.tools.extensions.AndroidStringPasteProvider"/>
     </extensions>
 </idea-plugin>

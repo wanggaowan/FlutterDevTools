@@ -1,10 +1,10 @@
-package com.wanggaowan.tools.description
+package com.wanggaowan.tools.extensions.description
 
 import com.intellij.lang.documentation.DocumentationProvider
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.wanggaowan.tools.gotohandler.ImagesGoToDeclarationHandler
+import com.wanggaowan.tools.extensions.gotohandler.ImagesGoToDeclarationHandler
 import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.findModule
 import com.wanggaowan.tools.utils.ex.isFlutterProject

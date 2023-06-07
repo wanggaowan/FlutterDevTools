@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.gotohandler
+package com.wanggaowan.tools.extensions.gotohandler
 
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.editor.Editor

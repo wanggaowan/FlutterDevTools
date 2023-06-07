@@ -1,8 +1,9 @@
-package com.wanggaowan.tools.gotohandler
+package com.wanggaowan.tools.extensions.gotohandler
 
 import com.intellij.openapi.module.Module
 import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
@@ -29,6 +30,36 @@ object RouterGoToDeclarationHandler {
             clazz.getChildOfType<DartClassBody>()?.getChildOfType<DartClassMembers>()
                 ?: return null
 
+        val findElement = mutableListOf<PsiElement>()
+        val pages = getListDefine(classMembers, text)
+        val isInMethod = sourceElement.getParentOfType<DartMethodDeclaration>(strict = true) != null
+        if (!isInMethod) {
+            val elements = getMethodDefine(classMembers, text)
+            if (elements.isNotEmpty()) {
+                findElement.addAll(elements)
+            }
+        } else {
+            pages?.also {
+                findElement.addAll(it)
+            }
+
+            pages?.forEach {
+                getResolvePage(it)?.also { page ->
+                    val parentClazz = page.getParentOfType<DartClass>(strict = true)
+                    if (parentClazz == null) {
+                        findElement.add(page)
+                    } else {
+                        findElement.add(parentClazz)
+                    }
+                }
+            }
+        }
+
+        return if (findElement.isEmpty()) null else findElement.toTypedArray()
+    }
+
+    // 获取与text内容匹配，定义在列表中的内容
+    private fun getListDefine(classMembers: DartClassMembers, text: String): List<PsiElement>? {
         val varList = classMembers.getChildrenOfType<DartVarDeclarationList>()
         var pagesElement: PsiElement? = null
         for (child in varList) {
@@ -37,7 +68,7 @@ object RouterGoToDeclarationHandler {
             if (name == "getPages") {
                 val type = element.getChildOfType<DartType>()?.text
                 if (!type.isNullOrEmpty() && !type.startsWith("List")) {
-                    return null
+                    break
                 }
 
                 pagesElement = child
@@ -52,7 +83,7 @@ object RouterGoToDeclarationHandler {
                 if (name == "getPages") {
                     val type = child.getChildOfType<DartReturnType>()?.text
                     if (!type.isNullOrEmpty() && !type.startsWith("List")) {
-                        return null
+                        break
                     }
 
                     pagesElement = child
@@ -68,6 +99,8 @@ object RouterGoToDeclarationHandler {
 
         val dartListLiteralExpression =
             findPageListDefinitionElement(pagesElement) ?: return null
+
+        val elements = mutableListOf<PsiElement>()
         for (child in dartListLiteralExpression.children) {
             val dartArgumentList = child.getChildOfType<DartCallExpression>()?.getChildOfType<DartArguments>()
                 ?.getChildOfType<DartArgumentList>() ?: continue
@@ -81,26 +114,38 @@ object RouterGoToDeclarationHandler {
                 ?.getChildOfType<DartStringLiteralExpression>()?.text?.replace("\"", "")
                 ?.replace("\'", "")?.trim()
             if (content == text) {
-                var element: PsiElement =
-                    children[1].getChildOfType<DartFunctionExpression>()?.getChildOfType<DartFunctionExpressionBody>()
-                        ?: return null
-                val newElement = element.getChildOfType<DartNewExpression>()
-                if (newElement != null) {
-                    element = newElement.getChildOfType<DartType>()?.children?.get(0)?.children?.get(0) ?: return null
-                    return if (element is DartReferenceExpression) {
-                        val find = element.resolve()
-                        if (find == null) null else arrayOf(find)
-                    } else {
-                        null
-                    }
-                } else {
-                    val find = element.getChildOfType<DartCallExpression>()?.getChildOfType<DartReferenceExpression>()?.resolve()
-                    return if (find == null) null else arrayOf(find)
-                }
+                elements.add(child)
+                break
             }
         }
+        return elements
+    }
 
-        return null
+    // 获取指定节点下定义的Page界面
+    private fun getResolvePage(parent: PsiElement): PsiElement? {
+        val dartArgumentList = parent.getChildOfType<DartCallExpression>()?.getChildOfType<DartArguments>()
+            ?.getChildOfType<DartArgumentList>() ?: return null
+
+        val children = dartArgumentList.children
+        if (children.size < 2) {
+            return null
+        }
+
+        var element: PsiElement =
+            children[1].getChildOfType<DartFunctionExpression>()?.getChildOfType<DartFunctionExpressionBody>()
+                ?: return null
+        val newElement = element.getChildOfType<DartNewExpression>()
+        if (newElement != null) {
+            element = newElement.getChildOfType<DartType>()?.children?.get(0)?.children?.get(0) ?: return null
+            return if (element is DartReferenceExpression) {
+                element.resolve()
+            } else {
+                null
+            }
+        } else {
+            return element.getChildOfType<DartCallExpression>()?.getChildOfType<DartReferenceExpression>()
+                ?.resolve()
+        }
     }
 
     /**
@@ -143,5 +188,25 @@ object RouterGoToDeclarationHandler {
         } else {
             parent.getChildOfType<DartVarInit>()?.getChildOfType<DartListLiteralExpression>()
         }
+    }
+
+    // 获取与text内容匹配，定义在方法中的内容
+    private fun getMethodDefine(classMembers: DartClassMembers, text: String): List<PsiElement> {
+        val children = classMembers.getChildrenOfType<DartMethodDeclaration>()
+        val elements = mutableListOf<PsiElement>()
+        for (child in children) {
+            val callExpressions = PsiTreeUtil.findChildrenOfAnyType(child, DartCallExpression::class.java)
+            for (callExpression in callExpressions) {
+                val router = callExpression.getChildOfType<DartArguments>()
+                    ?.getChildOfType<DartArgumentList>()?.firstChild?.text?.replace("\"", "")
+                    ?.replace("\'", "")?.trim()
+                if (router == text) {
+                    // 先只查找一个，一般情况下都是一对一
+                    elements.add(child)
+                    break
+                }
+            }
+        }
+        return elements
     }
 }

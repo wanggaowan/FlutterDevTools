@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.toolwindow
+package com.wanggaowan.tools.extensions.toolwindow
 
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.DumbService

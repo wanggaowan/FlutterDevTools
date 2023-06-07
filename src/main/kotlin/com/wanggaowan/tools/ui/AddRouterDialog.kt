@@ -22,6 +22,8 @@ import javax.swing.BorderFactory
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JTextField
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 
 /**
  * 添加路由配置界面
@@ -32,6 +34,9 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
     private val mJPage = JTextField()
     private val mJDoc = JTextField()
     private val mJPramsPanel = JPanel(GridBagLayout())
+    private val mJReturnPramPanel = JPanel(GridBagLayout())
+    private var mUserInputPath: Boolean = false
+    private var mSetPath = false
 
     init {
         mContentPane = initContentPanel()
@@ -40,7 +45,7 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
 
     override fun createCenterPanel(): JComponent = mContentPane
 
-    override fun getPreferredFocusedComponent(): JComponent = mJPath
+    override fun getPreferredFocusedComponent(): JComponent = mJPage
 
     override fun doOKAction() {
         val pagePath = getPagePath()
@@ -86,15 +91,156 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
             }
         })
 
+        mJPath.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(p0: DocumentEvent?) {
+                val str = mJPath.text.trim()
+                if (!mUserInputPath) {
+                    if (str != "/${mJPage.text.trim()}") {
+                        mUserInputPath = true
+                    }
+                } else if (str.isEmpty()) {
+                    mUserInputPath = false
+                }
+            }
+
+            override fun removeUpdate(p0: DocumentEvent?) {
+                if (mSetPath) {
+                    mSetPath = false
+                    return
+                }
+
+                val str = mJPath.text.trim()
+                if (!mUserInputPath) {
+                    if (str != "/${mJPage.text.trim()}") {
+                        mUserInputPath = true
+                    }
+                } else if (str.isEmpty()) {
+                    mUserInputPath = false
+                }
+            }
+
+            override fun changedUpdate(p0: DocumentEvent?) {
+                val str = mJPath.text.trim()
+                if (!mUserInputPath) {
+                    if (str != "/${mJPage.text.trim()}") {
+                        mUserInputPath = true
+                    }
+                } else if (str.isEmpty()) {
+                    mUserInputPath = false
+                }
+            }
+        })
+
+        mJPage.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(p0: DocumentEvent?) {
+                if (!mUserInputPath) {
+                    val str = mJPage.text.trim()
+                    mSetPath = true
+                    // 通过这种方式，会先触发removeUpdate再触发insertUpdate
+                    mJPath.text = if (str.isEmpty()) "" else "/$str"
+                }
+            }
+
+            override fun removeUpdate(p0: DocumentEvent?) {
+                if (!mUserInputPath) {
+                    val str = mJPage.text.trim()
+                    mSetPath = true
+                    mJPath.text = if (str.isEmpty()) "" else "/$str"
+                }
+            }
+
+            override fun changedUpdate(p0: DocumentEvent?) {
+                if (!mUserInputPath) {
+                    val str = mJPage.text.trim()
+                    mSetPath = true
+                    mJPath.text = if (str.isEmpty()) "" else "/$str"
+                }
+            }
+        })
+
+        initReturnParam()
         val builder = FormBuilder.createFormBuilder()
-            .addLabeledComponent(JBLabel("页面路径: "), mJPath, 1, false)
             .addLabeledComponent(JBLabel("页面名称: "), mJPage, 1, false)
+            .addLabeledComponent(JBLabel("页面路径: "), mJPath, 1, false)
             .addLabeledComponent(JBLabel("路由注释: "), mJDoc, 1, false)
+            .addLabeledComponent(JBLabel("返回数据: "), mJReturnPramPanel, 1, false)
             .addComponent(jParamsTitlePanel, 1)
             .addComponentFillVertically(JBScrollPane(mJPramsPanel), 1)
         val panel = builder.panel
         panel.preferredSize = JBUI.size(400, 300)
         return panel
+    }
+
+    private fun initReturnParam() {
+        val c = GridBagConstraints()
+        c.gridwidth = 1
+        c.gridx = 0
+        c.gridy = 0
+        c.weightx = 1.0
+        c.weighty = 0.0
+        c.fill = GridBagConstraints.HORIZONTAL
+        val typeName = JTextField("泛型名称")
+        typeName.isVisible = false
+        mJReturnPramPanel.add(typeName, c)
+
+        c.gridx = 1
+        c.weightx = 0.0
+        c.fill = GridBagConstraints.NONE
+        val typeBox = ComboBox<String>()
+        typeBox.addItem("无返回参数")
+        typeBox.addItem("String")
+        typeBox.addItem("int")
+        typeBox.addItem("double")
+        typeBox.addItem("bool")
+        typeBox.addItem("List")
+        typeBox.addItem("Set")
+        typeBox.addItem("Map")
+        typeBox.addItem("dynamic")
+        typeBox.addItem("自定义")
+        mJReturnPramPanel.add(typeBox, c)
+
+        val space = JBLabel()
+        c.gridx = 2
+        c.weightx = 1.0
+        c.fill = GridBagConstraints.HORIZONTAL
+        mJReturnPramPanel.add(space, c)
+
+        typeName.addFocusListener(object : FocusListener {
+            override fun focusGained(e: FocusEvent?) {
+                val text = typeName.text
+                if (text == "泛型名称" || text == "数据类型") {
+                    typeName.text = ""
+                }
+            }
+
+            override fun focusLost(e: FocusEvent?) {
+                val text = typeName.text.trim()
+                if (text.isEmpty()) {
+                    val type = typeBox.selectedItem as String
+                    if (type == "自定义") {
+                        typeName.text = "数据类型"
+                    } else {
+                        typeName.text = "泛型名称"
+                    }
+                }
+            }
+        })
+
+        typeBox.addItemListener {
+            val type: String = it.item as String
+            if (type == "List" || type == "Set" || type == "自定义") {
+                typeName.text = if (type == "自定义") "数据类型" else "泛型名称"
+                if (!typeName.isVisible) {
+                    typeName.isVisible = true
+                    space.isVisible = false
+                    mJReturnPramPanel.updateUI()
+                }
+            } else if (typeName.isVisible) {
+                typeName.isVisible = false
+                space.isVisible = true
+                mJReturnPramPanel.updateUI()
+            }
+        }
     }
 
     private fun createParamItem(verticalSpace: JComponent) {
@@ -124,7 +270,7 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
         cc.gridx = 0
         cc.gridy = gridy
         cc.fill = GridBagConstraints.HORIZONTAL
-        mJPramsPanel.add(panel,cc)
+        mJPramsPanel.add(panel, cc)
 
         cc.gridx = 1
         cc.weightx = 0.0
@@ -138,6 +284,7 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
         typeBox.addItem("Set")
         typeBox.addItem("Map")
         typeBox.addItem("dynamic")
+        typeBox.addItem("自定义")
         mJPramsPanel.add(typeBox, cc)
 
         val checkBox = JBCheckBox("null", true)
@@ -177,7 +324,7 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
         typeName.addFocusListener(object : FocusListener {
             override fun focusGained(e: FocusEvent?) {
                 val text = typeName.text
-                if (text == "泛型名称") {
+                if (text == "泛型名称" || text == "数据类型") {
                     typeName.text = ""
                 }
             }
@@ -185,7 +332,12 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
             override fun focusLost(e: FocusEvent?) {
                 val text = typeName.text.trim()
                 if (text.isEmpty()) {
-                    typeName.text = "泛型名称"
+                    val type = typeBox.selectedItem as String
+                    if (type == "自定义") {
+                        typeName.text = "数据类型"
+                    } else {
+                        typeName.text = "泛型名称"
+                    }
                 }
             }
         })
@@ -202,7 +354,8 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
 
         typeBox.addItemListener {
             val type: String = it.item as String
-            if (type == "List" || type == "Set") {
+            if (type == "List" || type == "Set" || type == "自定义") {
+                typeName.text = if (type == "自定义") "数据类型" else "泛型名称"
                 if (!typeName.isVisible) {
                     typeName.isVisible = true
                     panel.updateUI()
@@ -226,6 +379,18 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
         return mJDoc.text.trim()
     }
 
+    fun getReturnType(): String {
+        return (mJReturnPramPanel.components[1] as ComboBox<*>).selectedItem as String
+    }
+
+    fun getReturnGenerics(): String {
+        val value = (mJReturnPramPanel.components[0] as JTextField).text.trim()
+        if (value == "泛型名称" || value == "数据类型") {
+            return ""
+        }
+        return value
+    }
+
     fun getParams(): List<Param> {
         val list = mutableListOf<Param>()
         val components = mJPramsPanel.components
@@ -239,11 +404,15 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
             }
 
             var generics = (childComponents[1] as JTextField).text.trim()
-            if (generics == "泛型名称") {
+            if (generics == "泛型名称" || generics == "数据类型") {
                 generics = ""
             }
 
             val type = (components[index * 4 + 1] as ComboBox<*>).selectedItem as String
+            if (type == "自定义" && generics.isEmpty()) {
+                continue
+            }
+
             val couldNull = (components[index * 4 + 2] as JBCheckBox).isSelected
             list.add(Param(name, type, generics, couldNull))
         }

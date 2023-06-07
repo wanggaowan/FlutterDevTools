@@ -1,10 +1,11 @@
-package com.wanggaowan.tools.gotohandler
+package com.wanggaowan.tools.extensions.gotohandler
 
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.jetbrains.lang.dart.psi.*
+import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.ex.basePath
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
@@ -40,7 +41,7 @@ object ImagesGoToDeclarationHandler {
         }
 
         val text = parent.text ?: return null
-        if (!text.startsWith("Images.")) {
+        if (!text.startsWith("${PluginSettings.getImagesRefClassName(module.project)}.")) {
             return null
         }
 

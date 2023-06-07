@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.projectviewpane
+package com.wanggaowan.tools.extensions.projectviewpane
 
 import com.intellij.ide.SelectInContext
 import com.intellij.ide.SelectInManager

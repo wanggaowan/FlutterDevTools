@@ -25,7 +25,7 @@ object PluginSettings {
     const val DEFAULT_IMAGES_REF_CLASS_NAME = "Images"
 
     fun getImagesFileDir(project: Project? = null): String {
-        return formatPath(getValue(project, IMAGE_DIR, "assets/images"))
+        return formatPath(getValue(project, IMAGE_DIR, DEFAULT_IMAGE_DIR))
     }
 
     fun setImagesFileDir(project: Project? = null, value: String) {
@@ -44,7 +44,7 @@ object PluginSettings {
     }
 
     fun getImagesRefFilePath(project: Project? = null): String {
-        return formatPath(getValue(project, IMAGES_REF_FILE_PATH, "lib/resources"))
+        return formatPath(getValue(project, IMAGES_REF_FILE_PATH, DEFAULT_IMAGES_REF_FILE_PATH))
     }
 
     fun setImagesRefFilePath(project: Project? = null, value: String) {
@@ -52,7 +52,7 @@ object PluginSettings {
     }
 
     fun getImagesRefFileName(project: Project? = null): String {
-        return getValue(project, IMAGES_REF_FILE_NAME, "images.dart")
+        return getValue(project, IMAGES_REF_FILE_NAME, DEFAULT_IMAGES_REF_FILE_NAME)
     }
 
     fun setImagesRefFileName(project: Project? = null, value: String) {
@@ -60,7 +60,7 @@ object PluginSettings {
     }
 
     fun getImagesRefClassName(project: Project? = null): String {
-        return getValue(project, IMAGES_REF_CLASS_NAME, "Images")
+        return getValue(project, IMAGES_REF_CLASS_NAME, DEFAULT_IMAGES_REF_CLASS_NAME)
     }
 
     fun setImagesRefClassName(project: Project? = null, value: String) {
@@ -68,7 +68,7 @@ object PluginSettings {
     }
 
     fun getExampleImagesFileDir(project: Project? = null): String {
-        return formatPath(getValue(project, EXAMPLE_IMAGE_DIR, "assets/images"))
+        return formatPath(getValue(project, EXAMPLE_IMAGE_DIR, DEFAULT_IMAGE_DIR))
     }
 
     fun setExampleImagesFileDir(project: Project? = null, value: String) {
@@ -76,7 +76,7 @@ object PluginSettings {
     }
 
     fun getExampleImagesRefFilePath(project: Project? = null): String {
-        return formatPath(getValue(project, EXAMPLE_IMAGES_REF_FILE_PATH, "lib/resources"))
+        return formatPath(getValue(project, EXAMPLE_IMAGES_REF_FILE_PATH, DEFAULT_IMAGES_REF_FILE_PATH))
     }
 
     fun setExampleImagesRefFilePath(project: Project? = null, value: String) {
@@ -84,7 +84,7 @@ object PluginSettings {
     }
 
     fun getExampleImagesRefFileName(project: Project? = null): String {
-        return getValue(project, EXAMPLE_IMAGES_REF_FILE_NAME, "images.dart")
+        return getValue(project, EXAMPLE_IMAGES_REF_FILE_NAME, DEFAULT_IMAGES_REF_FILE_NAME)
     }
 
     fun setExampleImagesRefFileName(project: Project? = null, value: String) {
@@ -92,7 +92,7 @@ object PluginSettings {
     }
 
     fun getExampleImagesRefClassName(project: Project? = null): String {
-        return getValue(project, EXAMPLE_IMAGES_REF_CLASS_NAME, "Images")
+        return getValue(project, EXAMPLE_IMAGES_REF_CLASS_NAME, DEFAULT_IMAGES_REF_CLASS_NAME)
     }
 
     fun setExampleImagesRefClassName(project: Project? = null, value: String) {

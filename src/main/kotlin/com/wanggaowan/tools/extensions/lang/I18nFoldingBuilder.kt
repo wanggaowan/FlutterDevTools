@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.lang
+package com.wanggaowan.tools.extensions.lang
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject

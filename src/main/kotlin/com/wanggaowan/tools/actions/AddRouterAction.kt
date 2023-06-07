@@ -1,6 +1,5 @@
 package com.wanggaowan.tools.actions
 
-import com.intellij.ide.util.EditorHelper
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
@@ -10,15 +9,21 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiWhiteSpace
+import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
+import com.wanggaowan.tools.extensions.gotohandler.RouterGoToDeclarationHandler
 import com.wanggaowan.tools.ui.AddRouterDialog
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
+import com.wanggaowan.tools.utils.ex.findModule
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
+import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 /**
  * 增加路由
@@ -62,6 +67,8 @@ class AddRouterAction : DumbAwareAction() {
             override fun run(progressIndicator: ProgressIndicator) {
                 progressIndicator.isIndeterminate = true
                 WriteCommandAction.runWriteCommandAction(project) {
+
+                    // 查找RouteMap类和getPages节点，如果没有则创建
                     val children = psiFile.getChildrenOfType<DartClass>()
                     var routeMapClass: PsiElement? = null
                     for (child in children) {
@@ -113,47 +120,111 @@ class AddRouterAction : DumbAwareAction() {
                         }
                     }
 
+                    var insertAnchorList: PsiElement? = null
+                    var insertAnchorMethod: PsiElement? = null
 
+                    val dartListLiteralExpression: PsiElement
                     if (pagesElement == null) {
                         pagesElement =
                             DartPsiUtils.createClassMember(project, "static List<GetPage> getPages = []")
                                 ?: return@runWriteCommandAction
-                        pagesElement = classMembers.add(pagesElement)
+                        pagesElement = classMembers.add(pagesElement) ?: return@runWriteCommandAction
 
                         DartPsiUtils.createSemicolonElement(project)?.also {
                             classMembers.add(it)
                         }
+
+                        dartListLiteralExpression =
+                            findPageListDefinitionElement(project, pagesElement) ?: return@runWriteCommandAction
+                    } else {
+                        dartListLiteralExpression =
+                            findPageListDefinitionElement(project, pagesElement) ?: return@runWriteCommandAction
+
+                        // 存在getPages节点的情况下，查找触发当前Action时，最接近Editor中光标处PsiElement
+                        // 然后找打对应的列表节点和方法节点，之后输入插入到这些数据之后
+                        val (listNode, methodNode) = findInsertNode(event, psiFile, dartListLiteralExpression)
+                        insertAnchorList = listNode
+                        insertAnchorMethod = methodNode
                     }
 
-                    val dartListLiteralExpression =
-                        findPageListDefinitionElement(project, pagesElement!!) ?: return@runWriteCommandAction
-                    val listChildren = dartListLiteralExpression.children
-                    if (listChildren.isNotEmpty() && !endOfComma(listChildren[listChildren.size - 1])) {
-                        DartPsiUtils.createCommaElement(project)?.also {
-                            dartListLiteralExpression.addBefore(it, dartListLiteralExpression.lastChild)
+                    // 插入数据到getPages列表节点
+                    val pagePath = dialog.getPagePath()
+                    val pageName = dialog.getPageName()
+                    var pageElement: PsiElement?
+                    if (insertAnchorList == null) {
+                        val listChildren = dartListLiteralExpression.children
+                        if (listChildren.isNotEmpty() && endOfComma(listChildren[listChildren.size - 1]) == null) {
+                            DartPsiUtils.createCommaElement(project)?.also {
+                                dartListLiteralExpression.addBefore(it, dartListLiteralExpression.lastChild)
+                            }
+                        }
+
+                        pageElement = DartPsiUtils.createListItem(
+                            project,
+                            "GetPage(name: '$pagePath', page: () => const $pageName())"
+                        )
+
+                        if (pageElement != null) {
+                            pageElement =
+                                dartListLiteralExpression.addBefore(pageElement, dartListLiteralExpression.lastChild)
+                        }
+                    } else {
+                        pageElement = DartPsiUtils.createListItem(
+                            project,
+                            "GetPage(name: '$pagePath', page: () => const $pageName())"
+                        )
+
+                        if (pageElement != null) {
+                            endOfComma(insertAnchorList)?.also {
+                                insertAnchorList = it
+                            }
+
+                            pageElement =
+                                dartListLiteralExpression.addAfter(pageElement, insertAnchorList)
+                            DartPsiUtils.createCommaElement(project)?.also {
+                                dartListLiteralExpression.addAfter(it, pageElement)
+                            }
                         }
                     }
 
-                    val pagePath = dialog.getPagePath()
-                    val pageName = dialog.getPageName()
-                    DartPsiUtils.createListItem(
-                        project,
-                        "GetPage(name: '$pagePath', page: () => const $pageName())"
-                    )?.also {
-                        dartListLiteralExpression.addBefore(it, dartListLiteralExpression.lastChild)
-                    }
-
+                    // 插入数据到方法列表节点
                     val doc = dialog.getDoc()
                     if (doc.isNotEmpty()) {
                         DartPsiUtils.createDocElement(project, "/// $doc")?.also { docElement ->
-                            classMembers.add(docElement)
+                            if (insertAnchorMethod == null) {
+                                classMembers.add(docElement)
+                            } else {
+                                insertAnchorMethod = classMembers.addAfter(docElement, insertAnchorMethod)
+                            }
                         }
                     }
 
-
                     val params = dialog.getParams()
+                    val returnType = dialog.getReturnType()
+                    val returnGenerics = dialog.getReturnGenerics()
 
-                    var method = "static go$pageName(&params&) {&arguments1& Get.toNamed('$pagePath'&arguments2&); }"
+                    val returnStr = if (returnType == "无返回参数") {
+                        ""
+                    } else if (returnType == "自定义") {
+                        if (returnGenerics.isEmpty()) {
+                            ""
+                        } else {
+                            "Future<$returnGenerics?>? "
+                        }
+                    } else if ((returnType == "List" || returnType == "Set") && returnGenerics.isNotEmpty()) {
+                        "Future<$returnType<$returnGenerics>?>? "
+                    } else if (returnType == "Map") {
+                        "Future<Map<String,dynamic>?>? "
+                    } else {
+                        "Future<$returnType?>? "
+                    }
+
+                    var method = if (returnStr.isEmpty()) {
+                        "static ${returnStr}go$pageName(&params&) {&arguments1& Get.toNamed('$pagePath'&arguments2&); }"
+                    } else {
+                        "static ${returnStr}go$pageName(&params&) async {&arguments1& var result = await Get.toNamed('$pagePath'&arguments2&); return result; }"
+                    }
+
                     if (params.isEmpty()) {
                         method = method.replace("&params&", "")
                             .replace("&arguments1&", "")
@@ -167,16 +238,18 @@ class AddRouterAction : DumbAwareAction() {
                             val couldNull = if (it.type != "dynamic" && it.couldNull) "?" else ""
                             val required = if (it.couldNull) "" else "required "
 
+
                             paramsStr += if ((it.type == "List" || it.type == "Set") && it.generics.isNotEmpty()) {
                                 "$required${it.type}<${it.generics}>$couldNull ${it.name}"
                             } else if (it.type == "Map") {
                                 "$required${it.type}<String,dynamic>$couldNull ${it.name}"
+                            } else if (it.type == "自定义") {
+                                "$required${it.generics}$couldNull ${it.name}"
                             } else {
                                 "$required${it.type}$couldNull ${it.name}"
                             }
 
                             arguments += "'${it.name}': ${it.name}"
-
 
                             if (i != params.size - 1) {
                                 paramsStr += ","
@@ -191,20 +264,195 @@ class AddRouterAction : DumbAwareAction() {
                             .replace("&arguments2&", ", arguments: params")
                     }
 
-                    DartPsiUtils.createCommonElement(project, method)
-                        ?.also {
-                            val element = classMembers.add(it)
-                            EditorHelper.openInEditor(element)
+                    DartPsiUtils.createClassMember(project, method)?.also {
+                        if (insertAnchorMethod == null) {
+                            classMembers.add(it)
+                        } else {
+                            insertAnchorMethod = classMembers.addAfter(it, insertAnchorMethod)
                         }
+                    }
 
                     addImport(project, psiFile)
+
                     DartPsiUtils.reformatFile(project, psiFile)
+
+                    // pageElement?.also {
+                    //     EditorHelper.openInEditor(it)
+                    // }
                 }
 
                 progressIndicator.isIndeterminate = false
                 progressIndicator.fraction = 1.0
             }
         })
+    }
+
+    /**
+     * 查找指定节点之前，类型为DartElement的节点
+     */
+    private fun findPreListNode(element: PsiElement): PsiElement? {
+        val pre = element.prevSibling ?: return null
+
+        if (pre is DartElement) {
+            return pre
+        }
+        return findPreListNode(pre)
+    }
+
+    /**
+     * 查找指定节点之前，类型为DartMethodDeclaration的节点
+     */
+    private fun findPreMethodNode(element: PsiElement): PsiElement? {
+        val pre = element.prevSibling ?: return null
+
+        if (pre is DartMethodDeclaration) {
+            return pre
+        }
+        return findPreMethodNode(pre)
+    }
+
+    /**
+     * 查找插入节点,根据执行当前动作时鼠标接近位置PsiElement插入
+     */
+    private fun findInsertNode(
+        event: AnActionEvent,
+        psiFile: PsiFile,
+        dartListLiteralExpression: PsiElement
+    ): Pair<PsiElement?, PsiElement?> {
+        var insertAnchorList: PsiElement? = null
+        var insertAnchorMethod: PsiElement? = null
+
+        // 光标位置的PsiElement
+        var cursorElement = event.getData(CommonDataKeys.PSI_ELEMENT)
+        if (cursorElement == null) {
+            val editor = event.getData(CommonDataKeys.EDITOR)
+            editor?.let {
+                cursorElement =
+                    DartPsiUtils.findElementAtOffset(psiFile, it.selectionModel.selectionStart)
+            }
+        }
+
+        // 元素必须在RouteMap类中DartClassMembers里
+        val dartClassMembers = cursorElement?.getParentOfType<DartClassMembers>(strict = true)
+        if (dartClassMembers == null) {
+            cursorElement = null
+        } else {
+            val name =
+                dartClassMembers.getParentOfType<DartClass>(strict = true)?.getChildOfType<DartComponentName>()?.name
+            if (name != "RouteMap") {
+                cursorElement = null
+            }
+        }
+
+        if (cursorElement != null) {
+            var parent: PsiElement? =
+                cursorElement!!.getParentOfType<DartListLiteralExpression>(strict = true)
+            if (parent != null) {
+                // 说明光标在getPages列表里
+                insertAnchorList =
+                    cursorElement!!.getParentOfType<DartElement>(strict = true) ?: findPreListNode(cursorElement!!)
+                        ?: parent.firstChild
+            } else {
+                parent = cursorElement!!.getParentOfType<DartMethodDeclaration>(strict = true)
+                insertAnchorMethod = parent ?: findPreMethodNode(cursorElement!!)
+            }
+        }
+
+        if (insertAnchorList != null || insertAnchorMethod != null) {
+            if (insertAnchorMethod != null) {
+                val argListElements =
+                    PsiTreeUtil.findChildrenOfAnyType(insertAnchorMethod, DartArgumentList::class.java)
+                if (argListElements.isNotEmpty()) {
+                    for (element in argListElements) {
+                        val leafPsiElement =
+                            element.getChildOfType<DartStringLiteralExpression>()?.firstChild?.nextSibling
+                        if (leafPsiElement != null) {
+                            element.findModule()?.also { module ->
+                                val elements = RouterGoToDeclarationHandler.getGotoDeclarationTargets(
+                                    module,
+                                    leafPsiElement
+                                )
+                                if (!elements.isNullOrEmpty()) {
+                                    for (element2 in elements) {
+                                        if (element2 is DartElement) {
+                                            insertAnchorList = element2
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                            break
+                        }
+                    }
+                }
+            } else {
+                val argListElements =
+                    PsiTreeUtil.findChildrenOfAnyType(insertAnchorList, DartArgumentList::class.java)
+                if (argListElements.isNotEmpty()) {
+                    for (argListElement in argListElements) {
+                        for (namedArgument in argListElement.children) {
+                            if (namedArgument.text.startsWith("name")) {
+                                val leafPsiElement =
+                                    namedArgument.getChildOfType<DartStringLiteralExpression>()?.firstChild?.nextSibling
+                                if (leafPsiElement != null) {
+                                    namedArgument.findModule()?.also { module ->
+                                        val elements =
+                                            RouterGoToDeclarationHandler.getGotoDeclarationTargets(
+                                                module,
+                                                leafPsiElement
+                                            )
+                                        if (!elements.isNullOrEmpty()) {
+                                            for (element2 in elements) {
+                                                if (element2 is DartMethodDeclaration) {
+                                                    insertAnchorMethod = element2
+                                                    break
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                break
+                            }
+                        }
+
+                        if (insertAnchorMethod != null) {
+                            break
+                        }
+                    }
+                }
+
+                if (insertAnchorList == dartListLiteralExpression.firstChild) {
+                    val firstMethod = dartClassMembers?.getChildOfType<DartMethodDeclaration>()
+                    if (firstMethod != null) {
+                        insertAnchorMethod = preNotOfComment(firstMethod)
+                    }
+                }
+            }
+        } else if (cursorElement != null) {
+            // 此时表明应插入到最顶部
+            insertAnchorMethod = cursorElement.let {
+                if (cursorElement?.nextSibling?.textMatches(";") == true) {
+                    cursorElement?.nextSibling
+                } else {
+                    cursorElement
+                }
+            }
+
+            insertAnchorList = dartListLiteralExpression.firstChild
+        }
+
+        return Pair(insertAnchorList, insertAnchorMethod)
+    }
+
+    /**
+     * 查找指定元素之前第一个不是注释的元素
+     */
+    private tailrec fun preNotOfComment(psiElement: PsiElement): PsiElement {
+        val element = psiElement.prevSibling ?: return psiElement
+        if (element !is PsiWhiteSpace && element !is PsiComment) {
+            return element
+        }
+        return preNotOfComment(element)
     }
 
     /**
@@ -270,12 +518,31 @@ class AddRouterAction : DumbAwareAction() {
     /**
      * 判断页面列表是否已逗号结尾
      */
-    private fun endOfComma(psiElement: PsiElement): Boolean {
-        val element = psiElement.nextSibling ?: return false
+    private tailrec fun endOfComma(psiElement: PsiElement): PsiElement? {
+        val element = psiElement.nextSibling ?: return null
+        if (element !is PsiWhiteSpace && element !is LeafPsiElement) {
+            return null
+        }
+
         if (element.textMatches(",")) {
-            return true
+            return element
         }
         return endOfComma(element)
+    }
+
+    /**
+     * 判断页面列表是否已分号结尾
+     */
+    private tailrec fun endOfSemicolon(psiElement: PsiElement): PsiElement? {
+        val element = psiElement.nextSibling ?: return null
+        if (element !is PsiWhiteSpace && element !is LeafPsiElement) {
+            return null
+        }
+
+        if (element.textMatches(";")) {
+            return element
+        }
+        return endOfSemicolon(element)
     }
 
     /**

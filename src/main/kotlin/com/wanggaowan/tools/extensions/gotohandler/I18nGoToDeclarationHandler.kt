@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.gotohandler
+package com.wanggaowan.tools.extensions.gotohandler
 
 import com.intellij.json.psi.JsonObject
 import com.intellij.json.psi.JsonProperty
@@ -7,7 +7,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.jetbrains.lang.dart.psi.DartId
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
-import com.wanggaowan.tools.lang.I18nFoldingBuilder
+import com.wanggaowan.tools.extensions.lang.I18nFoldingBuilder
 import com.wanggaowan.tools.utils.ex.basePath
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 

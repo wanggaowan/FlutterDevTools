@@ -141,6 +141,7 @@ val VirtualFile?.isFlutterProject: Boolean
  */
 val VirtualFile.module: Module?
     get() {
+        // ModuleUtilCore.findModuleForFile()
         var inModule: Module? = null
         var inModuleBasePath: String? = null
         for (project in ProjectManager.getInstance().openProjects) {

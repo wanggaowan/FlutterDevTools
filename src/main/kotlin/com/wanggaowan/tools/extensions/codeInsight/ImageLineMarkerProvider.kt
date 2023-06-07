@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.codeInsight
+package com.wanggaowan.tools.extensions.codeInsight
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
@@ -10,7 +10,7 @@ import com.intellij.util.ui.JBUI
 import com.jetbrains.lang.dart.psi.DartFunctionBody
 import com.jetbrains.lang.dart.psi.DartGetterDeclaration
 import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
-import com.wanggaowan.tools.gotohandler.ImagesGoToDeclarationHandler
+import com.wanggaowan.tools.extensions.gotohandler.ImagesGoToDeclarationHandler
 import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.findModule
 import java.awt.Image

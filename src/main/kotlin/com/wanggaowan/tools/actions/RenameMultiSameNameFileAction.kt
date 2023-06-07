@@ -11,6 +11,11 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiElement
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.refactoring.rename.RenameProcessor
+import com.intellij.refactoring.rename.RenamePsiElementProcessor
+import com.intellij.refactoring.rename.naming.AutomaticRenamerFactory
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.ui.ImagesRenameDialog
 import com.wanggaowan.tools.ui.RenameEntity
@@ -67,20 +72,18 @@ class RenameMultiSameNameFileAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val module = e.getData(LangDataKeys.MODULE) ?: return
         val project = module.project
-        WriteCommandAction.runWriteCommandAction(project) {
-            val selectFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY) ?: return@runWriteCommandAction
-            if (selectFiles.isEmpty()) {
-                return@runWriteCommandAction
-            }
-
-            val distinctList = distinctFile(selectFiles)
-            val dialog = ImagesRenameDialog(project, distinctList)
-            dialog.setOkActionListener {
-                val fileList = dialog.getRenameFileList()
-                rename(project, fileList)
-            }
-            dialog.isVisible = true
+        val selectFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY) ?: return
+        if (selectFiles.isEmpty()) {
+            return
         }
+
+        val distinctList = distinctFile(selectFiles)
+        val dialog = ImagesRenameDialog(project, distinctList)
+        dialog.setOkActionListener {
+            val fileList = dialog.getRenameFileList()
+            rename(project, fileList)
+        }
+        dialog.isVisible = true
     }
 
     /**
@@ -107,7 +110,8 @@ class RenameMultiSameNameFileAction : DumbAwareAction() {
                     data.forEach {
                         if (it.oldName.isNotEmpty() && it.newName.isNotEmpty()
                             && it.oldName != it.newName
-                            && (!it.existFile || it.coverExistFile)) {
+                            && (!it.existFile || it.coverExistFile)
+                        ) {
                             val parentName = it.oldFile.parent.name
                             val parent = if (parentName == "1.5x"
                                 || parentName == "2.0x"
@@ -148,5 +152,35 @@ class RenameMultiSameNameFileAction : DumbAwareAction() {
                 progressIndicator.fraction = 1.0
             }
         })
+    }
+
+    private fun reanmePsiElement(project: Project, psiElement: PsiElement, newName: String) {
+        val elementProcessor = RenamePsiElementProcessor.forElement(psiElement)
+        elementProcessor.setToSearchInComments(psiElement, true)
+        elementProcessor.setToSearchForTextOccurrences(psiElement, true)
+        val processor = RenameProcessor(
+            project,
+            psiElement,
+            newName,
+            GlobalSearchScope.projectScope(project),
+            true,
+            true
+        )
+
+        val var3: Iterator<*> = AutomaticRenamerFactory.EP_NAME.extensionList.iterator()
+        while (var3.hasNext()) {
+            val factory = var3.next() as AutomaticRenamerFactory
+
+            if (factory.isApplicable(psiElement) && factory.optionName != null && factory.isEnabled) {
+                processor.addRenamerFactory(factory)
+            }
+        }
+
+        val prepareSuccessfulCallback = Runnable {
+            // 执行完成
+        }
+        processor.setPrepareSuccessfulSwingThreadCallback(prepareSuccessfulCallback)
+        processor.setPreviewUsages(true)
+        processor.run()
     }
 }

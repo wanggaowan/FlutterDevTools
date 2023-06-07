@@ -6,7 +6,7 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.ModuleListener
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupActivity
-import com.wanggaowan.tools.toolwindow.ResourcePreviewToolWindowFactory
+import com.wanggaowan.tools.extensions.toolwindow.ResourcePreviewToolWindowFactory
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import io.flutter.bazel.WorkspaceCache
 import javax.swing.SwingUtilities
