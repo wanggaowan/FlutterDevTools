@@ -32,7 +32,14 @@ object RouterGoToDeclarationHandler {
 
         val findElement = mutableListOf<PsiElement>()
         val pages = getListDefine(classMembers, text)
-        val isInMethod = sourceElement.getParentOfType<DartMethodDeclaration>(strict = true) != null
+        val method = sourceElement.getParentOfType<DartMethodDeclaration>(strict = true)
+        val isInMethod =
+            if (method != null) {
+                method.getChildOfType<DartComponentName>()?.text != "getPages"
+            } else {
+                false
+            }
+
         if (!isInMethod) {
             val elements = getMethodDefine(classMembers, text)
             if (elements.isNotEmpty()) {
