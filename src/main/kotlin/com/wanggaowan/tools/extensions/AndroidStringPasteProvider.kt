@@ -4,12 +4,15 @@ import com.intellij.ide.PasteProvider
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.LangDataKeys
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.progress.Task
 import com.intellij.openapi.util.TextRange
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
-import org.jetbrains.kotlin.idea.util.application.runWriteAction
 import java.awt.datatransfer.DataFlavor
 
 /**
@@ -24,84 +27,105 @@ class AndroidStringPasteProvider : PasteProvider {
     override fun performPaste(context: DataContext) {
         val text = copyString ?: return
         val editor = context.getData(CommonDataKeys.EDITOR) ?: return
+        val project = context.getData(CommonDataKeys.PROJECT) ?: return
 
-        runWriteAction {
-            val strings = text.split("\n")
-            val stringBuilder = StringBuilder()
-            var count = 0
-            for (str in strings) {
-                val index = str.indexOf("name=")
-                if (index == -1) {
-                    continue
-                }
-                val index2 = str.indexOf(">")
-                if (index2 == -1) {
-                    continue
-                }
-
-                val index3 = str.indexOf("</string>")
-                if (index3 == -1) {
-                    continue
-                }
-
-                val key = str.substring(index + ("name=".length), index2).trim()
-                var value = str.substring(index2 + 1, index3)
-                val placeholderList = mutableListOf<Placeholder>()
-                if (value.isNotEmpty()) {
-                    strPlaceholder.forEach {
-                        replace(0, value, it, "String", placeholderList)
-                    }
-
-                    intPlaceholder.forEach {
-                        replace(0, value, it, "int", placeholderList)
-                    }
-
-                    floatPlaceholder.forEach {
-                        replace(0, value, it, "double", placeholderList)
-                    }
-                }
-
-                var placeholderStr: String? = null
-                if (placeholderList.isNotEmpty()) {
-                    placeholderStr = "\"@${key.replace("\"", "")}\": { \"placeholders\": { %s } }"
-                    placeholderList.sortBy { it.index }
-                    val stringBuilder2 = StringBuilder()
-                    for (i in placeholderList.indices) {
-                        val placeholder = placeholderList[i]
-                        val indexOf = value.indexOf(placeholder.placeholder)
-                        val paramName = "param$i"
-                        value = value.replaceRange(indexOf, indexOf + placeholder.placeholder.length, "{$paramName}")
-                        stringBuilder2.append("\"$paramName\": { \"type\": \"${placeholder.type}\" }")
-                        if (placeholderList.size > 1 && i < placeholderList.size - 1) {
-                            stringBuilder2.append(",")
+        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "convert android string") {
+            override fun run(progressIndicator: ProgressIndicator) {
+                progressIndicator.isIndeterminate = false
+                WriteCommandAction.runWriteCommandAction(project) {
+                    val strings = text.split("\n")
+                    val stringBuilder = StringBuilder()
+                    var count = 0
+                    for (j in strings.indices) {
+                        val str = strings[j]
+                        val index = str.indexOf("name=")
+                        if (index == -1) {
+                            progressIndicator.fraction = (j + 1) * 1.0 / strings.size * 0.9
+                            continue
                         }
+                        val index2 = str.indexOf(">")
+                        if (index2 == -1) {
+                            progressIndicator.fraction = (j + 1) * 1.0 / strings.size * 0.9
+                            continue
+                        }
+
+                        val index3 = str.indexOf("</string>")
+                        if (index3 == -1) {
+                            progressIndicator.fraction = (j + 1) * 1.0 / strings.size * 0.9
+                            continue
+                        }
+
+                        val key = str.substring(index + ("name=".length), index2).trim()
+                        var value = str.substring(index2 + 1, index3)
+                        val placeholderList = mutableListOf<Placeholder>()
+                        if (value.isNotEmpty()) {
+                            strPlaceholder.forEach {
+                                replace(0, value, it, "String", placeholderList)
+                            }
+
+                            intPlaceholder.forEach {
+                                replace(0, value, it, "int", placeholderList)
+                            }
+
+                            floatPlaceholder.forEach {
+                                replace(0, value, it, "double", placeholderList)
+                            }
+                        }
+
+                        var placeholderStr: String? = null
+                        if (placeholderList.isNotEmpty()) {
+                            placeholderStr = "\"@${key.replace("\"", "")}\": { \"placeholders\": { %s } }"
+                            placeholderList.sortBy { it.index }
+                            val stringBuilder2 = StringBuilder()
+                            for (i in placeholderList.indices) {
+                                val placeholder = placeholderList[i]
+                                val indexOf = value.indexOf(placeholder.placeholder)
+                                val paramName = "param$i"
+                                value = value.replaceRange(
+                                    indexOf,
+                                    indexOf + placeholder.placeholder.length,
+                                    "{$paramName}"
+                                )
+                                stringBuilder2.append("\"$paramName\": { \"type\": \"${placeholder.type}\" }")
+                                if (placeholderList.size > 1 && i < placeholderList.size - 1) {
+                                    stringBuilder2.append(",")
+                                }
+                            }
+                            placeholderStr = placeholderStr.format(stringBuilder2.toString())
+                        }
+
+                        stringBuilder.append("$key: \"$value\"")
+                        if (placeholderStr != null || (strings.size > 1 && count < strings.size - 1)) {
+                            stringBuilder.append(",").append("\n")
+                        }
+
+                        if (placeholderStr != null) {
+                            stringBuilder.append(placeholderStr)
+                            if (strings.size > 1 && count < strings.size - 1) {
+                                stringBuilder.append(",").append("\n")
+                            }
+                        }
+
+                        count++
+                        progressIndicator.fraction = (j + 1) * 1.0 / strings.size * 0.9
                     }
-                    placeholderStr = placeholderStr.format(stringBuilder2.toString())
-                }
 
-                stringBuilder.append("$key: \"$value\"")
-                if (placeholderStr != null || (strings.size > 1 && count < strings.size - 1)) {
-                    stringBuilder.append(",").append("\n")
-                }
-
-                if (placeholderStr != null) {
-                    stringBuilder.append(placeholderStr)
-                    if (strings.size > 1 && count < strings.size - 1) {
-                        stringBuilder.append(",").append("\n")
+                    val replaceContent = stringBuilder.toString()
+                    editor.document.insertString(editor.selectionModel.selectionEnd, replaceContent)
+                    FileDocumentManager.getInstance().saveDocument(editor.document)
+                    context.getData(CommonDataKeys.PSI_FILE)?.also { file ->
+                        DartPsiUtils.reformatFile(
+                            project,
+                            file,
+                            listOf(TextRange(0, file.textLength + replaceContent.length))
+                        )
                     }
                 }
 
-                count++
+                progressIndicator.isIndeterminate = false
+                progressIndicator.fraction = 1.0
             }
-            val replaceContent = stringBuilder.toString()
-            editor.document.insertString(editor.selectionModel.selectionEnd, replaceContent)
-            FileDocumentManager.getInstance().saveDocument(editor.document)
-            context.getData(CommonDataKeys.PROJECT)?.also {
-                context.getData(CommonDataKeys.PSI_FILE)?.also { file ->
-                    DartPsiUtils.reformatFile(it, file, listOf(TextRange(0, file.textLength + replaceContent.length)))
-                }
-            }
-        }
+        })
     }
 
     private tailrec fun replace(
