@@ -212,4 +212,15 @@ object DartPsiUtils {
     fun reformatFile(project: Project, psiFile: PsiFile) {
         CodeStyleManagerImpl(project).reformatText(psiFile, mutableListOf(TextRange(0, psiFile.textLength)))
     }
+
+    /**
+     * 执行格式化
+     *
+     * @param project     项目对象
+     * @param psiFile 需要格式化文件
+     * @param ranges 需要格式化数据区域
+     */
+    fun reformatFile(project: Project, psiFile: PsiFile, ranges: Collection<TextRange>) {
+        CodeStyleManagerImpl(project).reformatText(psiFile, ranges)
+    }
 }

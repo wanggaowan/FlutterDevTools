@@ -6,6 +6,7 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.util.TextRange
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
@@ -44,22 +45,77 @@ class AndroidStringPasteProvider : PasteProvider {
                 }
 
                 val key = str.substring(index + ("name=".length), index2).trim()
-                val value = str.substring(index2 + 1, index3)
+                var value = str.substring(index2 + 1, index3)
+                val placeholderList = mutableListOf<Placeholder>()
+                if (value.isNotEmpty()) {
+                    strPlaceholder.forEach {
+                        replace(0, value, it, "String", placeholderList)
+                    }
+
+                    intPlaceholder.forEach {
+                        replace(0, value, it, "int", placeholderList)
+                    }
+
+                    floatPlaceholder.forEach {
+                        replace(0, value, it, "double", placeholderList)
+                    }
+                }
+
+                var placeholderStr: String? = null
+                if (placeholderList.isNotEmpty()) {
+                    placeholderStr = "\"@${key.replace("\"", "")}\": { \"placeholders\": { %s } }"
+                    placeholderList.sortBy { it.index }
+                    val stringBuilder2 = StringBuilder()
+                    for (i in placeholderList.indices) {
+                        val placeholder = placeholderList[i]
+                        val indexOf = value.indexOf(placeholder.placeholder)
+                        val paramName = "param$i"
+                        value = value.replaceRange(indexOf, indexOf + placeholder.placeholder.length, "{$paramName}")
+                        stringBuilder2.append("\"$paramName\": { \"type\": \"${placeholder.type}\" }")
+                        if (placeholderList.size > 1 && i < placeholderList.size - 1) {
+                            stringBuilder2.append(",")
+                        }
+                    }
+                    placeholderStr = placeholderStr.format(stringBuilder2.toString())
+                }
+
                 stringBuilder.append("$key: \"$value\"")
-                if (strings.size > 1 && count < strings.size - 1) {
+                if (placeholderStr != null || (strings.size > 1 && count < strings.size - 1)) {
                     stringBuilder.append(",").append("\n")
                 }
+
+                if (placeholderStr != null) {
+                    stringBuilder.append(placeholderStr)
+                    if (strings.size > 1 && count < strings.size - 1) {
+                        stringBuilder.append(",").append("\n")
+                    }
+                }
+
                 count++
             }
             val replaceContent = stringBuilder.toString()
             editor.document.insertString(editor.selectionModel.selectionEnd, replaceContent)
-
             FileDocumentManager.getInstance().saveDocument(editor.document)
             context.getData(CommonDataKeys.PROJECT)?.also {
                 context.getData(CommonDataKeys.PSI_FILE)?.also { file ->
-                    DartPsiUtils.reformatFile(it, file)
+                    DartPsiUtils.reformatFile(it, file, listOf(TextRange(0, file.textLength + replaceContent.length)))
                 }
             }
+        }
+    }
+
+    private tailrec fun replace(
+        startIndex: Int,
+        value: String,
+        placeholder: String,
+        type: String,
+        placeholderList: MutableList<Placeholder>
+    ) {
+        val indexOf = value.indexOf(placeholder, startIndex = startIndex)
+        if (indexOf != -1) {
+            val endIndex = indexOf + placeholder.length
+            placeholderList.add(Placeholder(placeholder, type, indexOf))
+            replace(endIndex, value, placeholder, type, placeholderList)
         }
     }
 
@@ -95,4 +151,15 @@ class AndroidStringPasteProvider : PasteProvider {
         copyString = contents
         return true
     }
+
+    companion object {
+        val strPlaceholder =
+            listOf("%s", "%1\$s", "%2\$s", "%3\$s", "%4\$s", "%5\$s")
+        val intPlaceholder =
+            listOf("%d", "%1\$d", "%2\$d", "%3\$d", "%4\$d", "%5\$d")
+        val floatPlaceholder =
+            listOf("%f", "%1\$f", "%2\$f", "%3\$f", "%4\$f", "%5\$f")
+    }
 }
+
+class Placeholder(val placeholder: String, val type: String, val index: Int)
