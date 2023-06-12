@@ -93,6 +93,11 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
                 return false
             }
 
+            val children = virtualFile.children
+            if (children.isNullOrEmpty()) {
+                continue
+            }
+
             val dirName = virtualFile.name
             val validDir = dirName.startsWith("drawable") || dirName.startsWith("mipmap")
             if (validDir) {
@@ -100,7 +105,7 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
                 continue
             }
 
-            for (child in virtualFile.children) {
+            for (child in children) {
                 val name = child.name
                 if (name.startsWith(".")) {
                     // 隐藏文件忽略
