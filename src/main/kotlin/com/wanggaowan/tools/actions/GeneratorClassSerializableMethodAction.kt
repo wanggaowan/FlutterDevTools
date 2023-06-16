@@ -14,6 +14,7 @@ import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils.findElementAtOffset
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
+import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
 
 /**
  * 根据选择的dart class，生成class对应的序列化方法，序列化配置项
@@ -188,11 +189,13 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
         var existFactory = false
         // 如果选中的类存在序列化方法则则创建
         var existToJson = false
+        var existFromList = false
         for (child in classMembers!!.children) {
-            if (child is DartFactoryConstructorDeclaration
-                && child.textMatches("${className}.fromJson(Map<String, dynamic> json)")
-            ) {
-                existFactory = true
+            if (child is DartFactoryConstructorDeclaration) {
+                val children = child.getChildrenOfType<DartComponentName>()
+                if (children.size >= 2 && children[0].textMatches(className) && children[1].textMatches("fromJson")) {
+                    existFactory = true
+                }
             }
 
             if (child is DartMethodDeclaration) {
@@ -202,11 +205,13 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
                         existConstructor = true
                     } else if (element.textMatches("toJson")) {
                         existToJson = true
+                    } else if (element.textMatches("fromJsonList")) {
+                        existFromList = true
                     }
                 }
             }
 
-            if (existConstructor && existFactory && existToJson) {
+            if (existConstructor && existFactory && existToJson && existFromList) {
                 break
             }
         }
@@ -217,7 +222,8 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
             className,
             !existConstructor,
             !existFactory,
-            !existToJson
+            !existToJson,
+            !existFromList
         )
     }
 
@@ -231,6 +237,7 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
         createConstructor: Boolean,
         createFactory: Boolean,
         createToJson: Boolean,
+        createFromList: Boolean
     ) {
 
         if (createConstructor) {
@@ -239,11 +246,11 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
             val privateFiled = mutableListOf<String>()
             classMembers.children.forEach {
                 if (it is DartVarDeclarationList) {
-                    var type:String? = null
-                    var fieldName:String? = null
-                    it.children.forEach {child->
+                    var type: String? = null
+                    var fieldName: String? = null
+                    it.children.forEach { child ->
                         if (child is DartVarAccessDeclaration) {
-                            child.children.forEach {child2->
+                            child.children.forEach { child2 ->
                                 if (child2 is DartType) {
                                     type = child2.text
                                 } else if (child2 is DartComponentName) {
@@ -298,6 +305,14 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
         if (createFactory) {
             val fromJson =
                 "factory ${className}.fromJson(Map<String, dynamic> json) => _\$${className}FromJson(json);"
+            DartPsiUtils.createClassMember(project, fromJson)?.also {
+                classMembers.add(it)
+            }
+        }
+
+        if (createFromList) {
+            val fromJson =
+                "static List<${className}> fromJsonList(List<dynamic> json) => json.map((e) => ${className}.fromJson(e as Map<String, dynamic>)).toList();"
             DartPsiUtils.createClassMember(project, fromJson)?.also {
                 classMembers.add(it)
             }

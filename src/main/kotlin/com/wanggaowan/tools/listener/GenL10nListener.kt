@@ -54,12 +54,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
             return
         }
 
-        val document = fileDocumentManager.value.getDocument(file) ?: return
-        try {
-            document.addDocumentListener(documentListener.value)
-        } catch (e:Exception) {
-            // 可能存在已经注册的情况
-        }
+        fileDocumentManager.value.getDocument(file)?.addDocumentListener(documentListener.value)
     }
 
     override fun fileClosed(source: FileEditorManager, file: VirtualFile) {
@@ -68,17 +63,17 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
             return
         }
 
+        if (!source.project.isFlutterProject) {
+            return
+        }
+
+        fileDocumentManager.value.getDocument(file)?.removeDocumentListener(documentListener.value)
+
         if (needDoGenL10nMap[file.path] != true) {
             return
         }
 
         needDoGenL10nMap.remove(file.path)
-        try {
-            fileDocumentManager.value.getDocument(file)?.removeDocumentListener(documentListener.value)
-        } catch (e:Exception) {
-            // 可能存在已经被移除的情况
-        }
-
         val module = file.getModule(source.project) ?: return
         fileDocumentManager.value.saveAllDocuments()
         doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))

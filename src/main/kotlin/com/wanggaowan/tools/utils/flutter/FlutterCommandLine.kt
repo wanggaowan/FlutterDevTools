@@ -37,7 +37,7 @@ class FlutterCommandLine internal constructor(
     type: Type,
     vararg args: String
 ) {
-    private val Log = Logger.getInstance(FlutterCommandLine::class.java)
+    private val log = Logger.getInstance(FlutterCommandLine::class.java)
     private var sdk: FlutterSdk
     private var workDir: VirtualFile? = null
     private var type: Type
@@ -117,7 +117,7 @@ class FlutterCommandLine internal constructor(
     fun startProcess(sendAnalytics: Boolean): ColoredProcessHandler? {
         return try {
             val commandLine = createGeneralCommandLine(null as Project?)
-            Log.info(commandLine.toString())
+            log.info(commandLine.toString())
             val handler = ColoredProcessHandler(commandLine)
             if (sendAnalytics) {
                 type.sendAnalyticsEvent()
@@ -139,7 +139,7 @@ class FlutterCommandLine internal constructor(
         }
         return try {
             val commandLine = createGeneralCommandLine(project)
-            Log.info(commandLine.toString())
+            log.info(commandLine.toString())
             val handler: ColoredProcessHandler = MostlySilentColoredProcessHandler(commandLine)
             handler.addProcessListener(object : ProcessAdapter() {
                 override fun processTerminated(event: ProcessEvent) {

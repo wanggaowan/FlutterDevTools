@@ -35,7 +35,41 @@ open class GeneratorGFileAction : FlutterSdkAction() {
     // }
 
     override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
-        root?.also {pubRoot->
+        root?.also { pubRoot ->
+            addGeneratorGFileDependencies(project, sdk, pubRoot) {
+                startGeneratorGFile(project, sdk, pubRoot, context)
+            }
+        }
+    }
+
+    /**
+     * 执行生产.g文件指令
+     */
+    protected open fun startGeneratorGFile(
+        project: Project,
+        sdk: FlutterSdk,
+        root: PubRoot,
+        context: DataContext
+    ) {
+        FlutterCommandUtils.startGeneratorJsonSerializable(project, root, sdk, onDone = {
+            onCommandEnd(context)
+        })
+    }
+
+    protected open fun onCommandEnd(context: DataContext) {
+        context.getData(CommonDataKeys.VIRTUAL_FILE)?.parent?.refresh(true, false)
+    }
+
+    companion object {
+        /**
+         * 添加生产.g.dart需要的pub依赖
+         */
+        fun addGeneratorGFileDependencies(
+            project: Project,
+            sdk: FlutterSdk,
+            pubRoot: PubRoot,
+            onDone: Runnable? = null
+        ) {
             pubRoot.pubspec.toPsiFile(project)?.also { pubspec ->
                 val packagesMap = pubRoot.packagesMap
                 val haveJsonAnnotation = packagesMap?.get("json_annotation") != null
@@ -49,66 +83,60 @@ open class GeneratorGFileAction : FlutterSdkAction() {
                     addJsonSerializable(project, pubRoot, sdk, haveJsonSerializable) {
                         FlutterCommandUtils.addBuildRunner(project, pubRoot, sdk, haveBuildRunner) {
                             FlutterCommandUtils.doPubGet(project, pubRoot, sdk, havePubspecLockFile) {
-                                FlutterCommandUtils.startGeneratorJsonSerializable(project, pubRoot, sdk, onDone = {
-                                    onCommandEnd(context)
-                                })
+                                onDone?.run()
                             }
                         }
                     }
                 }
             }
         }
-    }
 
-    protected open fun onCommandEnd(context: DataContext) {
-        context.getData(CommonDataKeys.VIRTUAL_FILE)?.parent?.refresh(true, false)
-    }
-
-    /**
-     * 执行添加json_annotation依赖命令
-     */
-    private fun addJsonAnnotation(
-        project: Project,
-        pubRoot: PubRoot,
-        flutterSdk: FlutterSdk,
-        haveJsonAnnotation: Boolean,
-        onDone: Runnable? = null
-    ) {
-        if (!haveJsonAnnotation) {
-            FlutterCommandUtils.startAddDependencies(
-                project, pubRoot, flutterSdk,
-                FlutterCommandLine.Type.ADD_JSON_ANNOTATION, {
-                    if (it == 0) {
-                        onDone?.run()
+        /**
+         * 执行添加json_annotation依赖命令
+         */
+        private fun addJsonAnnotation(
+            project: Project,
+            pubRoot: PubRoot,
+            flutterSdk: FlutterSdk,
+            haveJsonAnnotation: Boolean,
+            onDone: Runnable? = null
+        ) {
+            if (!haveJsonAnnotation) {
+                FlutterCommandUtils.startAddDependencies(
+                    project, pubRoot, flutterSdk,
+                    FlutterCommandLine.Type.ADD_JSON_ANNOTATION, {
+                        if (it == 0) {
+                            onDone?.run()
+                        }
                     }
-                }
-            )
-        } else {
-            onDone?.run()
+                )
+            } else {
+                onDone?.run()
+            }
         }
-    }
 
-    /**
-     * 执行添加json_serializable依赖命令
-     */
-    private fun addJsonSerializable(
-        project: Project,
-        pubRoot: PubRoot,
-        flutterSdk: FlutterSdk,
-        haveJsonSerializable: Boolean,
-        onDone: Runnable? = null
-    ) {
-        if (!haveJsonSerializable) {
-            FlutterCommandUtils.startAddDependencies(
-                project, pubRoot, flutterSdk,
-                FlutterCommandLine.Type.ADD_JSON_SERIALIZABLE_DEV, {
-                    if (it == 0) {
-                        onDone?.run()
+        /**
+         * 执行添加json_serializable依赖命令
+         */
+        private fun addJsonSerializable(
+            project: Project,
+            pubRoot: PubRoot,
+            flutterSdk: FlutterSdk,
+            haveJsonSerializable: Boolean,
+            onDone: Runnable? = null
+        ) {
+            if (!haveJsonSerializable) {
+                FlutterCommandUtils.startAddDependencies(
+                    project, pubRoot, flutterSdk,
+                    FlutterCommandLine.Type.ADD_JSON_SERIALIZABLE_DEV, {
+                        if (it == 0) {
+                            onDone?.run()
+                        }
                     }
-                }
-            )
-        } else {
-            onDone?.run()
+                )
+            } else {
+                onDone?.run()
+            }
         }
     }
 }

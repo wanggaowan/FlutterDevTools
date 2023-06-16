@@ -104,17 +104,22 @@ object GeneratorImageRefUtils {
                 WriteCommandAction.runWriteCommandAction(projectWrapper) {
                     // 写入数据之前先对文件进行保存，否则可能抛出异常：对未保存的文件进行写入
                     FileDocumentManager.getInstance().saveAllDocuments()
-                    createImageRefFile(
-                        projectWrapper,
-                        moduleRootFile,
-                        imagesDir,
-                        imagesRelDirPath,
-                        imageRefFilePath,
-                        imageRefFileName,
-                        imageRefClassName
-                    )
-                    progressIndicator.fraction = 0.5
-                    insertAssets(projectWrapper, moduleRootFile, imagesDir, imagesRelDirPath)
+                    try {
+                        createImageRefFile(
+                            projectWrapper,
+                            moduleRootFile,
+                            imagesDir,
+                            imagesRelDirPath,
+                            imageRefFilePath,
+                            imageRefFileName,
+                            imageRefClassName
+                        )
+                        progressIndicator.fraction = 0.5
+                        insertAssets(projectWrapper, moduleRootFile, imagesDir, imagesRelDirPath)
+                    } catch (e: Exception) {
+                        // 有时候由于编辑未保存的文件而报错
+                        e.printStackTrace()
+                    }
                 }
                 progressIndicator.isIndeterminate = false
                 progressIndicator.fraction = 1.0

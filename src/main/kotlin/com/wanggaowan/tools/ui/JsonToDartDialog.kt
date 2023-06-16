@@ -164,7 +164,10 @@ class JsonToDartDialog(
      * 是否生成反序列号列表方法
      */
     fun isCreateFromList(): Boolean {
-        return mCbCreateFromList.isSelected
+        // return mCbCreateFromList.isSelected
+
+        // 取消单独勾选创建序列化列表方法，只要序列化，则生成序列化单个方法和列表方法
+        return mCbGeneratorJsonSerializable.isSelected
     }
 
     /**

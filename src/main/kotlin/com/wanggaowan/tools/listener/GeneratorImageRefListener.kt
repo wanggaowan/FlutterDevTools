@@ -48,7 +48,7 @@ class GeneratorImageRefListener : BulkFileListener {
         module.basePath?.also { basePath ->
             val path = if (isExample) "$basePath/Example" else basePath
             var job = jobMap[path]
-            // 仅仅最后一次图片变更时执行,如果多个项目都有图片变化，则只处理最后一个项目
+            // 仅仅最后一次图片变更时执行
             if (job?.isActive == true) {
                 job.cancel()
             }

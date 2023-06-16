@@ -112,17 +112,20 @@ class AndroidStringPasteProvider : PasteProvider {
 
                     val replaceContent = stringBuilder.toString()
                     editor.document.insertString(editor.selectionModel.selectionEnd, replaceContent)
+                    val oldStarIndex = editor.selectionModel.selectionStart
+                    val endIndex = editor.selectionModel.selectionEnd + replaceContent.length
+                    // 将光标移动到结束位置
+                    editor.caretModel.moveToOffset(endIndex)
                     FileDocumentManager.getInstance().saveDocument(editor.document)
                     context.getData(CommonDataKeys.PSI_FILE)?.also { file ->
                         DartPsiUtils.reformatFile(
                             project,
                             file,
-                            listOf(TextRange(0, file.textLength + replaceContent.length))
+                            listOf(TextRange(oldStarIndex, endIndex))
                         )
                     }
                 }
 
-                progressIndicator.isIndeterminate = false
                 progressIndicator.fraction = 1.0
             }
         })

@@ -22,17 +22,14 @@ import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.ui.JsonToDartDialog
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.StringUtils
-import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
-import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
 import com.wanggaowan.tools.utils.flutter.FlutterCommandUtils
-import com.wanggaowan.tools.utils.flutter.YamlUtils
 import io.flutter.actions.FlutterSdkAction.showMissingSdkDialog
 import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
-import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
+import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
 
 
 /**
@@ -179,76 +176,17 @@ class JsonToDartAction : DumbAwareAction() {
      */
     private fun executeCommand(project: Project, psiFile: PsiFile, sdk: FlutterSdk) {
         val pubRoot = PubRoot.forPsiFile(psiFile) ?: return
-        val pubspec = pubRoot.pubspec.toPsiFile(project) ?: return
         ApplicationManager.getApplication().runReadAction {
-            val packagesMap = pubRoot.packagesMap
-
-            val haveJsonAnnotation = packagesMap?.get("json_annotation") != null
-                || YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_annotation")
-            val haveJsonSerializable = packagesMap?.get("json_serializable") != null
-                || YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_serializable")
-            val haveBuildRunner = packagesMap?.get("build_runner") != null
-                || YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "build_runner")
-            val havePubspecLockFile = XUtils.havePubspecLockFile(project)
-            addJsonAnnotation(project, pubRoot, sdk, haveJsonAnnotation) {
-                addJsonSerializable(project, pubRoot, sdk, haveJsonSerializable) {
-                    FlutterCommandUtils.addBuildRunner(project, pubRoot, sdk, haveBuildRunner) {
-                        FlutterCommandUtils.doPubGet(project, pubRoot, sdk, havePubspecLockFile) {
-                            FlutterCommandUtils.startGeneratorJsonSerializable(project, pubRoot, sdk, onDone = {
-                                psiFile.virtualFile.parent?.refresh(true, false)
-                            })
-                        }
-                    }
-                }
+            GeneratorGFileAction.addGeneratorGFileDependencies(project, sdk, pubRoot) {
+                // 只生成当前文件的.g.dart
+                val virtualFile = psiFile.virtualFile
+                FlutterCommandUtils.startGeneratorJsonSerializable(
+                    project, pubRoot, sdk,
+                    includeFiles = listOf(virtualFile),
+                    onDone = {
+                        virtualFile.parent?.refresh(true, false)
+                    })
             }
-        }
-    }
-
-    /**
-     * 执行添加json_annotation依赖命令
-     */
-    private fun addJsonAnnotation(
-        project: Project,
-        pubRoot: PubRoot,
-        flutterSdk: FlutterSdk,
-        haveJsonAnnotation: Boolean,
-        onDone: Runnable? = null
-    ) {
-        if (!haveJsonAnnotation) {
-            FlutterCommandUtils.startAddDependencies(
-                project, pubRoot, flutterSdk,
-                FlutterCommandLine.Type.ADD_JSON_ANNOTATION, {
-                    if (it == 0) {
-                        onDone?.run()
-                    }
-                }
-            )
-        } else {
-            onDone?.run()
-        }
-    }
-
-    /**
-     * 执行添加json_serializable依赖命令
-     */
-    private fun addJsonSerializable(
-        project: Project,
-        pubRoot: PubRoot,
-        flutterSdk: FlutterSdk,
-        haveJsonSerializable: Boolean,
-        onDone: Runnable? = null
-    ) {
-        if (!haveJsonSerializable) {
-            FlutterCommandUtils.startAddDependencies(
-                project, pubRoot, flutterSdk,
-                FlutterCommandLine.Type.ADD_JSON_SERIALIZABLE_DEV, {
-                    if (it == 0) {
-                        onDone?.run()
-                    }
-                }
-            )
-        } else {
-            onDone?.run()
         }
     }
 
@@ -289,8 +227,11 @@ class JsonToDartAction : DumbAwareAction() {
         var existToJson = false
         var existFromList = false
         for (child in classMembers.children) {
-            if (child is DartFactoryConstructorDeclaration && child.textMatches("${selectedClazzName}.fromJson(Map<String, dynamic> json)")) {
-                existFactory = true
+            if (child is DartFactoryConstructorDeclaration) {
+                val children = child.getChildrenOfType<DartComponentName>()
+                if (children.size >= 2 && children[0].textMatches(selectedClazzName) && children[1].textMatches("fromJson")) {
+                    existFactory = true
+                }
             }
 
             if (child is DartMethodDeclaration) {
@@ -505,7 +446,7 @@ class JsonToDartAction : DumbAwareAction() {
     }
 
     /**
-     * 创建类的构造函数及系列化方法
+     * 创建类的构造函数及序列化方法
      */
     private fun createClassConstructorAndSerializableMethod(
         project: Project, jsonObject: JsonObject, classMembers: PsiElement,

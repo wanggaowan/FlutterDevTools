@@ -2,6 +2,7 @@ package com.wanggaowan.tools.utils.flutter
 
 import com.intellij.execution.process.ProcessListener
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
 
@@ -30,16 +31,38 @@ object FlutterCommandUtils {
 
     /**
      * 根据Dart实体生成JSON序列化实体文件
+     *
+     * @param includeFiles 指定具体文件生成.g.dart文件，未指定则全盘扫描
      */
     fun startGeneratorJsonSerializable(
         project: Project,
         root: PubRoot,
         sdk: FlutterSdk,
+        includeFiles: List<VirtualFile>? = null,
         onDone: ((existCode: Int) -> Unit)? = null,
         processListener: ProcessListener? = null
     ): Process? {
         val module = root.getModule(project) ?: return null
-        val commandLine = FlutterCommandLine(sdk, root.root, FlutterCommandLine.Type.GENERATOR_JSON_SERIALIZABLE)
+        val commandLine = if (includeFiles.isNullOrEmpty()) {
+            FlutterCommandLine(sdk, root.root, FlutterCommandLine.Type.GENERATOR_JSON_SERIALIZABLE)
+        } else {
+            val array = includeFiles.map {
+                var path = it.path.replace(root.path, "")
+                val index = path.indexOf(".dart")
+                if (index != -1) {
+                    path = path.substring(0, index) + "*" + ".dart"
+                }
+
+                if (path.startsWith("/")) {
+                    path = path.substring(1)
+                }
+
+                // 不管用那种方法在path两边加双引号，最后控制台输出都是\",由于不加也可执行，暂时先不加
+                // "--build-filter=\u0022$path\u0022"
+                "--build-filter=$path"
+            }.toTypedArray()
+            FlutterCommandLine(sdk, root.root, FlutterCommandLine.Type.GENERATOR_JSON_SERIALIZABLE, *array)
+        }
         return commandLine.startInModuleConsole(module, onDone, processListener)
     }
 

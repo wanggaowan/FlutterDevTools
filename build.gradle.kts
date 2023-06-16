@@ -19,7 +19,17 @@ intellij {
 
     version.set("221.6008.13.2211.9619390")
     type.set("AI") // AndroidStudio
-    plugins.set(listOf("java","Kotlin","Dart:221.6103.1","io.flutter:72.1.2","yaml","com.localizely.flutter-intl:1.18.1-2020.3"))
+    // Git4Idea: git插件
+    plugins.set(
+        listOf(
+            "java",
+            "Kotlin",
+            "Dart:221.6103.1",
+            "io.flutter:72.1.2",
+            "yaml",
+            "com.localizely.flutter-intl:1.18.1-2020.3"
+        )
+    )
 }
 
 tasks {
