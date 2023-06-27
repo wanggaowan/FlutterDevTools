@@ -176,12 +176,13 @@ class JsonToDartAction : DumbAwareAction() {
      */
     private fun executeCommand(project: Project, psiFile: PsiFile, sdk: FlutterSdk) {
         val pubRoot = PubRoot.forPsiFile(psiFile) ?: return
+        val module = pubRoot.getModule(project)?:return
         ApplicationManager.getApplication().runReadAction {
-            GeneratorGFileAction.addGeneratorGFileDependencies(project, sdk, pubRoot) {
+            GeneratorGFileAction.addGeneratorGFileDependencies(module, sdk, pubRoot) {
                 // 只生成当前文件的.g.dart
                 val virtualFile = psiFile.virtualFile
                 FlutterCommandUtils.startGeneratorJsonSerializable(
-                    project, pubRoot, sdk,
+                    module, pubRoot, sdk,
                     includeFiles = listOf(virtualFile),
                     onDone = {
                         virtualFile.parent?.refresh(true, false)

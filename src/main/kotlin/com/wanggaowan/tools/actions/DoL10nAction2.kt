@@ -28,16 +28,18 @@ class DoL10nAction2 : DoL10nAction() {
             return
         }
 
+        val module = root.getModule(project) ?: return
+
         val virtualFile = context.getData(LangDataKeys.VIRTUAL_FILE) ?: return
         val exampleDir = root.exampleDir
         if (exampleDir != null && virtualFile.path.startsWith(exampleDir.path)) {
             val examplePubRoot = PubRoot.forDirectory(exampleDir)
             if (examplePubRoot != null) {
-                doGenL10n(project, sdk, examplePubRoot)
+                doGenL10n(module, sdk, examplePubRoot)
             }
             return
         }
 
-        doGenL10n(project, sdk, root)
+        doGenL10n(module, sdk, root)
     }
 }

@@ -83,6 +83,7 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
             addJsonSerializableImport(project, psiFile)
             addPartImport(project, psiFile)
             selectedClassInit(project, selectedClassPsiElement!!)
+            DartPsiUtils.reformatFile(project, psiFile)
         }
     }
 

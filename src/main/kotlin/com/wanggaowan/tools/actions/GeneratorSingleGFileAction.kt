@@ -2,7 +2,7 @@ package com.wanggaowan.tools.actions
 
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
-import com.intellij.openapi.project.Project
+import com.intellij.openapi.module.Module
 import com.wanggaowan.tools.utils.flutter.FlutterCommandUtils
 import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
@@ -13,18 +13,18 @@ import io.flutter.sdk.FlutterSdk
  * @author Created by wanggaowan on 2023/6/15 19:05
  */
 open class GeneratorSingleGFileAction : GeneratorGFileAction() {
-    override fun startGeneratorGFile(project: Project, sdk: FlutterSdk, root: PubRoot, context: DataContext) {
+    override fun startGeneratorGFile(module: Module, sdk: FlutterSdk, root: PubRoot, context: DataContext) {
         val file = context.getData(CommonDataKeys.VIRTUAL_FILE)
         if (file != null) {
             // 只生成当前文件的.g.dart
             FlutterCommandUtils.startGeneratorJsonSerializable(
-                project, root, sdk,
+                module, root, sdk,
                 includeFiles = listOf(file),
                 onDone = {
                     onCommandEnd(context)
                 })
         } else {
-            FlutterCommandUtils.startGeneratorJsonSerializable(project, root, sdk, onDone = {
+            FlutterCommandUtils.startGeneratorJsonSerializable(module, root, sdk, onDone = {
                 onCommandEnd(context)
             })
         }

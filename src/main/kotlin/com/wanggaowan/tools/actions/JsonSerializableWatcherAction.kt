@@ -19,13 +19,14 @@ import org.jetbrains.kotlin.idea.core.util.toPsiFile
 class JsonSerializableWatcherAction : FlutterSdkAction() {
     override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
         root?.also {
+            val module = it.getModule(project)?:return
             it.pubspec.toPsiFile(project)?.also { psiFile ->
                 val haveJsonAnnotation = root.haveDependencies("build_runner")
                     YamlUtils.haveDependencies(psiFile, YamlUtils.DEPENDENCY_TYPE_ALL, "build_runner")
                 val havePubspecLockFile = XUtils.havePubspecLockFile(project)
-                FlutterCommandUtils.addBuildRunner(project, it, sdk, haveJsonAnnotation) {
-                    FlutterCommandUtils.doPubGet(project, it, sdk, havePubspecLockFile) {
-                        FlutterCommandUtils.startJsonSerializableWatcher(project, root, sdk)
+                FlutterCommandUtils.addBuildRunner(module, it, sdk, haveJsonAnnotation) {
+                    FlutterCommandUtils.doPubGet(module, it, sdk, havePubspecLockFile) {
+                        FlutterCommandUtils.startJsonSerializableWatcher(module, root, sdk)
                     }
                 }
             }

@@ -2,6 +2,7 @@ package com.wanggaowan.tools.actions
 
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.wanggaowan.tools.utils.flutter.FlutterCommandUtils
 import com.wanggaowan.tools.utils.flutter.YamlUtils
@@ -25,12 +26,13 @@ open class DoL10nAction : FlutterSdkAction() {
             return
         }
 
-        doGenL10n(project, sdk, root) {
+        val module = root.getModule(project) ?: return
+        doGenL10n(module, sdk, root) {
             val exampleDir = root.exampleDir
             if (exampleDir != null) {
                 val examplePubRoot = PubRoot.forDirectory(exampleDir)
                 if (examplePubRoot != null) {
-                    doGenL10n(project, sdk, examplePubRoot)
+                    doGenL10n(module, sdk, examplePubRoot)
                 }
             }
         }
@@ -41,11 +43,13 @@ open class DoL10nAction : FlutterSdkAction() {
     // }
 
     protected fun doGenL10n(
-        project: Project,
+        module: Module,
         sdk: FlutterSdk,
         pubRoot: PubRoot,
         onDone: ((existCode: Int) -> Unit)? = null
     ) {
+
+        val project = module.project
         WriteCommandAction.runWriteCommandAction(project) {
             pubRoot.pubspec.toPsiFile(project)?.also { psiFile ->
                 val packagesMap = pubRoot.packagesMap
@@ -110,7 +114,7 @@ open class DoL10nAction : FlutterSdkAction() {
                     }
                 }
 
-                FlutterCommandUtils.genL10N(project, pubRoot, sdk, onDone)
+                FlutterCommandUtils.genL10N(module, pubRoot, sdk, onDone)
             }
         }
     }

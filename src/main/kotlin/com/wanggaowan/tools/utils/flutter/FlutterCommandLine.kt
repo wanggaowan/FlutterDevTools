@@ -204,8 +204,7 @@ class FlutterCommandLine internal constructor(
             "pub",
             "run",
             "build_runner",
-            "build",
-            "--delete-conflicting-outputs"
+            "build"
         ),
         JSON_SERIALIZABLE_WATCHER(
             "开启dart生成json序列化文件观察者，只要dart文件配置了相关属性，自动检测然后生成序列化文件",

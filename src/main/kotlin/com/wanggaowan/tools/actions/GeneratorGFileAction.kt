@@ -3,6 +3,7 @@ package com.wanggaowan.tools.actions
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
@@ -36,8 +37,9 @@ open class GeneratorGFileAction : FlutterSdkAction() {
 
     override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
         root?.also { pubRoot ->
-            addGeneratorGFileDependencies(project, sdk, pubRoot) {
-                startGeneratorGFile(project, sdk, pubRoot, context)
+            val module = pubRoot.getModule(project) ?: return
+            addGeneratorGFileDependencies(module, sdk, pubRoot) {
+                startGeneratorGFile(module, sdk, pubRoot, context)
             }
         }
     }
@@ -46,12 +48,12 @@ open class GeneratorGFileAction : FlutterSdkAction() {
      * 执行生产.g文件指令
      */
     protected open fun startGeneratorGFile(
-        project: Project,
+        module: Module,
         sdk: FlutterSdk,
         root: PubRoot,
         context: DataContext
     ) {
-        FlutterCommandUtils.startGeneratorJsonSerializable(project, root, sdk, onDone = {
+        FlutterCommandUtils.startGeneratorJsonSerializable(module, root, sdk, onDone = {
             onCommandEnd(context)
         })
     }
@@ -65,12 +67,13 @@ open class GeneratorGFileAction : FlutterSdkAction() {
          * 添加生产.g.dart需要的pub依赖
          */
         fun addGeneratorGFileDependencies(
-            project: Project,
+            module: Module,
             sdk: FlutterSdk,
             pubRoot: PubRoot,
             onDone: Runnable? = null
         ) {
-            pubRoot.pubspec.toPsiFile(project)?.also { pubspec ->
+
+            pubRoot.pubspec.toPsiFile(module.project)?.also { pubspec ->
                 val packagesMap = pubRoot.packagesMap
                 val haveJsonAnnotation = packagesMap?.get("json_annotation") != null
                     || YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_annotation")
@@ -78,11 +81,11 @@ open class GeneratorGFileAction : FlutterSdkAction() {
                     || YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "json_serializable")
                 val haveBuildRunner = packagesMap?.get("build_runner") != null
                     || YamlUtils.haveDependencies(pubspec, YamlUtils.DEPENDENCY_TYPE_ALL, "build_runner")
-                val havePubspecLockFile = XUtils.havePubspecLockFile(project)
-                addJsonAnnotation(project, pubRoot, sdk, haveJsonAnnotation) {
-                    addJsonSerializable(project, pubRoot, sdk, haveJsonSerializable) {
-                        FlutterCommandUtils.addBuildRunner(project, pubRoot, sdk, haveBuildRunner) {
-                            FlutterCommandUtils.doPubGet(project, pubRoot, sdk, havePubspecLockFile) {
+                val havePubspecLockFile = XUtils.havePubspecLockFile(module.project)
+                addJsonAnnotation(module, pubRoot, sdk, haveJsonAnnotation) {
+                    addJsonSerializable(module, pubRoot, sdk, haveJsonSerializable) {
+                        FlutterCommandUtils.addBuildRunner(module, pubRoot, sdk, haveBuildRunner) {
+                            FlutterCommandUtils.doPubGet(module, pubRoot, sdk, havePubspecLockFile) {
                                 onDone?.run()
                             }
                         }
@@ -95,7 +98,7 @@ open class GeneratorGFileAction : FlutterSdkAction() {
          * 执行添加json_annotation依赖命令
          */
         private fun addJsonAnnotation(
-            project: Project,
+            module: Module,
             pubRoot: PubRoot,
             flutterSdk: FlutterSdk,
             haveJsonAnnotation: Boolean,
@@ -103,7 +106,7 @@ open class GeneratorGFileAction : FlutterSdkAction() {
         ) {
             if (!haveJsonAnnotation) {
                 FlutterCommandUtils.startAddDependencies(
-                    project, pubRoot, flutterSdk,
+                    module, pubRoot, flutterSdk,
                     FlutterCommandLine.Type.ADD_JSON_ANNOTATION, {
                         if (it == 0) {
                             onDone?.run()
@@ -119,7 +122,7 @@ open class GeneratorGFileAction : FlutterSdkAction() {
          * 执行添加json_serializable依赖命令
          */
         private fun addJsonSerializable(
-            project: Project,
+            module: Module,
             pubRoot: PubRoot,
             flutterSdk: FlutterSdk,
             haveJsonSerializable: Boolean,
@@ -127,7 +130,7 @@ open class GeneratorGFileAction : FlutterSdkAction() {
         ) {
             if (!haveJsonSerializable) {
                 FlutterCommandUtils.startAddDependencies(
-                    project, pubRoot, flutterSdk,
+                    module, pubRoot, flutterSdk,
                     FlutterCommandLine.Type.ADD_JSON_SERIALIZABLE_DEV, {
                         if (it == 0) {
                             onDone?.run()
