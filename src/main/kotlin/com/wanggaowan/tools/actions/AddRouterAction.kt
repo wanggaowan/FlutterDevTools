@@ -67,18 +67,18 @@ class AddRouterAction : DumbAwareAction() {
             override fun run(progressIndicator: ProgressIndicator) {
                 progressIndicator.isIndeterminate = true
                 WriteCommandAction.runWriteCommandAction(project) {
-
-                    // 查找RouteMap类和getPages节点，如果没有则创建
-                    val children = psiFile.getChildrenOfType<DartClass>()
-                    var routeMapClass: PsiElement? = null
-                    for (child in children) {
-                        val name = child.getChildOfType<DartComponentName>()?.name
-                        if (name == "RouteMap") {
-                            routeMapClass = child
-                            break
+                    // 光标位置的PsiElement
+                    var cursorElement = event.getData(CommonDataKeys.PSI_ELEMENT)
+                    if (cursorElement == null) {
+                        val editor = event.getData(CommonDataKeys.EDITOR)
+                        editor?.let {
+                            cursorElement =
+                                DartPsiUtils.findElementAtOffset(psiFile, it.selectionModel.selectionStart)
                         }
                     }
 
+                    // 查找光标位置所在类
+                    var routeMapClass: PsiElement? = cursorElement?.getParentOfType<DartClass>(strict = true)
                     if (routeMapClass == null) {
                         routeMapClass =
                             DartPsiUtils.createClassElement(project, "RouteMap") ?: return@runWriteCommandAction
@@ -142,7 +142,7 @@ class AddRouterAction : DumbAwareAction() {
 
                         // 存在getPages节点的情况下，查找触发当前Action时，最接近Editor中光标处PsiElement
                         // 然后找打对应的列表节点和方法节点，之后输入插入到这些数据之后
-                        val (listNode, methodNode) = findInsertNode(event, psiFile, dartListLiteralExpression)
+                        val (listNode, methodNode) = findInsertNode(cursorElement, dartListLiteralExpression)
                         insertAnchorList = listNode
                         insertAnchorMethod = methodNode
                     }
@@ -312,49 +312,38 @@ class AddRouterAction : DumbAwareAction() {
     }
 
     /**
-     * 查找插入节点,根据执行当前动作时鼠标接近位置PsiElement插入
+     * 查找插入节点,根据执行当前动作时鼠标位置PsiElement插入
      */
     private fun findInsertNode(
-        event: AnActionEvent,
-        psiFile: PsiFile,
+        cursorElement: PsiElement?,
         dartListLiteralExpression: PsiElement
     ): Pair<PsiElement?, PsiElement?> {
         var insertAnchorList: PsiElement? = null
         var insertAnchorMethod: PsiElement? = null
-
-        // 光标位置的PsiElement
-        var cursorElement = event.getData(CommonDataKeys.PSI_ELEMENT)
-        if (cursorElement == null) {
-            val editor = event.getData(CommonDataKeys.EDITOR)
-            editor?.let {
-                cursorElement =
-                    DartPsiUtils.findElementAtOffset(psiFile, it.selectionModel.selectionStart)
-            }
-        }
-
         // 元素必须在RouteMap类中DartClassMembers里
-        val dartClassMembers = cursorElement?.getParentOfType<DartClassMembers>(strict = true)
+        var cursorElement2 = cursorElement
+        val dartClassMembers = cursorElement2?.getParentOfType<DartClassMembers>(strict = true)
         if (dartClassMembers == null) {
-            cursorElement = null
+            cursorElement2 = null
         } else {
             val name =
                 dartClassMembers.getParentOfType<DartClass>(strict = true)?.getChildOfType<DartComponentName>()?.name
             if (name != "RouteMap") {
-                cursorElement = null
+                cursorElement2 = null
             }
         }
 
-        if (cursorElement != null) {
+        if (cursorElement2 != null) {
             var parent: PsiElement? =
-                cursorElement!!.getParentOfType<DartListLiteralExpression>(strict = true)
+                cursorElement2.getParentOfType<DartListLiteralExpression>(strict = true)
             if (parent != null) {
                 // 说明光标在getPages列表里
                 insertAnchorList =
-                    cursorElement!!.getParentOfType<DartElement>(strict = true) ?: findPreListNode(cursorElement!!)
+                    cursorElement2.getParentOfType<DartElement>(strict = true) ?: findPreListNode(cursorElement2)
                         ?: parent.firstChild
             } else {
-                parent = cursorElement!!.getParentOfType<DartMethodDeclaration>(strict = true)
-                insertAnchorMethod = parent ?: findPreMethodNode(cursorElement!!)
+                parent = cursorElement2.getParentOfType<DartMethodDeclaration>(strict = true)
+                insertAnchorMethod = parent ?: findPreMethodNode(cursorElement2)
             }
         }
 
@@ -428,13 +417,13 @@ class AddRouterAction : DumbAwareAction() {
                     }
                 }
             }
-        } else if (cursorElement != null) {
+        } else if (cursorElement2 != null) {
             // 此时表明应插入到最顶部
-            insertAnchorMethod = cursorElement.let {
-                if (cursorElement?.nextSibling?.textMatches(";") == true) {
-                    cursorElement?.nextSibling
+            insertAnchorMethod = cursorElement2.let {
+                if (cursorElement2.nextSibling?.textMatches(";") == true) {
+                    cursorElement2.nextSibling
                 } else {
-                    cursorElement
+                    cursorElement2
                 }
             }
 

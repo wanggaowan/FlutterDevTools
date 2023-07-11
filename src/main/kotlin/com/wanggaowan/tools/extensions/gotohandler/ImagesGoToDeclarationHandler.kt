@@ -41,7 +41,12 @@ object ImagesGoToDeclarationHandler {
         }
 
         val text = parent.text ?: return null
-        if (!text.startsWith("${PluginSettings.getImagesRefClassName(module.project)}.")) {
+        val splits: List<String> = text.split(".")
+        if (splits.size < 2) {
+            return null
+        }
+
+        if (splits[0] != PluginSettings.getImagesRefClassName(module.project) || splits[1] != sourceElement.text) {
             return null
         }
 
@@ -49,6 +54,7 @@ object ImagesGoToDeclarationHandler {
         if (reference !is DartComponentName) {
             return null
         }
+
         parent = reference.parent ?: return null
         if (parent !is DartGetterDeclaration) {
             return null

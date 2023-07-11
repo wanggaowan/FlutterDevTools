@@ -38,9 +38,14 @@ object I18nGoToDeclarationHandler {
         }
 
         val text = parent.text ?: return null
-        if (!text.startsWith("S.current")
-            && !text.startsWith("S.of(")
-        ) {
+        val splits: List<String> = text.split(".")
+        if (splits.size < 3) {
+            return null
+        }
+
+        val sourceText = sourceElement.text
+        // 一般多语言调用格式为S.of(context).txt或S.current.txt
+        if (splits[2] != sourceText || splits[0] != "S" || (splits[1] != "current" && !splits[1].startsWith("of("))) {
             return null
         }
 
@@ -55,15 +60,9 @@ object I18nGoToDeclarationHandler {
         val file = I18nFoldingBuilder.getTranslateFile(module, isExample) ?: return null
         val jsonObject = file.getChildOfType<JsonObject>() ?: return arrayOf(file)
 
-        val children = parent.children
-        if (children.size != 2) {
-            return arrayOf(file)
-        }
-
-        val key = children[1].text
         for (child in jsonObject.children) {
             if (child is JsonProperty) {
-                if (key == child.name) {
+                if (sourceText == child.name) {
                     return arrayOf(child)
                 }
             }
