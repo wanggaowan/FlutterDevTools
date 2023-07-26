@@ -2,6 +2,7 @@ package com.wanggaowan.tools.listener
 
 import com.intellij.ide.PasteProvider
 import com.intellij.ide.dnd.FileCopyPasteUtil
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.ide.CopyPasteManager
@@ -27,9 +28,9 @@ import java.io.File
  */
 class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
 
-    // override fun getActionUpdateThread(): ActionUpdateThread {
-    //     return ActionUpdateThread.BGT
-    // }
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.BGT
+    }
 
     override fun performPaste(dataContext: DataContext) {
         files?.also {

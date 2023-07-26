@@ -239,10 +239,7 @@ class GeneratorImageRefListener : BulkFileListener {
         }
 
         if (!file.isDirectory) {
-            if (XUtils.isImage(file.name) && file.path.startsWith(imagesDir)) {
-                return true
-            }
-            return false
+            return XUtils.isImage(file.name) && file.path.startsWith(imagesDir)
         }
 
         file.children.forEach {

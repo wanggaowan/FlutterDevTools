@@ -1,5 +1,6 @@
 package com.wanggaowan.tools.actions
 
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
@@ -31,9 +32,9 @@ open class GeneratorGFileAction : FlutterSdkAction() {
         e.presentation.isVisible = true
     }
 
-    // override fun getActionUpdateThread(): ActionUpdateThread {
-    //     return ActionUpdateThread.BGT
-    // }
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.BGT
+    }
 
     override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
         root?.also { pubRoot ->

@@ -1,5 +1,6 @@
 package com.wanggaowan.tools.actions
 
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -49,9 +50,9 @@ class GeneratorImageRefAction : DumbAwareAction() {
         }
     }
 
-    // override fun getActionUpdateThread(): ActionUpdateThread {
-    //     return ActionUpdateThread.BGT
-    // }
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.BGT
+    }
 }
 
 object GeneratorImageRefUtils {

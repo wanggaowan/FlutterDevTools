@@ -1,5 +1,6 @@
 package com.wanggaowan.tools.actions
 
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
@@ -31,6 +32,10 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
  * @author Created by wanggaowan on 2023/4/26 14:53
  */
 class AddRouterAction : DumbAwareAction() {
+
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.BGT
+    }
 
     override fun update(e: AnActionEvent) {
         if (!e.isFlutterProject) {
@@ -220,9 +225,9 @@ class AddRouterAction : DumbAwareAction() {
                     }
 
                     var method = if (returnStr.isEmpty()) {
-                        "static ${returnStr}go$pageName(&params&) {&arguments1& Get.toNamed('$pagePath'&arguments2&); }"
+                        "${returnStr}go$pageName(&params&) {&arguments1& Get.toNamed('$pagePath'&arguments2&); }"
                     } else {
-                        "static ${returnStr}go$pageName(&params&) async {&arguments1& var result = await Get.toNamed('$pagePath'&arguments2&); return result; }"
+                        "${returnStr}go$pageName(&params&) async {&arguments1& var result = await Get.toNamed('$pagePath'&arguments2&); return result; }"
                     }
 
                     if (params.isEmpty()) {
@@ -325,12 +330,6 @@ class AddRouterAction : DumbAwareAction() {
         val dartClassMembers = cursorElement2?.getParentOfType<DartClassMembers>(strict = true)
         if (dartClassMembers == null) {
             cursorElement2 = null
-        } else {
-            val name =
-                dartClassMembers.getParentOfType<DartClass>(strict = true)?.getChildOfType<DartComponentName>()?.name
-            if (name != "RouteMap") {
-                cursorElement2 = null
-            }
         }
 
         if (cursorElement2 != null) {

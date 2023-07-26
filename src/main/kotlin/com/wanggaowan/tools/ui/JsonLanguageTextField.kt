@@ -12,7 +12,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.LanguageTextField
 
 /**
- *
+ * JSON语言文本编辑器，提供语法高亮及只能补全等
  *
  * @author Created by wanggaowan on 2023/2/7 16:56
  */

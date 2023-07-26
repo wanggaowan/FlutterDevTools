@@ -1,5 +1,6 @@
 package com.wanggaowan.tools.actions
 
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
@@ -25,9 +26,9 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
 
     private var selectedClassPsiElement: DartClass? = null
 
-    // override fun getActionUpdateThread(): ActionUpdateThread {
-    //     return ActionUpdateThread.BGT
-    // }
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.BGT
+    }
 
     override fun update(e: AnActionEvent) {
         if (!e.isFlutterProject) {

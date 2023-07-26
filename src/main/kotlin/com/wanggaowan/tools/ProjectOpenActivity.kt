@@ -29,11 +29,14 @@ class ProjectOpenActivity : StartupActivity, DumbAware {
             }
         } else {
             project.messageBus.connect().subscribe(ProjectTopics.MODULES, object : ModuleListener {
-                override fun moduleAdded(project: Project, module: Module) {
-                    if (!toolWindowsInitialized && module.isFlutterProject) {
-                        toolWindowsInitialized = true
-                        SwingUtilities.invokeLater {
-                            ResourcePreviewToolWindowFactory.init(project)
+                override fun modulesAdded(project: Project, modules: MutableList<Module>) {
+                    for (module in modules) {
+                        if (!toolWindowsInitialized && module.isFlutterProject) {
+                            toolWindowsInitialized = true
+                            SwingUtilities.invokeLater {
+                                ResourcePreviewToolWindowFactory.init(project)
+                            }
+                            break
                         }
                     }
                 }

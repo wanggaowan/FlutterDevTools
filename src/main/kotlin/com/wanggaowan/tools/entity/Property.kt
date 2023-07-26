@@ -10,9 +10,7 @@ data class Property(val key: String, val value: String) {
         if (this === other) return true
         if (other !is Property) return false
 
-        if (key != other.key) return false
-
-        return true
+        return key == other.key
     }
 
     override fun hashCode(): Int {

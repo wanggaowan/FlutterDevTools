@@ -1,6 +1,7 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.LangDataKeys
@@ -26,9 +27,10 @@ import java.io.File
  * @author Created by wanggaowan on 2023/3/6 13:09
  */
 class CopyMultiSameNameFileAction : DumbAwareAction() {
-    // override fun getActionUpdateThread(): ActionUpdateThread {
-    //     return ActionUpdateThread.BGT
-    // }
+
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.BGT
+    }
 
     override fun update(e: AnActionEvent) {
         val module = e.getData(LangDataKeys.MODULE)
