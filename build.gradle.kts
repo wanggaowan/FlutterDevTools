@@ -28,10 +28,12 @@ intellij {
             "Kotlin",
             "Dart:223.8950",
             "io.flutter:74.0.3",
-            "yaml",
-            "com.localizely.flutter-intl:1.18.3-2022.2"
+            "yaml"
         )
     )
+
+    // 是否开启增量构建
+    instrumentCode.set(true)
 }
 
 tasks {

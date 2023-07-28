@@ -48,7 +48,12 @@ object SdkIcons {
     @JvmStatic
     val closeFocus: Icon = IconLoader.getIcon("/icons/ic_close_focus.svg", SdkIcons::class.java)
 
-    val add:Icon = IconLoader.getIcon("/icons/add.svg", SdkIcons::class.java)
+    @JvmStatic
+    val add: Icon = IconLoader.getIcon("/icons/add.svg", SdkIcons::class.java)
 
-    val delete:Icon = IconLoader.getIcon("/icons/delete.svg", SdkIcons::class.java)
+    @JvmStatic
+    val delete: Icon = IconLoader.getIcon("/icons/delete.svg", SdkIcons::class.java)
+
+    @JvmStatic
+    val arbFile: Icon = IconLoader.getIcon("/icons/arb_file.svg", SdkIcons::class.java)
 }
