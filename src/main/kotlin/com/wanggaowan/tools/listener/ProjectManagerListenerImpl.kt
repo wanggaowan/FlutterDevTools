@@ -11,12 +11,27 @@ import com.intellij.openapi.vfs.VirtualFileManager
 class ProjectManagerListenerImpl : ProjectManagerListener {
     override fun projectClosed(project: Project) {
         super.projectClosed(project)
+        if (project.isDisposed) {
+            return
+        }
+
         val basePath = project.basePath ?: return
-        val projectRootFolder = VirtualFileManager.getInstance().findFileByUrl("file://${basePath}") ?: return
-        WriteCommandAction.runWriteCommandAction(project) {
-            val ideaFolder = projectRootFolder.findChild(".idea") ?: return@runWriteCommandAction
-            val copyCacheFolder = ideaFolder.findChild("copyCache") ?: return@runWriteCommandAction
-            copyCacheFolder.children?.forEach { it.delete(null) }
+        val projectRootFolder = VirtualFileManager.getInstance().findFileByUrl("file://${basePath}")
+            ?: return
+        try {
+            WriteCommandAction.runWriteCommandAction(project) {
+                val ideaFolder = projectRootFolder.findChild(".idea")
+                    ?: return@runWriteCommandAction
+                val copyCacheFolder = ideaFolder.findChild("copyCache")
+                    ?: return@runWriteCommandAction
+                copyCacheFolder.children?.forEach {
+                    if (it.exists()) {
+                        it.delete(null)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            //
         }
     }
 }

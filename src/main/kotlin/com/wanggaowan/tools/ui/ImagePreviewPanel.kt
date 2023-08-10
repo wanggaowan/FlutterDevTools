@@ -10,6 +10,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import com.intellij.ui.Gray
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -21,6 +22,7 @@ import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.ex.basePath
 import icons.SdkIcons
+import kotlinx.coroutines.*
 import java.awt.*
 import java.awt.event.*
 import java.io.File
@@ -50,6 +52,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private lateinit var mRefreshBtn: ImageButton
     private lateinit var mRootPathJPanel: JPanel
     private lateinit var mRootPathLabel: MyLabel
+    private lateinit var mChangeBtn: JButton
 
     // 网格展示模式时图片布局宽度
     private val mGridImageLayoutWidth = 160
@@ -60,19 +63,22 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     // 需要展示的图片路径
     private var mImages: Set<Property>? = null
 
-    // 当前展示图片数量
-    private var mShowImageCount = 1
-
     // 默认预览图片文件夹
     private var mRootFilePath: String? = null
+
+    private val defaultCoroutineScope = CoroutineScope(Dispatchers.Default)
+    private val mainCoroutineScope = CoroutineScope(Dispatchers.Main)
+
+    private var mGetImageJob: Job? = null
+    private var mSetNewImageJob: Job? = null
+    private var mUpdateImageLayoutJob: Job? = null
 
     init {
         Disposer.register(this, UiNotifyConnector(this, object : Activatable {
             override fun hideNotify() {}
 
             override fun showNotify() {
-                mImages = getImageData()
-                setNewImages()
+                updateNewImage()
             }
         }))
 
@@ -80,6 +86,21 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         preferredSize = JBUI.size(320, 100)
         initRootPath()
         initPanel()
+    }
+
+    private fun updateNewImage() {
+        mUpdateImageLayoutJob?.cancel()
+        mSetNewImageJob?.cancel()
+        mGetImageJob?.cancel()
+
+        mGetImageJob = defaultCoroutineScope.launch {
+            // 不加delay，cancel则无效，无法检测中断
+            delay(200)
+            val images = getImageData()
+            delay(100)
+            mImages = images
+            setNewImages(mImages, mSearchTextField.text)
+        }
     }
 
     private fun initRootPath() {
@@ -213,21 +234,20 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             override fun insertUpdate(p0: DocumentEvent?) {
                 val str = mSearchTextField.text.trim()
                 mClearBtn.isVisible = str.isNotEmpty()
-                setNewImages()
+                setNewImages(mImages, str)
             }
 
             override fun removeUpdate(p0: DocumentEvent?) {
                 val str = mSearchTextField.text.trim()
                 mClearBtn.isVisible = str.isNotEmpty()
-                setNewImages()
+                setNewImages(mImages, str)
             }
 
             override fun changedUpdate(p0: DocumentEvent?) {
                 val str = mSearchTextField.text.trim()
                 mClearBtn.isVisible = str.isNotEmpty()
-                setNewImages()
+                setNewImages(mImages, str)
             }
-
         })
     }
 
@@ -273,8 +293,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
             override fun mouseClicked(e: MouseEvent?) {
                 mRefreshBtn.background = UIColor.MOUSE_ENTER_COLOR
-                mImages = getImageData()
-                setNewImages()
+                updateNewImage()
             }
         })
 
@@ -301,37 +320,35 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         c.fill = GridBagConstraints.VERTICAL
         mRootPathJPanel.add(label, c)
 
-        mRootPathLabel = MyLabel(mRootFilePath ?: "")
+        mRootPathLabel = MyLabel(formatRootPath(mRootFilePath ?: ""))
         mRootPathLabel.strictMode = true
         mRootPathLabel.ellipsize = MyLabel.TruncateAt.MIDDLE
         c.fill = GridBagConstraints.BOTH
         c.weightx = 1.0
         mRootPathJPanel.add(mRootPathLabel, c)
 
-        val jButton = JButton("Change")
-        jButton.preferredSize = JBUI.size(60, 26)
-        jButton.maximumSize = JBUI.size(60, 26)
-        jButton.minimumSize = JBUI.size(60, 26)
-        jButton.font = UIUtil.getFont(UIUtil.FontSize.SMALL, jButton.font)
-        jButton.addActionListener {
-            jButton.isEnabled = false
+        mChangeBtn = JButton("Change")
+        mChangeBtn.preferredSize = JBUI.size(60, 26)
+        mChangeBtn.maximumSize = JBUI.size(60, 26)
+        mChangeBtn.minimumSize = JBUI.size(60, 26)
+        mChangeBtn.font = UIUtil.getFont(UIUtil.FontSize.SMALL, mChangeBtn.font)
+        mChangeBtn.addActionListener {
+            mChangeBtn.isEnabled = false
             val file = VirtualFileManager.getInstance().findFileByUrl("file://$mRootFilePath")
             val descriptor = FileChooserDescriptor(false, true, false, false, false, false)
             val selectedFile = FileChooser.chooseFile(descriptor, module.project, file)
-            jButton.isEnabled = true
+            mChangeBtn.isEnabled = true
             selectedFile?.also {
                 mRootFilePath = it.path
-                val path = mRootFilePath ?: ""
-                PropertiesSerializeUtils.putString(module.project, ROOT_PATH, path)
-                mRootPathLabel.text = path
-                mImages = getImageData()
-                setNewImages()
+                PropertiesSerializeUtils.putString(module.project, ROOT_PATH, it.path)
+                mRootPathLabel.text = formatRootPath(it.path)
+                updateNewImage()
             }
         }
 
         c.fill = GridBagConstraints.VERTICAL
         c.weightx = 0.0
-        mRootPathJPanel.add(jButton, c)
+        mRootPathJPanel.add(mChangeBtn, c)
 
         // 底部靠右的布局面板
         val bottomRightPanel = JPanel(GridBagLayout())
@@ -384,7 +401,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 mGridLayoutBtn.background = null
 
                 mLayoutMode = 0
-                setNewImages()
+                setNewImages(mImages, mSearchTextField.text)
             }
         })
 
@@ -416,9 +433,22 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 mListLayoutBtn.background = null
 
                 mLayoutMode = 1
-                setNewImages()
+                setNewImages(mImages, mSearchTextField.text)
             }
         })
+    }
+
+    private fun formatRootPath(rootPath: String): String {
+        var rootPathFormat = rootPath
+        val basePath = module.basePath
+        if (!basePath.isNullOrEmpty() && rootPathFormat.startsWith(basePath)) {
+            rootPathFormat = rootPathFormat.replace(basePath, "")
+            val index = basePath.lastIndexOf("/")
+            if (index != -1) {
+                rootPathFormat = basePath.substring(index + 1) + rootPathFormat
+            }
+        }
+        return rootPathFormat
     }
 
     /**
@@ -427,11 +457,12 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private fun registerSizeChange() {
         addComponentListener(object : SimpleComponentListener() {
             override fun componentResized(p0: ComponentEvent?) {
+                val dataCount = mImagePanel.components.size.coerceAtLeast(1)
                 if (mLayoutMode == 0) {
                     for (component in mImagePanel.components) {
                         component.preferredSize = Dimension(width, 100)
                     }
-                    val totalHeight = mShowImageCount * 100 + 100
+                    val totalHeight = dataCount * 100 + 100
                     mImagePanel.preferredSize = Dimension(width, totalHeight)
                     mImagePanel.updateUI()
                     return
@@ -440,8 +471,8 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 val itemHeight: Int = mGridImageLayoutWidth + 60 + 20
                 val itemWidth = mGridImageLayoutWidth + 20
                 val columns: Int = if (width <= itemWidth) 1 else width / itemWidth
-                var rows: Int = mShowImageCount / columns
-                if (mShowImageCount % columns != 0) {
+                var rows: Int = dataCount / columns
+                if (dataCount % columns != 0) {
                     rows += 1
                 }
                 val totalHeight = rows * itemHeight + 100
@@ -455,7 +486,8 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             return null
         }
 
-        val file = VirtualFileManager.getInstance().findFileByUrl("file://$mRootFilePath") ?: return null
+        val file = VirtualFileManager.getInstance().findFileByUrl("file://$mRootFilePath")
+            ?: return null
         if (!file.isDirectory) {
             return null
         }
@@ -469,51 +501,74 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     }
 
     // 设置需要预览的图片数据
-    private fun setNewImages() {
-        mImagePanel.removeAll()
-        mImagePanel.updateUI()
-        mShowImageCount = 1
+    private fun setNewImages(images: Set<Property>?, search: String?) {
+        mUpdateImageLayoutJob?.cancel()
+        mSetNewImageJob?.cancel()
 
-        var data = mImages
-        if (data.isNullOrEmpty()) {
-            return
-        }
-
-        val searchStr = mSearchTextField.text.trim()
-        if (searchStr.isNotEmpty()) {
-            val newData = mutableSetOf<Property>()
-            for (property: Property in data) {
-                if (property.key.contains(searchStr)) {
-                    newData.add(property)
+        mSetNewImageJob = defaultCoroutineScope.launch {
+            var data = images
+            if (data.isNullOrEmpty()) {
+                mUpdateImageLayoutJob = mainCoroutineScope.launch {
+                    delay(10)
+                    mImagePanel.removeAll()
+                    setImageLayout(1)
+                    mImagePanel.updateUI()
                 }
+                return@launch
             }
-            data = newData
-        }
 
-        if (data.isEmpty()) {
-            return
-        }
+            val searchStr = search?.trim()
+            if (!searchStr.isNullOrEmpty()) {
+                val newData = mutableSetOf<Property>()
+                for (property: Property in data) {
+                    if (property.name.contains(searchStr)) {
+                        newData.add(property)
+                    }
+                }
+                data = newData
+            }
 
-        mShowImageCount = data.size
-        setImageLayout()
-        data.forEach { image ->
-            mImagePanel.add(getPreviewItemPanel(image, mLayoutMode))
+            if (data.isEmpty()) {
+                mainCoroutineScope.launch {
+                    delay(10)
+                    mImagePanel.removeAll()
+                    setImageLayout(1)
+                    mImagePanel.updateUI()
+                }
+                return@launch
+            }
+
+            delay(10)
+            val list = mutableListOf<JPanel>()
+            data.forEach { image ->
+                list.add(getPreviewItemPanel(image, mLayoutMode))
+            }
+
+            delay(10)
+            mUpdateImageLayoutJob = mainCoroutineScope.launch {
+                delay(10)
+                mImagePanel.removeAll()
+                setImageLayout(list.size)
+                list.forEach { jPanel ->
+                    mImagePanel.add(jPanel)
+                }
+                mImagePanel.updateUI()
+            }
         }
-        mImagePanel.updateUI()
     }
 
     // 设置图片预览的布局样式
-    private fun setImageLayout() {
+    private fun setImageLayout(dataCount: Int) {
         (mImagePanel.layout as FlowLayout).let {
             if (mLayoutMode == 0) {
-                val totalHeight = mShowImageCount * 100 + 100
+                val totalHeight = dataCount * 100 + 100
                 mImagePanel.preferredSize = Dimension(width, totalHeight)
             } else {
                 val itemHeight: Int = mGridImageLayoutWidth + 60 + 20
                 val itemWidth = mGridImageLayoutWidth + 20
                 val columns: Int = if (width <= itemWidth) 1 else width / itemWidth
-                var rows: Int = mShowImageCount / columns
-                if (mShowImageCount % columns != 0) {
+                var rows: Int = dataCount / columns
+                if (dataCount % columns != 0) {
                     rows += 1
                 }
                 val totalHeight = rows * itemHeight + 100
@@ -544,7 +599,8 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
             override fun mouseClicked(e: MouseEvent) {
                 panel.background = null
-                val file = VirtualFileManager.getInstance().findFileByUrl("file://${image.value}") ?: return
+                val file = VirtualFileManager.getInstance().findFileByUrl("file://${image.value}")
+                    ?: return
                 val psiFile = PsiManager.getInstance(module.project).findFile(file) ?: return
                 EditorHelper.openFilesInEditor(arrayOf<PsiFile?>(psiFile))
             }
@@ -561,13 +617,25 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             imageView.border = LineBorder(UIColor.LINE_COLOR, 1)
 
             val label = JLabel()
-            label.border = BorderFactory.createCompoundBorder(
+            label.text = image.name
+
+            val label2 = JLabel()
+            label2.foreground = Gray._131
+            label2.font = UIUtil.getFont(UIUtil.FontSize.MINI, label.font)
+            label2.border = BorderFactory.createEmptyBorder(2, 0, 0, 0)
+            label2.text = image.key
+
+            val box = Box.createVerticalBox()
+            box.border = BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(0, 30, 0, 0),
                 LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0)
             )
-            label.text = image.key
+            box.add(Box.createVerticalGlue())
+            box.add(label)
+            box.add(label2)
+            box.add(Box.createVerticalGlue())
 
-            panel.add(label, BorderLayout.CENTER)
+            panel.add(box, BorderLayout.CENTER)
         } else {
             // 网格布局
             val labelHeight = 60
@@ -583,13 +651,25 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             panel.add(imageView, BorderLayout.CENTER)
 
             val label = JLabel()
-            label.background = UIColor.IMAGE_TITLE_BG_COLOR
-            label.isOpaque = true
-            label.preferredSize = Dimension(mGridImageLayoutWidth, labelHeight)
-            label.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
-            label.text = image.key
+            label.text = image.name
 
-            panel.add(label, BorderLayout.SOUTH)
+            val label2 = JLabel()
+            label2.foreground = Gray._131
+            label2.border = BorderFactory.createEmptyBorder(2, 0, 0, 0)
+            label2.font = UIUtil.getFont(UIUtil.FontSize.MINI, label.font)
+            label2.text = image.key
+
+            val box = Box.createVerticalBox()
+            box.isOpaque = true
+            box.background = UIColor.IMAGE_TITLE_BG_COLOR
+            box.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
+            box.preferredSize = Dimension(mGridImageLayoutWidth, labelHeight)
+            box.add(Box.createVerticalGlue())
+            box.add(label)
+            box.add(label2)
+            box.add(Box.createVerticalGlue())
+
+            panel.add(box, BorderLayout.SOUTH)
         }
 
         return panel
@@ -610,36 +690,59 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
      */
     private fun getDeDuplicationList(rootDir: VirtualFile, parentPath: String = ""): LinkedHashSet<Property> {
         val childrenSet = linkedSetOf<Property>()
-        for (child in rootDir.children) {
-            if (child.isDirectory) {
-                val name = child.name
-                val child4x = child.findChild("4.0x")
-                val child3x = child.findChild("3.0x")
-                val child2x = child.findChild("2.0x")
-                val child1_5x = child.findChild("1.5x")
-                if (child4x != null) {
-                    childrenSet.addAll(getDeDuplicationList(child4x, "$parentPath$name/${child4x.name}/"))
-                }
+        val name = rootDir.name
+        val children = rootDir.children
+        if (name != "4.0x" && name != "3.0x" && name != "2.0x" && name != "1.5x") {
+            val child4x = rootDir.findChild("4.0x")
+            val child3x = rootDir.findChild("3.0x")
+            val child2x = rootDir.findChild("2.0x")
+            val child1_5x = rootDir.findChild("1.5x")
 
-                if (child3x != null) {
-                    childrenSet.addAll(getDeDuplicationList(child3x, "$parentPath$name/${child3x.name}/"))
+            child4x?.also {
+                for (child in it.children) {
+                    if (!child.isDirectory && isImage(child.name)) {
+                        childrenSet.add(Property("${parentPath}${child.name}", child.path, child.name))
+                    }
                 }
-
-                if (child2x != null) {
-                    childrenSet.addAll(getDeDuplicationList(child2x, "$parentPath$name/${child2x.name}/"))
-                }
-
-                if (child1_5x != null) {
-                    childrenSet.addAll(getDeDuplicationList(child1_5x, "$parentPath$name/${child1_5x.name}/"))
-                }
-
-                if (name == "4.0x" || name == "3.0x" || name == "2.0x" || name == "1.5x") {
-                    continue
-                }
-                childrenSet.addAll(getDeDuplicationList(child, "$parentPath${child.name}/"))
-            } else if (isImage(child.name)) {
-                childrenSet.add(Property(child.name, child.path))
             }
+
+            child3x?.also {
+                for (child in it.children) {
+                    if (!child.isDirectory && isImage(child.name)) {
+                        childrenSet.add(Property("${parentPath}${child.name}", child.path, child.name))
+                    }
+                }
+            }
+
+            child2x?.also {
+                for (child in it.children) {
+                    if (!child.isDirectory && isImage(child.name)) {
+                        childrenSet.add(Property("${parentPath}${child.name}", child.path, child.name))
+                    }
+                }
+            }
+
+            child1_5x?.also {
+                for (child in it.children) {
+                    if (!child.isDirectory && isImage(child.name)) {
+                        childrenSet.add(Property("${parentPath}${child.name}", child.path, child.name))
+                    }
+                }
+            }
+
+            for (child in children) {
+                if (!child.isDirectory && isImage(child.name)) {
+                    childrenSet.add(Property("${parentPath}${child.name}", child.path, child.name))
+                }
+            }
+        }
+
+        for (child in children) {
+            if (!child.isDirectory) {
+                continue
+            }
+
+            childrenSet.addAll(getDeDuplicationList(child, "$parentPath${child.name}/"))
         }
 
         return childrenSet

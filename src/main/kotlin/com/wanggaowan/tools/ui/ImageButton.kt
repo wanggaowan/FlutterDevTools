@@ -68,6 +68,10 @@ class ImageButton(icon: Icon? = null, arcSize: Int? = null) :
     }
 
     override fun paint(g2: Graphics) {
+        if (!isEnabled) {
+            return super.paint(g2)
+        }
+
         val g = g2 as Graphics2D
         val config = GraphicsUtil.setupAAPainting(g)
         val w = g.clipBounds.width

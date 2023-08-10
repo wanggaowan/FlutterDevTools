@@ -1,8 +1,13 @@
 package com.wanggaowan.tools.extensions.description
 
 import com.intellij.lang.documentation.DocumentationProvider
+import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiElementFactory
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import java.text.DecimalFormat
 
 /**
@@ -29,11 +34,15 @@ class ScreenSizeDocumentDescriptionProvider : DocumentationProvider {
             return null
         }
 
-        var text = originalElement.text
+        var text: String? = element.text?.replace("\"", "")?.replace("'", "")
+        if (text == null || (!text.endsWith("px") && !text.endsWith("dp"))) {
+            text = originalElement.text.replace("\"", "").replace("'", "")
+        }
+
         if (text.endsWith("px")) {
             text = text.replace("px", "")
             return try {
-                val size = text.toInt()
+                val size = text.toFloat()
                 val format = DecimalFormat("#.##")
                 "414设计图尺寸：" + format.format(size * 0.38333333333) + "dp"
             } catch (e: NumberFormatException) {
@@ -45,7 +54,7 @@ class ScreenSizeDocumentDescriptionProvider : DocumentationProvider {
         if (text.endsWith("dp")) {
             text = text.replace("dp", "")
             return try {
-                val size = text.toInt()
+                val size = text.toFloat()
                 val format = DecimalFormat("#.##")
                 "1080设计图尺寸：" + format.format(size / 0.38333333333) + "px"
             } catch (e: NumberFormatException) {
@@ -54,5 +63,38 @@ class ScreenSizeDocumentDescriptionProvider : DocumentationProvider {
         }
 
         return null
+    }
+
+    override fun getCustomDocumentationElement(editor: Editor, file: PsiFile, contextElement: PsiElement?, targetOffset: Int): PsiElement? {
+        if (contextElement != null) {
+            try {
+                val parent = contextElement.parent.parent.parent
+                var text = parent.text
+                var valid = false
+                if (text.startsWith("SimpleUtil.getScaledValue")) {
+                    valid = true
+
+                } else {
+                    text = parent.parent.parent.text
+                    if (text.startsWith("SimpleUtil.getScaledValue")) {
+                        valid = true
+                    }
+                }
+
+                if (valid) {
+                    text = contextElement.text
+                    val value = text.toFloat()
+                    var element: PsiElement? = PsiElementFactory.getInstance(editor.project).createFieldFromText("String a = \"${value}px\";", null)
+                    element = element?.getChildOfType<PsiLiteralExpression>()
+                    if (element != null) {
+                        return element
+                    }
+                }
+            } catch (e: Exception) {
+                // 不满足要求
+            }
+        }
+
+        return super.getCustomDocumentationElement(editor, file, contextElement, targetOffset)
     }
 }

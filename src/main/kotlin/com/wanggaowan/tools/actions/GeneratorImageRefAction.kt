@@ -287,15 +287,7 @@ object GeneratorImageRefUtils {
                     val value = child.getChildOfType<DartFunctionBody>()?.let { child2 ->
                         child2.getChildOfType<DartStringLiteralExpression>()?.firstChild?.nextSibling?.text
                     }
-
-                    var exist = false
-                    for (property in allImages) {
-                        if (value == it.value) {
-                            exist = true
-                            break
-                        }
-                    }
-                    exist
+                    value == it.value
                 } else {
                     false
                 }
