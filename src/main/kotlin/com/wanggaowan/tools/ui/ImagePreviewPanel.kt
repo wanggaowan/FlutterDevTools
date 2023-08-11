@@ -27,7 +27,8 @@ import java.awt.*
 import java.awt.event.*
 import java.io.File
 import javax.swing.*
-import javax.swing.event.*
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 
 /**
  * 图片资源预览面板
@@ -69,9 +70,6 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private val defaultCoroutineScope = CoroutineScope(Dispatchers.Default)
     private val mainCoroutineScope = CoroutineScope(Dispatchers.Main)
     private var mGetImageJob: Job? = null
-
-    private var mLastOpenImage: Property? = null
-    private var mLastSelectedIndex: Int = -1
 
     init {
         Disposer.register(this, UiNotifyConnector(this, object : Activatable {
@@ -126,46 +124,25 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             return@setCellRenderer getPreviewItemPanel(index, mLayoutMode, selected || focused)
         }
 
-        mImagePanel.selectionModel.addListSelectionListener {
-            if (mLayoutMode == 0 || mImagePanel.maxColumns == 1) {
-                // 当mImagePanel只有一列时触发此监听
-                val image = myListModel.getData(mLastSelectedIndex)
-                    ?: return@addListSelectionListener
+        mImagePanel.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent?) {
+                val selectedRow = mImagePanel.selectedRow
+                if (mLayoutMode == 0 || mImagePanel.maxColumns == 1) {
+                    val image = myListModel.getData(selectedRow) ?: return
+                    openFile(image)
+                    return
+                }
+
+                val selectedColumn = mImagePanel.selectedColumn
+                if (selectedRow == -1 || selectedColumn == -1) {
+                    return
+                }
+
+                val index = mImagePanel.model.toListIndex(selectedRow, selectedColumn)
+                val image = myListModel.getData(index) ?: return
                 openFile(image)
             }
-        }
-
-        mImagePanel.columnModel.addColumnModelListener(object : TableColumnModelListener {
-            override fun columnAdded(p0: TableColumnModelEvent?) {
-            }
-
-            override fun columnRemoved(p0: TableColumnModelEvent?) {
-            }
-
-            override fun columnMoved(p0: TableColumnModelEvent?) {
-            }
-
-            override fun columnMarginChanged(p0: ChangeEvent?) {
-            }
-
-            override fun columnSelectionChanged(p0: ListSelectionEvent?) {
-                if (mLayoutMode == 1 && mImagePanel.maxColumns > 1) {
-                    // 当mImagePanel有多列时触发此监听
-                    val image = myListModel.getData(mLastSelectedIndex) ?: return
-                    openFile(image)
-                }
-            }
         })
-
-        mImagePanel.delegate.addListSelectionListener {
-            // 此监听在内容绘制期间被出发，不能在此处执行打开文件操作，否则报错：写不安全
-            val indexArray = mImagePanel.delegate.selectionModel.selectedIndices
-            if (indexArray.isEmpty()) {
-                mLastSelectedIndex = -1
-                return@addListSelectionListener
-            }
-            mLastSelectedIndex = indexArray[0]
-        }
 
         mScrollPane = JBScrollPane(mImagePanel)
         mScrollPane.background = null
@@ -778,15 +755,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private fun openFile(image: Property) {
         val file = VirtualFileManager.getInstance().findFileByUrl("file://${image.value}")
             ?: return
-        val manager = FileEditorManager.getInstance(module.project)
-        if (mLastOpenImage == image) {
-            if (manager.isFileOpen(file)) {
-                return
-            }
-        }
-
-        mLastOpenImage = image
-        manager.openFile(file, false)
+        FileEditorManager.getInstance(module.project).openFile(file, false)
     }
 
     override fun dispose() {
