@@ -1,14 +1,13 @@
 package com.wanggaowan.tools.ui
 
-import com.intellij.ide.util.EditorHelper
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
-import com.intellij.psi.PsiManager
 import com.intellij.ui.Gray
 import com.intellij.ui.SingleSelectionModel
 import com.intellij.ui.components.JBScrollPane
@@ -28,8 +27,7 @@ import java.awt.*
 import java.awt.event.*
 import java.io.File
 import javax.swing.*
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
+import javax.swing.event.*
 
 /**
  * 图片资源预览面板
@@ -72,6 +70,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private val mainCoroutineScope = CoroutineScope(Dispatchers.Main)
     private var mGetImageJob: Job? = null
 
+    private var mLastOpenImage: Property? = null
     private var mLastSelectedIndex: Int = -1
 
     init {
@@ -127,34 +126,45 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             return@setCellRenderer getPreviewItemPanel(index, mLayoutMode, selected || focused)
         }
 
+        mImagePanel.selectionModel.addListSelectionListener {
+            if (mLayoutMode == 0 || mImagePanel.maxColumns == 1) {
+                // 当mImagePanel只有一列时触发此监听
+                val image = myListModel.getData(mLastSelectedIndex)
+                    ?: return@addListSelectionListener
+                openFile(image)
+            }
+        }
+
+        mImagePanel.columnModel.addColumnModelListener(object : TableColumnModelListener {
+            override fun columnAdded(p0: TableColumnModelEvent?) {
+            }
+
+            override fun columnRemoved(p0: TableColumnModelEvent?) {
+            }
+
+            override fun columnMoved(p0: TableColumnModelEvent?) {
+            }
+
+            override fun columnMarginChanged(p0: ChangeEvent?) {
+            }
+
+            override fun columnSelectionChanged(p0: ListSelectionEvent?) {
+                if (mLayoutMode == 1 && mImagePanel.maxColumns > 1) {
+                    // 当mImagePanel有多列时触发此监听
+                    val image = myListModel.getData(mLastSelectedIndex) ?: return
+                    openFile(image)
+                }
+            }
+        })
+
         mImagePanel.delegate.addListSelectionListener {
+            // 此监听在内容绘制期间被出发，不能在此处执行打开文件操作，否则报错：写不安全
             val indexArray = mImagePanel.delegate.selectionModel.selectedIndices
             if (indexArray.isEmpty()) {
                 mLastSelectedIndex = -1
                 return@addListSelectionListener
             }
-
-            if (mLastSelectedIndex == indexArray[0]) {
-                return@addListSelectionListener
-            }
-
             mLastSelectedIndex = indexArray[0]
-            if (myListModel.isIndexOver(mLastSelectedIndex)) {
-                return@addListSelectionListener
-            }
-
-            val image = myListModel.getElementAt(mLastSelectedIndex).value
-            val file = VirtualFileManager.getInstance().findFileByUrl("file://${image}")
-                ?: return@addListSelectionListener
-            val psiFile = PsiManager.getInstance(module.project).findFile(file)
-                ?: return@addListSelectionListener
-            try {
-                SwingUtilities.invokeLater {
-                    EditorHelper.openInEditor(psiFile)
-                }
-            } catch (e:Exception) {
-                //
-            }
         }
 
         mScrollPane = JBScrollPane(mImagePanel)
@@ -423,6 +433,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 mGridLayoutBtn.background = null
 
                 mLayoutMode = 0
+                mImagePanel.clearSelection()
                 setImageLayout()
                 mImagePanel.setFixedColumnsMode(1)
             }
@@ -456,8 +467,9 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 mListLayoutBtn.background = null
 
                 mLayoutMode = 1
-                val columns = calculationColumns()
+                mImagePanel.clearSelection()
                 setImageLayout()
+                val columns = calculationColumns()
                 mImagePanel.setFixedColumnsMode(columns)
             }
         })
@@ -472,6 +484,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 if (mLayoutMode == 1) {
                     val columns = calculationColumns()
                     if (columns != mImagePanel.maxColumns) {
+                        mImagePanel.clearSelection()
                         mImagePanel.setFixedColumnsMode(columns)
                     }
                 }
@@ -480,6 +493,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     }
 
     private fun refreshImagePanel() {
+        mImagePanel.clearSelection()
         mImagePanel.model.fireTableStructureChanged()
     }
 
@@ -581,16 +595,12 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
      */
     private fun getPreviewItemPanel(index: Int, layoutType: Int, focused: Boolean): JPanel {
         val panel = JPanel()
-        if (myListModel.isIndexOver(index)) {
-            return panel
-        }
-
+        val image = myListModel.getData(index) ?: return panel
         panel.layout = BorderLayout()
         if (focused) {
             panel.background = UIColor.MOUSE_ENTER_COLOR
         }
 
-        val image = myListModel.getElementAt(index)
         if (layoutType == 0) {
             // 列表布局
             panel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
@@ -765,6 +775,17 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         return File(relativePath)
     }
 
+    private fun openFile(image: Property) {
+        if (mLastOpenImage == image) {
+            return
+        }
+
+        val file = VirtualFileManager.getInstance().findFileByUrl("file://${image.value}")
+            ?: return
+        mLastOpenImage = image
+        FileEditorManager.getInstance(module.project).openFile(file, false)
+    }
+
     override fun dispose() {
 
     }
@@ -801,9 +822,15 @@ class MyListModel : AbstractListModel<Property>() {
         return data!![index]
     }
 
-    fun isIndexOver(index: Int): Boolean {
-        val size = size
-        return index < 0 || index >= size
+    fun getData(index: Int): Property? {
+        val data = this.data
+        if (data.isNullOrEmpty()) {
+            return null
+        }
+        if (index < 0 || index >= data.size) {
+            return null
+        }
+        return data[index]
     }
 }
 
