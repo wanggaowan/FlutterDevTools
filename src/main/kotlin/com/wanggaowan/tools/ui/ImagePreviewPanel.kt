@@ -776,14 +776,17 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     }
 
     private fun openFile(image: Property) {
-        if (mLastOpenImage == image) {
-            return
-        }
-
         val file = VirtualFileManager.getInstance().findFileByUrl("file://${image.value}")
             ?: return
+        val manager = FileEditorManager.getInstance(module.project)
+        if (mLastOpenImage == image) {
+            if (manager.isFileOpen(file)) {
+                return
+            }
+        }
+
         mLastOpenImage = image
-        FileEditorManager.getInstance(module.project).openFile(file, false)
+        manager.openFile(file, false)
     }
 
     override fun dispose() {
