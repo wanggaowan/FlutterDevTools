@@ -115,6 +115,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
         // 展示Image预览内容的面板
         mImagePanel = MyMultiColumnList(myListModel)
+        mImagePanel.background = UIColor.BG_COLOR
         mImagePanel.selectionModel = SingleSelectionModel()
         mImagePanel.setFixedColumnsMode(1)
         mImagePanel.tableHeader = null
@@ -159,6 +160,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private fun initSearchLayout(parent: JPanel) {
         // 搜索一栏根布局
         mSearchPanel = JPanel()
+        mSearchPanel.background = UIColor.BG_COLOR
         mSearchPanel.layout = BoxLayout(mSearchPanel, BoxLayout.X_AXIS)
         mSearchPanel.border = BorderFactory.createCompoundBorder(
             BorderFactory.createCompoundBorder(
@@ -266,12 +268,14 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private fun initBottomLayout() {
         // 底部按钮面板
         val bottomPanel = JPanel(GridBagLayout())
+        bottomPanel.background = UIColor.BG_COLOR
         bottomPanel.border = BorderFactory.createEmptyBorder(5, 0, 5, 0)
         add(bottomPanel, BorderLayout.SOUTH)
 
         val c = GridBagConstraints()
         // 底部靠左面板
         val bottomLeftPanel = JPanel(GridBagLayout())
+        bottomLeftPanel.background = UIColor.BG_COLOR
         c.fill = GridBagConstraints.VERTICAL
         c.weightx = 0.0
         bottomPanel.add(bottomLeftPanel, c)
@@ -308,6 +312,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
         // 增加图片预览的根路径显示
         mRootPathJPanel = JPanel(GridBagLayout())
+        mRootPathJPanel.background = UIColor.BG_COLOR
         mRootPathJPanel.border = BorderFactory.createCompoundBorder(
             BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(2, 4, 2, 4),
@@ -361,6 +366,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
         // 底部靠右的布局面板
         val bottomRightPanel = JPanel(GridBagLayout())
+        bottomRightPanel.background = UIColor.BG_COLOR
         c.fill = GridBagConstraints.VERTICAL
         c.weightx = 0.0
         bottomPanel.add(bottomRightPanel, c)
@@ -572,6 +578,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
      */
     private fun getPreviewItemPanel(index: Int, layoutType: Int, focused: Boolean): JPanel {
         val panel = JPanel()
+        panel.background = UIColor.BG_COLOR
         val image = myListModel.getData(index) ?: return panel
         panel.layout = BorderLayout()
         if (focused) {
@@ -690,14 +697,6 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 }
             }
 
-            child4x?.also {
-                for (child in it.children) {
-                    if (!child.isDirectory && isImage(child.name)) {
-                        childrenSet.add(Property("${parentPath}${child.name}", child.path, child.name))
-                    }
-                }
-            }
-
             child1_5x?.also {
                 for (child in it.children) {
                     if (!child.isDirectory && isImage(child.name)) {
@@ -709,6 +708,14 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             for (child in children) {
                 if (!child.isDirectory && isImage(child.name)) {
                     childrenSet.add(Property("${parentPath}${child.name}", child.path, child.name))
+                }
+            }
+
+            child4x?.also {
+                for (child in it.children) {
+                    if (!child.isDirectory && isImage(child.name)) {
+                        childrenSet.add(Property("${parentPath}${child.name}", child.path, child.name))
+                    }
                 }
             }
         }

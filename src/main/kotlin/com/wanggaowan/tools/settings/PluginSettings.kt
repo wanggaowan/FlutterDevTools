@@ -19,6 +19,8 @@ object PluginSettings {
     private const val EXAMPLE_IMAGES_REF_FILE_NAME = "exampleImagesRefFileName"
     private const val EXAMPLE_IMAGES_REF_CLASS_NAME = "exampleImagesRefClassName"
 
+    private const val COPY_ANDROID_STR_USE_SIMPLE_MODE = "copyAndroidStrUseSimpleMode"
+
     const val DEFAULT_IMAGE_DIR = "assets/images"
     const val DEFAULT_IMAGES_REF_FILE_PATH = "lib/resources"
     const val DEFAULT_IMAGES_REF_FILE_NAME = "images.dart"
@@ -97,6 +99,14 @@ object PluginSettings {
 
     fun setExampleImagesRefClassName(project: Project? = null, value: String) {
         setValue(project, EXAMPLE_IMAGES_REF_CLASS_NAME, value)
+    }
+
+    fun getCopyAndroidStrUseSimpleMode(project: Project? = null): Boolean {
+        return getValue(project, COPY_ANDROID_STR_USE_SIMPLE_MODE, "1") == "1"
+    }
+
+    fun setCopyAndroidStrUseSimpleMode(project: Project? = null, value: Boolean) {
+        setValue(project, COPY_ANDROID_STR_USE_SIMPLE_MODE, if (value) "1" else "0")
     }
 
     private fun getValue(project: Project?, key: String, defValue: String): String {

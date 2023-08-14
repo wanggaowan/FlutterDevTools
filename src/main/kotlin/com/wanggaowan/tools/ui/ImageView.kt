@@ -7,7 +7,7 @@ import java.awt.*
 import java.io.File
 import java.io.FileInputStream
 import javax.imageio.ImageIO
-import javax.swing.JPanel
+import javax.swing.JComponent
 
 
 /**
@@ -15,7 +15,7 @@ import javax.swing.JPanel
  *
  * @author Created by wanggaowan on 2022/6/20 08:44
  */
-class ImageView(image: File? = null) : JPanel() {
+class ImageView(image: File? = null) : JComponent() {
     private var image: Image? = null
     private var imgWidth = 0
     private var imgHeight = 0

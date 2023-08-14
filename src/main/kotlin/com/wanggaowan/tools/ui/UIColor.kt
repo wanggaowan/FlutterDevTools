@@ -15,7 +15,7 @@ object UIColor {
     /**
      * 分割线颜色
      */
-    val LINE_COLOR = JBColor(Gray._209, Gray._50)
+    val LINE_COLOR = JBColor(Gray._209, Gray._81)
 
     /**
      * 鼠标进入颜色
@@ -51,6 +51,11 @@ object UIColor {
      * 图片预览，网格预览模式下，展示图片路径Label的背景颜色
      */
     val IMAGE_TITLE_BG_COLOR = JBColor(Gray._252, Color(49, 52, 53))
+
+    /**
+     * 图片预览，网格预览模式下，展示图片路径Label的背景颜色
+     */
+    val BG_COLOR = JBColor(Color.WHITE, Color(60, 63, 65))
 
     val TRANSPARENT = Color(0, 0, 0, 0)
 }

@@ -12,6 +12,7 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.util.TextRange
+import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import java.awt.datatransfer.DataFlavor
@@ -79,24 +80,37 @@ class AndroidStringPasteProvider : PasteProvider {
 
                         var placeholderStr: String? = null
                         if (placeholderList.isNotEmpty()) {
-                            placeholderStr = "\"@${key.replace("\"", "")}\": { \"placeholders\": { %s } }"
                             placeholderList.sortBy { it.index }
-                            val stringBuilder2 = StringBuilder()
-                            for (i in placeholderList.indices) {
-                                val placeholder = placeholderList[i]
-                                val indexOf = value.indexOf(placeholder.placeholder)
-                                val paramName = "param$i"
-                                value = value.replaceRange(
-                                    indexOf,
-                                    indexOf + placeholder.placeholder.length,
-                                    "{$paramName}"
-                                )
-                                stringBuilder2.append("\"$paramName\": { \"type\": \"${placeholder.type}\" }")
-                                if (placeholderList.size > 1 && i < placeholderList.size - 1) {
-                                    stringBuilder2.append(",")
+                            if (!PluginSettings.getCopyAndroidStrUseSimpleMode(project)) {
+                                placeholderStr = "\"@${key.replace("\"", "")}\": { \"placeholders\": { %s } }"
+                                val stringBuilder2 = StringBuilder()
+                                for (i in placeholderList.indices) {
+                                    val placeholder = placeholderList[i]
+                                    val indexOf = value.indexOf(placeholder.placeholder)
+                                    val paramName = "param$i"
+                                    value = value.replaceRange(
+                                        indexOf,
+                                        indexOf + placeholder.placeholder.length,
+                                        "{$paramName}"
+                                    )
+                                    stringBuilder2.append("\"$paramName\": { \"type\": \"${placeholder.type}\" }")
+                                    if (placeholderList.size > 1 && i < placeholderList.size - 1) {
+                                        stringBuilder2.append(",")
+                                    }
+                                }
+                                placeholderStr = placeholderStr.format(stringBuilder2.toString())
+                            } else {
+                                for (i in placeholderList.indices) {
+                                    val placeholder = placeholderList[i]
+                                    val indexOf = value.indexOf(placeholder.placeholder)
+                                    val paramName = "param$i"
+                                    value = value.replaceRange(
+                                        indexOf,
+                                        indexOf + placeholder.placeholder.length,
+                                        "{$paramName}"
+                                    )
                                 }
                             }
-                            placeholderStr = placeholderStr.format(stringBuilder2.toString())
                         }
 
                         stringBuilder.append("$key: \"$value\"")

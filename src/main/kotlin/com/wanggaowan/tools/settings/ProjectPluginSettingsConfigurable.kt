@@ -30,6 +30,13 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
     }
 
     override fun isModified(): Boolean {
+        if (PluginSettings.getCopyAndroidStrUseSimpleMode(getProjectWrapper()) != mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected) {
+            return true
+        }
+        return isCreateResourceModified()
+    }
+
+    private fun isCreateResourceModified(): Boolean {
         val modified = PluginSettings.getImagesFileDir(getProjectWrapper()) != mSettingsView?.imagesDir?.text
             || PluginSettings.getImagesRefFilePath(getProjectWrapper()) != mSettingsView?.imagesRefFilePath?.text
             || PluginSettings.getImagesRefFileName(getProjectWrapper()) != mSettingsView?.imagesRefFileName?.text
@@ -49,6 +56,12 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
     }
 
     override fun apply() {
+        PluginSettings.setCopyAndroidStrUseSimpleMode(getProjectWrapper(),
+            mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected ?: true)
+        applyCreateResourceSet()
+    }
+
+    private fun applyCreateResourceSet() {
         PluginSettings.setImagesFileDir(
             getProjectWrapper(),
             mSettingsView?.imagesDir?.text ?: PluginSettings.DEFAULT_IMAGE_DIR
@@ -76,19 +89,27 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
         )
         PluginSettings.setExampleImagesRefFilePath(
             getProjectWrapper(),
-            mSettingsView?.exampleImagesRefFilePath?.text ?: PluginSettings.DEFAULT_IMAGES_REF_FILE_PATH
+            mSettingsView?.exampleImagesRefFilePath?.text
+                ?: PluginSettings.DEFAULT_IMAGES_REF_FILE_PATH
         )
         PluginSettings.setExampleImagesRefFileName(
             getProjectWrapper(),
-            mSettingsView?.exampleImagesRefFileName?.text ?: PluginSettings.DEFAULT_IMAGES_REF_FILE_NAME
+            mSettingsView?.exampleImagesRefFileName?.text
+                ?: PluginSettings.DEFAULT_IMAGES_REF_FILE_NAME
         )
         PluginSettings.setExampleImagesRefClassName(
             getProjectWrapper(),
-            mSettingsView?.exampleImagesRefClassName?.text ?: PluginSettings.DEFAULT_IMAGES_REF_CLASS_NAME
+            mSettingsView?.exampleImagesRefClassName?.text
+                ?: PluginSettings.DEFAULT_IMAGES_REF_CLASS_NAME
         )
     }
 
     override fun reset() {
+        mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected = true
+        resetCreateResource()
+    }
+
+    private fun resetCreateResource() {
         mSettingsView?.imagesDir?.text = PluginSettings.getImagesFileDir(getProjectWrapper())
         mSettingsView?.imagesRefFilePath?.text = PluginSettings.getImagesRefFilePath(getProjectWrapper())
         mSettingsView?.imagesRefFileName?.text = PluginSettings.getImagesRefFileName(getProjectWrapper())

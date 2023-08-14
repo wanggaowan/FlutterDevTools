@@ -22,6 +22,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>2.3</p>
+    <ul>
+       <li>粘贴android <string/>文本转化为flutter多语言文本，占位符转化支持简单模式</li>
+       <li>优化图片资源管理窗口，解决图片数量巨大的情况下使用卡顿问题</li>
+    </ul>
+
     <p>2.2</p>
     <ul>
        <li>增加android屏幕尺寸px，dp转换文档说明</li>
