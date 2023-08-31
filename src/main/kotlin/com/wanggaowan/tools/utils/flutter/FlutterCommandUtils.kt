@@ -43,7 +43,11 @@ object FlutterCommandUtils {
         processListener: ProcessListener? = null
     ): Process? {
         val params = mutableListOf<String>()
-        params.add("--delete-conflicting-outputs")
+        if (includeFiles == null || includeFiles.size != 1) {
+            // 仅生成单个文件.g.dart文件时，不重新删除后再创建
+            // 存在冲突需要手动解决
+            params.add("--delete-conflicting-outputs")
+        }
 
         if (!includeFiles.isNullOrEmpty()) {
             val array = includeFiles.map {

@@ -8,10 +8,7 @@ import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.vfs.VirtualFile
-import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.NotificationUtils
-import com.wanggaowan.tools.utils.ex.basePath
-import com.wanggaowan.tools.utils.ex.isFlutterProject
 
 /**
  * 删除多个相同名称但在不同分辨率下的文件
@@ -24,40 +21,40 @@ class DeleteMultiSameNameFileAction : DumbAwareAction() {
         return ActionUpdateThread.BGT
     }
 
-    override fun update(e: AnActionEvent) {
-        val module = e.getData(LangDataKeys.MODULE)
-        if (module == null) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        if (!module.isFlutterProject) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        val virtualFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
-        if (virtualFiles.isNullOrEmpty()) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        val basePath = module.basePath
-        val imageDir = PluginSettings.getImagesFileDir(module.project)
-        if (!virtualFiles[0].path.startsWith("$basePath/$imageDir") && !virtualFiles[0].path.startsWith("$basePath/example/$imageDir")) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        for (file in virtualFiles) {
-            if (file.isDirectory) {
-                e.presentation.isVisible = false
-                return
-            }
-        }
-
-        e.presentation.isVisible = true
-    }
+    // override fun update(e: AnActionEvent) {
+    //     val module = e.getData(LangDataKeys.MODULE)
+    //     if (module == null) {
+    //         e.presentation.isVisible = false
+    //         return
+    //     }
+    //
+    //     if (!module.isFlutterProject) {
+    //         e.presentation.isVisible = false
+    //         return
+    //     }
+    //
+    //     val virtualFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
+    //     if (virtualFiles.isNullOrEmpty()) {
+    //         e.presentation.isVisible = false
+    //         return
+    //     }
+    //
+    //     val basePath = module.basePath
+    //     val imageDir = PluginSettings.getImagesFileDir(module.project)
+    //     if (!virtualFiles[0].path.startsWith("$basePath/$imageDir") && !virtualFiles[0].path.startsWith("$basePath/example/$imageDir")) {
+    //         e.presentation.isVisible = false
+    //         return
+    //     }
+    //
+    //     for (file in virtualFiles) {
+    //         if (file.isDirectory) {
+    //             e.presentation.isVisible = false
+    //             return
+    //         }
+    //     }
+    //
+    //     e.presentation.isVisible = true
+    // }
 
     override fun actionPerformed(e: AnActionEvent) {
         val module = e.getData(LangDataKeys.MODULE) ?: return

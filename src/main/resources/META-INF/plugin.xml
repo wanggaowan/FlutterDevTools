@@ -22,6 +22,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>2.4</p>
+    <ul>
+       <li>修复执行'生成类序列化方法'命令时，创建构造函数，未将static、const和已经有初始值的final字段排除Bug</li>
+       <li>图片多分辨率操作增加到编辑器tab页右键操作中</li>
+    </ul>
+
     <p>2.3</p>
     <ul>
        <li>粘贴android <string/>文本转化为flutter多语言文本，占位符转化支持简单模式</li>
@@ -122,7 +128,6 @@
     <depends>org.jetbrains.plugins.yaml</depends>
 
     <actions>
-        <!--文件编辑界面的命令-->
         <action id="FlutterDevTools.DoL10nAction2"
             class="com.wanggaowan.tools.actions.DoL10nAction2" text="gen-l10n"
             description="执行flutter gen-l10n命令">
@@ -175,24 +180,26 @@
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last" />
         </group>
 
-        <action id="FlutterDevTools.CopyMultiSameNameFileAction"
-            class="com.wanggaowan.tools.actions.CopyMultiSameNameFileAction"
-            text="复制不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
-            description="复制不同分辨率下的相同图片">
+        <group id="FlutterDevToolsImageOperationActionGroup"
+            class="com.wanggaowan.tools.actions.ImageOperationActionGroup">
+            <separator />
+            <action id="FlutterDevTools.CopyMultiSameNameFileAction"
+                class="com.wanggaowan.tools.actions.CopyMultiSameNameFileAction"
+                text="复制不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
+                description="复制不同分辨率下的相同图片" />
+            <action id="FlutterDevTools.DeleteMultiSameNameFileAction"
+                class="com.wanggaowan.tools.actions.DeleteMultiSameNameFileAction"
+                text="删除不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
+                description="删除不同分辨率下的相同图片" />
+            <action id="FlutterDevTools.RenameMultiSameNameFileAction"
+                class="com.wanggaowan.tools.actions.RenameMultiSameNameFileAction"
+                text="重命名不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
+                description="重命名不同分辨率下的相同图片" />
+            <separator />
             <add-to-group group-id="CutCopyPasteGroup" anchor="last" />
-        </action>
-        <action id="FlutterDevTools.DeleteMultiSameNameFileAction"
-            class="com.wanggaowan.tools.actions.DeleteMultiSameNameFileAction"
-            text="删除不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
-            description="删除不同分辨率下的相同图片">
-            <add-to-group group-id="CutCopyPasteGroup" anchor="last" />
-        </action>
-        <action id="FlutterDevTools.RenameMultiSameNameFileAction"
-            class="com.wanggaowan.tools.actions.RenameMultiSameNameFileAction"
-            text="重命名不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
-            description="重命名不同分辨率下的相同图片">
-            <add-to-group group-id="CutCopyPasteGroup" anchor="last" />
-        </action>
+            <add-to-group group-id="EditorTabPopupMenu" relative-to-action="SplitVertically"
+                anchor="before" />
+        </group>
     </actions>
 
     <applicationListeners>

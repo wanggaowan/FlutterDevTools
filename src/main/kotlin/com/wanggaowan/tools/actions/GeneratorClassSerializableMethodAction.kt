@@ -11,6 +11,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
+import com.jetbrains.lang.dart.psi.impl.AbstractDartComponentImpl
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils.findElementAtOffset
 import com.wanggaowan.tools.utils.ex.isFlutterProject
@@ -250,8 +251,18 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
                 if (it is DartVarDeclarationList) {
                     var type: String? = null
                     var fieldName: String? = null
-                    it.children.forEach { child ->
-                        if (child is DartVarAccessDeclaration) {
+                    val child = it.getChildOfType<DartVarAccessDeclaration>()
+                    if (child != null) {
+                        var isValid = !child.isStatic
+                        if (isValid && child is AbstractDartComponentImpl) {
+                            isValid = !child.isConst
+                        }
+
+                        if (isValid && child.isFinal) {
+                            isValid = it.getChildOfType<DartVarInit>() == null
+                        }
+
+                        if (isValid) {
                             child.children.forEach { child2 ->
                                 if (child2 is DartType) {
                                     type = child2.text
