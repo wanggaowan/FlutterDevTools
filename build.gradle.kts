@@ -20,7 +20,7 @@ intellij {
     // version.set("223.8836.35.2231.10406996")
     type.set("AI") // AndroidStudio
     // 配置本地已下载IDE路径，具体配置文档查看：https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#configuration-intellij-extension
-    localPath.set("/Users/wgw/Documents/project/IdeaProjects/dev_ide/android studio/223.8836.35.2231.10406996/Android Studio.app/Contents")
+    localPath.set("/Users/wgw/Documents/develop/project/ide plugin/test ide/Android Studio.app/Contents")
     // Git4Idea: git插件
     plugins.set(
         listOf(

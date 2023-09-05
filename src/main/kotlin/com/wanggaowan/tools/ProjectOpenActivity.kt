@@ -6,6 +6,7 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.ModuleListener
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupActivity
+import com.wanggaowan.tools.actions.filetemplate.FileTemplateUtils
 import com.wanggaowan.tools.extensions.toolwindow.ResourcePreviewToolWindowFactory
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import io.flutter.bazel.WorkspaceCache
@@ -23,7 +24,8 @@ class ProjectOpenActivity : StartupActivity, DumbAware {
 
     override fun runActivity(project: Project) {
         // 项目打开
-        if (project.isFlutterProject || WorkspaceCache.getInstance(project).isBazel) {
+        val isFlutterProject = project.isFlutterProject
+        if (isFlutterProject || WorkspaceCache.getInstance(project).isBazel) {
             SwingUtilities.invokeLater {
                 ResourcePreviewToolWindowFactory.init(project)
             }
@@ -41,6 +43,10 @@ class ProjectOpenActivity : StartupActivity, DumbAware {
                     }
                 }
             })
+        }
+
+        if (isFlutterProject) {
+            FileTemplateUtils.initDefaultTemplate()
         }
     }
 }

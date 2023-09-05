@@ -2,7 +2,7 @@
 <idea-plugin>
     <id>com.wanggaowan.tools</id>
     <name>FlutterDevTools</name>
-    <vendor email="wanggaowan@163.com" url="https://github.com/wanggaowan/FlutterDevTools.git" />
+    <vendor email="wanggaowan@163.com" url="https://github.com/wanggaowan/FlutterDevTools.git"/>
 
     <description><![CDATA[
     <h2>提供Flutter开发所需工具</h2>
@@ -128,144 +128,156 @@
     <depends>org.jetbrains.plugins.yaml</depends>
 
     <actions>
-        <action id="FlutterDevTools.DoL10nAction2"
-            class="com.wanggaowan.tools.actions.DoL10nAction2" text="gen-l10n"
-            description="执行flutter gen-l10n命令">
-            <add-to-group group-id="GenerateGroup" anchor="last" />
-        </action>
-        <action id="FlutterDevTools.JsonToDart"
-            class="com.wanggaowan.tools.actions.JsonToDartAction" text="Json To Dart"
-            description="Json convert to dart">
-            <add-to-group group-id="GenerateGroup" anchor="last" />
-        </action>
-        <action id="FlutterDevTools.GeneratorJsonSerializableAction"
-            class="com.wanggaowan.tools.actions.GeneratorClassSerializableMethodAction"
-            text="生成类序列化方法" description="Json convert to dart">
-            <add-to-group group-id="GenerateGroup" anchor="last" />
-        </action>
-        <action id="FlutterDevTools.GeneratorSingleGFileAction"
-            class="com.wanggaowan.tools.actions.GeneratorSingleGFileAction" text="生成 .g.dart"
-            description="根据Dart实体生成.g.dart文件">
-            <add-to-group group-id="GenerateGroup" anchor="last" />
-        </action>
-        <action id="FlutterDevTools.AddRouterAction"
-            class="com.wanggaowan.tools.actions.AddRouterAction" text="添加页面路由"
-            description="根据给定内容，生成路由数据">
-            <add-to-group group-id="GenerateGroup" anchor="last" />
-        </action>
+        <group id="FlutterDevTools.GenerateGroup">
+            <separator/>
+            <action id="FlutterDevTools.JsonToDart"
+                    class="com.wanggaowan.tools.actions.JsonToDartAction" text="Json To Dart"
+                    description="Json convert to dart"/>
 
-        <group id="FlutterDevToolsActionGroup"
-            class="com.wanggaowan.tools.actions.ToolsActionGroup">
-            <separator />
+            <action id="FlutterDevTools.GeneratorJsonSerializableAction"
+                    class="com.wanggaowan.tools.actions.GeneratorClassSerializableMethodAction"
+                    text="生成类序列化方法" description="Json convert to dart"/>
+
+            <action id="FlutterDevTools.GeneratorSingleGFileAction"
+                    class="com.wanggaowan.tools.actions.GeneratorSingleGFileAction" text="生成 .g.dart"
+                    description="根据Dart实体生成.g.dart文件"/>
+
+            <action id="FlutterDevTools.AddRouterAction"
+                    class="com.wanggaowan.tools.actions.AddRouterAction" text="添加页面路由"
+                    description="根据给定内容，生成路由数据"/>
+            <action
+                id="FlutterDevTools.PubGetAction"
+                class="com.wanggaowan.tools.actions.PubGetAction"
+                text="pub get"
+                description="执行Flutter pub get命令"/>
+
+            <action id="FlutterDevTools.DoL10nAction2"
+                    class="com.wanggaowan.tools.actions.DoL10nAction2" text="gen-l10n"
+                    description="执行flutter gen-l10n命令"/>
+
+            <separator/>
+            <add-to-group group-id="GenerateGroup" anchor="last"/>
+        </group>
+
+        <group id="FlutterDevTools.FlutterToolsActionGroup"
+               class="com.wanggaowan.tools.actions.ToolsActionGroup">
+            <separator/>
             <action id="FlutterDevTools.DoL10nAction"
-                class="com.wanggaowan.tools.actions.DoL10nAction" text="gen-l10n"
-                description="执行flutter gen-l10n命令" />
-            <separator />
+                    class="com.wanggaowan.tools.actions.DoL10nAction" text="gen-l10n"
+                    description="执行flutter gen-l10n命令"/>
+            <separator/>
             <action id="FlutterDevTools.GeneratorGFileAction"
-                class="com.wanggaowan.tools.actions.GeneratorGFileAction" text="生成 .g.dart"
-                description="根据Dart实体生成.g.dart文件" />
+                    class="com.wanggaowan.tools.actions.GeneratorGFileAction" text="生成 .g.dart"
+                    description="根据Dart实体生成.g.dart文件"/>
             <action id="FlutterDevTools.JsonSerializableWatcher"
-                class="com.wanggaowan.tools.actions.JsonSerializableWatcherAction"
-                text="开启自动生成.g.dart文件服务"
-                description="开启根据Dart实体生成.g.dart文件观察者" />
-            <separator />
+                    class="com.wanggaowan.tools.actions.JsonSerializableWatcherAction"
+                    text="开启自动生成.g.dart文件服务"
+                    description="开启根据Dart实体生成.g.dart文件观察者"/>
+            <separator/>
             <action id="FlutterDevTools.ImportSameImageResAction"
-                class="com.wanggaowan.tools.actions.ImportSameImageResAction"
-                text="导入不同分辨率下的相同图片"
-                description="导入 android drawable目录结构不同分辨率下的多张图片" />
+                    class="com.wanggaowan.tools.actions.ImportSameImageResAction"
+                    text="导入不同分辨率下的相同图片"
+                    description="导入 android drawable目录结构不同分辨率下的多张图片"/>
             <action id="FlutterDevTools.GeneratorImageRefAction"
-                class="com.wanggaowan.tools.actions.GeneratorImageRefAction"
-                text="生成图片资源引用文件并配置yaml assets节点"
-                description="生成图片资源引用文件并配置pubspec.yaml assets节点" />
-            <add-to-group group-id="FlutterToolsActionGroup" anchor="last" />
+                    class="com.wanggaowan.tools.actions.GeneratorImageRefAction"
+                    text="生成图片资源引用文件并配置yaml assets节点"
+                    description="生成图片资源引用文件并配置pubspec.yaml assets节点"/>
+            <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
         </group>
 
-        <group id="FlutterDevToolsImageOperationActionGroup"
-            class="com.wanggaowan.tools.actions.ImageOperationActionGroup">
-            <separator />
+        <group id="FlutterDevTools.ImageOperationActionGroup"
+               class="com.wanggaowan.tools.actions.ImageOperationActionGroup">
+            <separator/>
             <action id="FlutterDevTools.CopyMultiSameNameFileAction"
-                class="com.wanggaowan.tools.actions.CopyMultiSameNameFileAction"
-                text="复制不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
-                description="复制不同分辨率下的相同图片" />
+                    class="com.wanggaowan.tools.actions.CopyMultiSameNameFileAction"
+                    text="复制不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
+                    description="复制不同分辨率下的相同图片"/>
             <action id="FlutterDevTools.DeleteMultiSameNameFileAction"
-                class="com.wanggaowan.tools.actions.DeleteMultiSameNameFileAction"
-                text="删除不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
-                description="删除不同分辨率下的相同图片" />
+                    class="com.wanggaowan.tools.actions.DeleteMultiSameNameFileAction"
+                    text="删除不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
+                    description="删除不同分辨率下的相同图片"/>
             <action id="FlutterDevTools.RenameMultiSameNameFileAction"
-                class="com.wanggaowan.tools.actions.RenameMultiSameNameFileAction"
-                text="重命名不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
-                description="重命名不同分辨率下的相同图片" />
-            <separator />
-            <add-to-group group-id="CutCopyPasteGroup" anchor="last" />
+                    class="com.wanggaowan.tools.actions.RenameMultiSameNameFileAction"
+                    text="重命名不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
+                    description="重命名不同分辨率下的相同图片"/>
+            <separator/>
+            <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
             <add-to-group group-id="EditorTabPopupMenu" relative-to-action="SplitVertically"
-                anchor="before" />
+                          anchor="before"/>
         </group>
+
+        <action
+            id="FlutterDevTools.CreateFileTemplateAction"
+            class="com.wanggaowan.tools.actions.filetemplate.CreateFileTemplateAction" text="创建Flutter模版文件"
+            icon="FlutterIcons.Flutter_13">
+            <add-to-group group-id="NewGroup" relative-to-action="NewFile" anchor="before"/>
+        </action>
     </actions>
 
     <applicationListeners>
         <listener class="com.wanggaowan.tools.listener.ProjectManagerListenerImpl"
-            topic="com.intellij.openapi.project.ProjectManagerListener" />
+                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
         <listener class="com.wanggaowan.tools.listener.GenL10nListener"
-            topic="com.intellij.openapi.fileEditor.FileEditorManagerListener" />
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
         <listener class="com.wanggaowan.tools.listener.GeneratorImageRefListener"
-            topic="com.intellij.openapi.vfs.newvfs.BulkFileListener" />
+                  topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
     </applicationListeners>
 
     <extensions defaultExtensionNs="com.intellij">
         <notificationGroup displayType="BALLOON" id="com.wanggaowan.tools.notification"
-            isLogByDefault="false" />
+                           isLogByDefault="false"/>
 
-        <postStartupActivity implementation="com.wanggaowan.tools.ProjectOpenActivity" />
+        <postStartupActivity implementation="com.wanggaowan.tools.ProjectOpenActivity"/>
 
         <!--必须设置order为first，否则2021.3版本之后不会调用FlutterGoToDeclarationHandler-->
         <gotoDeclarationHandler
             implementation="com.wanggaowan.tools.extensions.gotohandler.FlutterGoToDeclarationHandler"
-            order="first" />
+            order="first"/>
 
         <lang.documentationProvider language="Dart"
-            implementationClass="com.wanggaowan.tools.extensions.description.ImageDocumentDescriptionProvider"
-            order="first" />
+                                    implementationClass="com.wanggaowan.tools.extensions.description.ImageDocumentDescriptionProvider"
+                                    order="first"/>
 
         <lang.documentationProvider
             implementationClass="com.wanggaowan.tools.extensions.description.ScreenSizeDocumentDescriptionProvider"
-            order="first" language="XML" id="ssdxml" />
+            order="first" language="XML" id="ssdxml"/>
         <lang.documentationProvider
             implementationClass="com.wanggaowan.tools.extensions.description.ScreenSizeDocumentDescriptionProvider"
-            order="after ssdxml" language="JAVA" id="ssdjava" />
+            order="after ssdxml" language="JAVA" id="ssdjava"/>
         <lang.documentationProvider
             implementationClass="com.wanggaowan.tools.extensions.description.ScreenSizeDocumentDescriptionProvider"
-            order="after ssdjava" language="kotlin" />
+            order="after ssdjava" language="kotlin"/>
 
         <projectViewPane
             implementation="com.wanggaowan.tools.extensions.projectviewpane.FlutterProjectViewPane"
-            id="FlutterDevTools.ProjectViewPane" />
+            id="FlutterDevTools.ProjectViewPane"/>
 
         <toolWindow id="Flutter Resource Manager"
-            factoryClass="com.wanggaowan.tools.extensions.toolwindow.ResourcePreviewToolWindowFactory"
-            icon="FlutterIcons.Flutter_13" />
+                    factoryClass="com.wanggaowan.tools.extensions.toolwindow.ResourcePreviewToolWindowFactory"
+                    icon="FlutterIcons.Flutter_13"/>
 
         <projectConfigurable parentId="tools"
-            instance="com.wanggaowan.tools.settings.ProjectPluginSettingsConfigurable"
-            id="FlutterDevTools.ProjectPluginSettingsConfigurable" displayName="FlutterDevTools" />
+                             instance="com.wanggaowan.tools.settings.ProjectPluginSettingsConfigurable"
+                             id="FlutterDevTools.ProjectPluginSettingsConfigurable" displayName="FlutterDevTools"/>
 
         <codeInsight.lineMarkerProvider language="Dart"
-            implementationClass="com.wanggaowan.tools.extensions.codeInsight.ImageLineMarkerProvider" />
+                                        implementationClass="com.wanggaowan.tools.extensions.codeInsight.ImageLineMarkerProvider"/>
 
         <lang.foldingBuilder language="Dart"
-            implementationClass="com.wanggaowan.tools.extensions.lang.I18nFoldingBuilder" />
+                             implementationClass="com.wanggaowan.tools.extensions.lang.I18nFoldingBuilder"/>
 
-        <actionOnSave implementation="com.wanggaowan.tools.listener.GenL10nListener" order="last" />
+        <actionOnSave implementation="com.wanggaowan.tools.listener.GenL10nListener" order="last"/>
 
         <filePasteProvider implementation="com.wanggaowan.tools.listener.ImportSameImageListener"
-            order="first" />
+                           order="first"/>
         <refactoring.moveHandler
-            implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first" />
+            implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first"/>
 
         <customPasteProvider
-            implementation="com.wanggaowan.tools.extensions.AndroidStringPasteProvider" />
+            implementation="com.wanggaowan.tools.extensions.AndroidStringPasteProvider"/>
 
         <fileType name="ARB" extensions="arb" language="JSON"
-            implementationClass="com.wanggaowan.tools.extensions.filetype.ArbFileType" />
+                  implementationClass="com.wanggaowan.tools.extensions.filetype.ArbFileType"/>
     </extensions>
 
 </idea-plugin>

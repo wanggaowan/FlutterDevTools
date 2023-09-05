@@ -56,4 +56,7 @@ object SdkIcons {
 
     @JvmStatic
     val arbFile: Icon = IconLoader.getIcon("/icons/arb_file.svg", SdkIcons::class.java)
+
+    @JvmStatic
+    val fileTemplate: Icon = IconLoader.getIcon("/icons/file_template.svg", SdkIcons::class.java)
 }
