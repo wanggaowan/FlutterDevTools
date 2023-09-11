@@ -21,7 +21,7 @@ import com.wanggaowan.tools.listener.SimpleComponentListener
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.ex.basePath
-import icons.SdkIcons
+import icons.FlutterDevToolsIcons
 import kotlinx.coroutines.*
 import java.awt.*
 import java.awt.event.*
@@ -170,7 +170,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         )
         parent.add(mSearchPanel, BorderLayout.NORTH)
 
-        mSearchBtn = ImageButton(SdkIcons.search)
+        mSearchBtn = ImageButton(FlutterDevToolsIcons.search)
         mSearchBtn.preferredSize = Dimension(30, 30)
         mSearchBtn.minimumSize = mSearchBtn.preferredSize
         mSearchBtn.maximumSize = mSearchBtn.preferredSize
@@ -205,7 +205,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
         mSearchPanel.add(mSearchTextField)
 
-        mClearBtn = ImageButton(SdkIcons.close, arcSize = 100)
+        mClearBtn = ImageButton(FlutterDevToolsIcons.close, arcSize = 100)
         mClearBtn.preferredSize = Dimension(30, 30)
         mClearBtn.minimumSize = mSearchBtn.preferredSize
         mClearBtn.maximumSize = mSearchBtn.preferredSize
@@ -215,25 +215,25 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         mClearBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent?) {
                 mClearBtn.background = UIColor.MOUSE_ENTER_COLOR2
-                mClearBtn.icon = SdkIcons.closeFocus
+                mClearBtn.icon = FlutterDevToolsIcons.closeFocus
             }
 
             override fun mouseExited(e: MouseEvent?) {
                 super.mouseExited(e)
                 mClearBtn.background = null
-                mClearBtn.icon = SdkIcons.close
+                mClearBtn.icon = FlutterDevToolsIcons.close
             }
 
             override fun mousePressed(e: MouseEvent?) {
                 super.mousePressed(e)
                 mClearBtn.background = UIColor.MOUSE_PRESS_COLOR2
-                mClearBtn.icon = SdkIcons.closeFocus
+                mClearBtn.icon = FlutterDevToolsIcons.closeFocus
             }
 
             override fun mouseClicked(e: MouseEvent?) {
                 mSearchTextField.text = null
                 mClearBtn.background = null
-                mClearBtn.icon = SdkIcons.close
+                mClearBtn.icon = FlutterDevToolsIcons.close
                 mClearBtn.isVisible = false
             }
         })
@@ -280,7 +280,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         c.weightx = 0.0
         bottomPanel.add(bottomLeftPanel, c)
 
-        mRefreshBtn = ImageButton(SdkIcons.refresh)
+        mRefreshBtn = ImageButton(FlutterDevToolsIcons.refresh)
         mRefreshBtn.preferredSize = JBUI.size(30)
         mRefreshBtn.maximumSize = JBUI.size(30)
         mRefreshBtn.minimumSize = JBUI.size(30)
@@ -371,7 +371,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         c.weightx = 0.0
         bottomPanel.add(bottomRightPanel, c)
 
-        mListLayoutBtn = ImageButton(SdkIcons.list)
+        mListLayoutBtn = ImageButton(FlutterDevToolsIcons.list)
         mListLayoutBtn.preferredSize = JBUI.size(30)
         mListLayoutBtn.maximumSize = JBUI.size(30)
         mListLayoutBtn.minimumSize = JBUI.size(30)
@@ -379,7 +379,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         mListLayoutBtn.setBorderWidth(3)
         bottomRightPanel.add(mListLayoutBtn, c)
 
-        mGridLayoutBtn = ImageButton(SdkIcons.grid)
+        mGridLayoutBtn = ImageButton(FlutterDevToolsIcons.grid)
         mGridLayoutBtn.preferredSize = JBUI.size(30)
         mGridLayoutBtn.maximumSize = JBUI.size(30)
         mGridLayoutBtn.minimumSize = JBUI.size(30)

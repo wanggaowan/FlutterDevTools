@@ -43,10 +43,10 @@ object DartPsiUtils {
      * 创建[DartFile]文件，[name]为文件名称，不带后缀
      */
     @Throws(IncorrectOperationException::class)
-    fun createFile(project: Project, name: String): DartFile? {
+    fun createFile(project: Project, name: String, content: String = ""): DartFile? {
         val psiFile = PsiFileFactory.getInstance(project).createFileFromText(
             "$name.${DartFileType.INSTANCE.defaultExtension}",
-            DartFileType.INSTANCE, "", LocalTimeCounter.currentTime(), false
+            DartFileType.INSTANCE, content, LocalTimeCounter.currentTime(), false
         )
 
         if (psiFile is DartFile) {

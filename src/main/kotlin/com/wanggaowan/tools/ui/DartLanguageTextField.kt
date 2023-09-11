@@ -27,7 +27,9 @@ class DartLanguageTextField(project: Project) :
         editorEx.document.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
                 ApplicationManager.getApplication().invokeLater({
-                    CodeFoldingManager.getInstance(this@DartLanguageTextField.project).updateFoldRegions(editorEx)
+                    if (!editorEx.isDisposed) {
+                        CodeFoldingManager.getInstance(this@DartLanguageTextField.project).updateFoldRegions(editorEx)
+                    }
                 }, ModalityState.NON_MODAL)
             }
         })

@@ -1,23 +1,23 @@
 package com.wanggaowan.tools.actions.filetemplate.template
 
-import com.wanggaowan.tools.actions.filetemplate.Template
-import com.wanggaowan.tools.actions.filetemplate.TemplateChild
+import com.wanggaowan.tools.actions.filetemplate.TemplateChildEntity
+import com.wanggaowan.tools.actions.filetemplate.TemplateEntity
 
 object SimplePage {
-    val template: Template
+    val template: TemplateEntity
         get() {
-            val template = Template()
+            val template = TemplateEntity()
             template.name = "simplePage"
 
-            val children = arrayListOf<TemplateChild>()
+            val children = arrayListOf<TemplateChildEntity>()
             template.children = children
 
-            val view = TemplateChild()
+            val view = TemplateChildEntity()
             view.name = "view"
             view.content = viewContent
             children.add(view)
 
-            val controller = TemplateChild()
+            val controller = TemplateChildEntity()
             controller.name = "controller"
             controller.content = controllerContent
             children.add(controller)
@@ -29,24 +29,28 @@ object SimplePage {
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kq_flutter_widgets/getx/kq_get_builder.dart';
+import 'package:kq_flutter_widgets/widgets/emptyView/empty_view.dart';
 import 'package:kq_flutter_widgets/widgets/titleBar/kq_title_bar.dart';
 
 import 'controller.dart';
 
+/// ${'$'}desc${'$'}
+/// create by ${'$'}USER${'$'} ${'$'}DATETIME${'$'}
 class ${'$'}pageName${'$'}Page extends StatefulWidget {
-  const TestPage({super.key});
+  const ${'$'}pageName${'$'}Page({super.key});
 
   @override
-  State<TestPage> createState() => _TestPageState();
+  State<${'$'}pageName${'$'}Page> createState() => _${'$'}pageName${'$'}PageState();
 }
 
-class _TestPageState extends State<TestPage> {
+class _${'$'}pageName${'$'}PageState extends State<${'$'}pageName${'$'}Page> {
   final _controller = ${'$'}pageName${'$'}Controller();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: KqHeadBar(
+        // todo 填写界面标题
         headTitle: '',
         back: Get.back,
       ),
@@ -59,6 +63,15 @@ class _TestPageState extends State<TestPage> {
   }
 
   Widget _buildBody(BuildContext context) {
+    if (_controller.state.isFirstRequest) {
+      return const SizedBox();
+    }
+
+    if (_controller.state.isDataEmpty) {
+      return const KqEmptyView(forceSliver: false, autoSliver: false);
+    }
+
+    // todo 完善具体的界面逻辑
     return const Placeholder();
   }
 }            
@@ -67,15 +80,20 @@ class _TestPageState extends State<TestPage> {
     private val controllerContent = """
 import 'package:kq_flutter_widgets/getx/kq_get_builder.dart';
 
-import 'state.dart';
-
 class ${'$'}pageName${'$'}Controller extends KqGetXController {
   final ${'$'}pageName${'$'}State state = ${'$'}pageName${'$'}State();
-
 }    
 
 class ${'$'}pageName${'$'}State {
+  ${'$'}pageName${'$'}State() {
+    ///Initialize variables
+  }
 
+  bool _firstRequest = true;
+  
+  bool get isDataEmpty => true;
+  
+  bool get isFirstRequest => _firstRequest;
 }  
 """.trimIndent()
 }

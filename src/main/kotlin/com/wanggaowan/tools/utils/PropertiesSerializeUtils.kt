@@ -28,6 +28,15 @@ object PropertiesSerializeUtils {
     fun putString(name: String, value: String) {
         PropertiesComponent.getInstance().setValue(name, value)
     }
+
+    @JvmOverloads
+    fun getInt(name: String, defaultValue: Int = 0): Int {
+        return PropertiesComponent.getInstance().getInt(name, defaultValue)
+    }
+
+    fun putInt(name: String, value: Int) {
+        PropertiesComponent.getInstance().setValue(name, value, 0)
+    }
     // </editor-fold>
 
     // <editor-fold desc="基于项目级别的序列化，项目配置文件删除，序列化即删除">
@@ -47,6 +56,15 @@ object PropertiesSerializeUtils {
 
     fun putString(project: Project, name: String, value: String) {
         PropertiesComponent.getInstance(project).setValue(name, value)
+    }
+
+    @JvmOverloads
+    fun getInt(project: Project, name: String, defaultValue: Int = 0): Int {
+        return PropertiesComponent.getInstance(project).getInt(name, defaultValue)
+    }
+
+    fun putInt(project: Project, name: String, value: Int) {
+        PropertiesComponent.getInstance(project).setValue(name, value, 0)
     }
     // </editor-fold>
 }

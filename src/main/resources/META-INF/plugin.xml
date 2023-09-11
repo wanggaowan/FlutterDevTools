@@ -18,10 +18,17 @@
       <li>文件导航</li>
       <li>页面路由配置</li>
       <li>Android &lt;string/&gt;转化arb文件格式</li>
+      <li>创建Dart文件模版，支持一组文件同时创建</li>
     </ol>
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>2.5</p>
+    <ul>
+       <li>GenerateGroup分组增加执行pub get指令action</li>
+       <li>新增创建Dart文件模版功能，支持一组文件同时创建</li>
+    </ul>
+
     <p>2.4</p>
     <ul>
        <li>修复执行'生成类序列化方法'命令时，创建构造函数，未将static、const和已经有初始值的final字段排除Bug</li>
@@ -145,6 +152,7 @@
             <action id="FlutterDevTools.AddRouterAction"
                     class="com.wanggaowan.tools.actions.AddRouterAction" text="添加页面路由"
                     description="根据给定内容，生成路由数据"/>
+
             <action
                 id="FlutterDevTools.PubGetAction"
                 class="com.wanggaowan.tools.actions.PubGetAction"
@@ -209,7 +217,7 @@
         <action
             id="FlutterDevTools.CreateFileTemplateAction"
             class="com.wanggaowan.tools.actions.filetemplate.CreateFileTemplateAction" text="创建Flutter模版文件"
-            icon="FlutterIcons.Flutter_13">
+            icon="/icons/file_template.svg">
             <add-to-group group-id="NewGroup" relative-to-action="NewFile" anchor="before"/>
         </action>
     </actions>

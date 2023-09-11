@@ -10,7 +10,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.wanggaowan.tools.utils.msg.Toast
-import icons.SdkIcons
+import icons.FlutterDevToolsIcons
 import java.awt.BorderLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
@@ -71,7 +71,7 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
         label.alignmentX = 0f
         jParamsTitlePanel.add(label, BorderLayout.CENTER)
 
-        val paramsAdd = ImageButton(icon = SdkIcons.add)
+        val paramsAdd = ImageButton(icon = FlutterDevToolsIcons.add)
         paramsAdd.preferredSize = JBUI.size(16)
         jParamsTitlePanel.add(paramsAdd, BorderLayout.EAST)
 
@@ -292,7 +292,7 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
         mJPramsPanel.add(checkBox, cc)
 
         cc.gridx = 3
-        val delete = ImageButton(icon = SdkIcons.delete)
+        val delete = ImageButton(icon = FlutterDevToolsIcons.delete)
         delete.preferredSize = JBUI.size(16)
         mJPramsPanel.add(delete, cc)
 

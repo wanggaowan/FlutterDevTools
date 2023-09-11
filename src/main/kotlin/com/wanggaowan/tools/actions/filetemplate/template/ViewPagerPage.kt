@@ -3,12 +3,12 @@ package com.wanggaowan.tools.actions.filetemplate.template
 import com.wanggaowan.tools.actions.filetemplate.TemplateChildEntity
 import com.wanggaowan.tools.actions.filetemplate.TemplateEntity
 
-object Page {
+object ViewPagerPage {
 
     val template: TemplateEntity
         get() {
             val template = TemplateEntity()
-            template.name = "page"
+            template.name = "viewPagerPage"
 
             val children = arrayListOf<TemplateChildEntity>()
             template.children = children
@@ -35,6 +35,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kq_flutter_widgets/getx/kq_get_builder.dart';
 import 'package:kq_flutter_widgets/widgets/emptyView/empty_view.dart';
+import 'package:kq_flutter_widgets/widgets/tabbar/kq_tab_bar.dart';
+import 'package:kq_flutter_widgets/widgets/tabbar/kq_tab_bar_page_view.dart';
 import 'package:kq_flutter_widgets/widgets/titleBar/kq_title_bar.dart';
 
 import 'controller.dart';
@@ -42,7 +44,7 @@ import 'controller.dart';
 /// ${'$'}desc${'$'}
 /// create by ${'$'}USER${'$'} ${'$'}DATETIME${'$'}
 class ${'$'}pageName${'$'}Page extends StatefulWidget {
-  const TestPage({super.key});
+  const ${'$'}pageName${'$'}Page({super.key});
 
   @override
   State<${'$'}pageName${'$'}Page> createState() => _${'$'}pageName${'$'}PageState();
@@ -76,20 +78,41 @@ class _${'$'}pageName${'$'}PageState extends State<${'$'}pageName${'$'}Page> {
       return const KqEmptyView(forceSliver: false, autoSliver: false);
     }
 
-    // todo 完善具体的界面逻辑
-    return const Placeholder();
+    return Column(
+      children: [
+        KqTabBar(
+          tabController: _controller.tabController,
+          items: [
+            // todo 初始化标签页
+          ],
+        ),
+        Expanded(
+          child: KqTabBarView(
+            controller: _controller.tabController,
+            children: [
+              // todo 初始化标签页对应的界面
+            ],
+          ),
+        )
+      ],
+    );
   }
-}            
+}     
 """.trimIndent()
 
     private val controllerContent = """
+import 'package:flutter/material.dart';
 import 'package:kq_flutter_widgets/getx/kq_get_builder.dart';
 
 import 'state.dart';
 
 class ${'$'}pageName${'$'}Controller extends KqGetXController {
   final ${'$'}pageName${'$'}State state = ${'$'}pageName${'$'}State();
-}    
+  TabController? _tabController;
+
+  TabController get tabController =>
+      _tabController ??= TabController(length: state.pageCount, vsync: vsync);
+}  
 """.trimIndent()
 
     private val stateContent = """
@@ -101,7 +124,9 @@ class ${'$'}pageName${'$'}State {
   bool firstRequest = true;
   
   bool get isDataEmpty => true;
-}   
+  
+  int get pageCount => 0;
+}
 """.trimIndent()
 }
 

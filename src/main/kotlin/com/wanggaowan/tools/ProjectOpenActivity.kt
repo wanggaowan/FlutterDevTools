@@ -10,6 +10,9 @@ import com.wanggaowan.tools.actions.filetemplate.FileTemplateUtils
 import com.wanggaowan.tools.extensions.toolwindow.ResourcePreviewToolWindowFactory
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import io.flutter.bazel.WorkspaceCache
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import javax.swing.SwingUtilities
 
 
@@ -46,7 +49,9 @@ class ProjectOpenActivity : StartupActivity, DumbAware {
         }
 
         if (isFlutterProject) {
-            FileTemplateUtils.initDefaultTemplate()
+            CoroutineScope(Dispatchers.Default).launch {
+                FileTemplateUtils.initDefaultTemplate()
+            }
         }
     }
 }

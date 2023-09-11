@@ -1,7 +1,7 @@
 package com.wanggaowan.tools.extensions.filetype
 
 import com.intellij.json.JsonFileType
-import icons.SdkIcons
+import icons.FlutterDevToolsIcons
 import javax.swing.Icon
 
 /**
@@ -20,7 +20,7 @@ class ArbFileType : JsonFileType() {
     }
 
     override fun getIcon(): Icon {
-        return SdkIcons.arbFile
+        return FlutterDevToolsIcons.arbFile
     }
 
     override fun getDefaultExtension(): String {
