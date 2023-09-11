@@ -16,20 +16,31 @@ object FileTemplateUtils {
     private const val TEMPLATE_VERSION = 1
 
     fun initDefaultTemplate() {
-        if (PropertiesSerializeUtils.getInt(TEMPLATE_VERSION_KEY) == TEMPLATE_VERSION) {
-            return
+        val version = PropertiesSerializeUtils.getInt(TEMPLATE_VERSION_KEY, 0)
+        val templateList = getTemplateList()
+        var haveInsert = false
+        if (version <= 0) {
+            // 版本1新增的内容
+            haveInsert = true
+            templateList.add(Page.template)
+            templateList.add(SimplePage.template)
+            templateList.add(FormPage.template)
+            templateList.add(SimpleFormPage.template)
+            templateList.add(ViewPagerPage.template)
+            templateList.add(SimpleViewPagerPage.template)
+        }
+
+        if (version <= 1) {
+            // 版本2新增的内容
+            // TODO: 预留，用于以后理解插件升级后数据更新逻辑
+            haveInsert = true
         }
 
         PropertiesSerializeUtils.putInt(TEMPLATE_VERSION_KEY, TEMPLATE_VERSION)
-        val templateList = arrayListOf<TemplateEntity>()
-        templateList.add(Page.template)
-        templateList.add(SimplePage.template)
-        templateList.add(FormPage.template)
-        templateList.add(SimpleFormPage.template)
-        templateList.add(ViewPagerPage.template)
-        templateList.add(SimpleViewPagerPage.template)
-        val defaultTemplate = Gson().toJson(templateList)
-        PropertiesSerializeUtils.putString(TEMPLATE_DATA_KEY, defaultTemplate)
+        if (haveInsert) {
+            val defaultTemplate = Gson().toJson(templateList)
+            PropertiesSerializeUtils.putString(TEMPLATE_DATA_KEY, defaultTemplate)
+        }
     }
 
     fun getTemplateList(): MutableList<TemplateEntity> {
