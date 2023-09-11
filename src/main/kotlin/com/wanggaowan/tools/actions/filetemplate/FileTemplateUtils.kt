@@ -13,7 +13,7 @@ import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 object FileTemplateUtils {
     private const val TEMPLATE_DATA_KEY = "template"
     private const val TEMPLATE_VERSION_KEY = "templateVersion"
-    private const val TEMPLATE_VERSION = 2
+    private const val TEMPLATE_VERSION = 1
 
     fun initDefaultTemplate() {
         if (PropertiesSerializeUtils.getInt(TEMPLATE_VERSION_KEY) == TEMPLATE_VERSION) {
