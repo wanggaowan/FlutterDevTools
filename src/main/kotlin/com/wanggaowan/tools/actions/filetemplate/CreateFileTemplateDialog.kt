@@ -265,7 +265,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         val box = Box.createHorizontalBox()
         box.border = BorderFactory.createCompoundBorder(
             LineBorder(UIColor.LINE_COLOR, 1, 0, 0, 0),
-            BorderFactory.createEmptyBorder(0, 10, 0, 10)
+            BorderFactory.createEmptyBorder(0, 5, 0, 5)
         )
         rootPanel.add(box, BorderLayout.SOUTH)
 
