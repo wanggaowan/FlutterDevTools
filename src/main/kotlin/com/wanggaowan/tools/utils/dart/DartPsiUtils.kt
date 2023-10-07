@@ -5,6 +5,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
+import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.impl.source.codeStyle.CodeStyleManagerImpl
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
@@ -12,7 +13,9 @@ import com.intellij.util.IncorrectOperationException
 import com.intellij.util.LocalTimeCounter
 import com.jetbrains.lang.dart.DartFileType
 import com.jetbrains.lang.dart.psi.DartFile
+import com.jetbrains.lang.dart.psi.DartImportStatement
 import com.jetbrains.lang.dart.psi.DartIncompleteDeclaration
+import com.jetbrains.lang.dart.psi.DartPartStatement
 
 // import com.jetbrains.lang.dart.psi.DartFile
 
@@ -222,5 +225,87 @@ object DartPsiUtils {
      */
     fun reformatFile(project: Project, psiFile: PsiFile, ranges: Collection<TextRange>) {
         CodeStyleManagerImpl(project).reformatText(psiFile, ranges)
+    }
+
+    /**
+     * 添加Import导入,[importStr]为导入的内容，如：import 'package:json_annotation/json_annotation.dart'; 。
+     * [isRelPath]表示导入的内容是否采用相对路径
+     */
+    fun addImport(project: Project, psiFile: PsiFile, importStr: String, isRelPath: Boolean = false) {
+        var lastImportElement: PsiElement? = null
+        var prePsiWhiteSpace = false
+
+        // import 'dart:io';
+        //
+        // import 'package:dio/dio.dart';
+        // import 'package:kq_flutter_core_widget/network/http.dart' as http;
+        //
+        // import '../resources/l10n/l10n.dart';
+        // import '../utils/account_util.dart';
+
+        // 插入到import 'package:分组的最后一个
+        for (child in psiFile.children) {
+            if (child is DartImportStatement) {
+                if (child.textMatches(importStr)) {
+                    return
+                }
+
+                if (!isRelPath && prePsiWhiteSpace
+                    && lastImportElement != null
+                    && !child.text.startsWith("import 'package:")) {
+                    break
+                }
+
+                lastImportElement = child
+                prePsiWhiteSpace = false
+            } else if (child is PsiWhiteSpace) {
+                prePsiWhiteSpace = true
+            } else {
+                prePsiWhiteSpace = false
+                if (lastImportElement != null) {
+                    break
+                }
+            }
+        }
+
+        createCommonElement(project, importStr)?.also {
+            if (lastImportElement != null) {
+                psiFile.addAfter(it, lastImportElement)
+            } else {
+                psiFile.addBefore(it, psiFile.firstChild)
+            }
+        }
+    }
+
+    /**
+     * 添加part导入,[partStr]为导入的内容，如：part 'test.g.dart';
+     */
+    fun addPartImport(project: Project, psiFile: PsiFile,partStr:String) {
+        var lastImportElement: PsiElement? = null
+        var lastPartElement: PsiElement? = null
+        var existAnyPart = false
+        for (child in psiFile.children) {
+            if (child is DartPartStatement) {
+                existAnyPart = true
+                if (child.textMatches(partStr)) {
+                    return
+                }
+            } else if (child is DartImportStatement) {
+                lastImportElement = child
+            } else if (child !is PsiWhiteSpace && existAnyPart) {
+                lastPartElement = child
+                break
+            }
+        }
+
+        createCommonElement(project, partStr)?.also {
+            if (lastPartElement != null) {
+                psiFile.addAfter(it, lastPartElement)
+            } else if (lastImportElement != null) {
+                psiFile.addAfter(it, lastImportElement)
+            } else {
+                psiFile.addBefore(it, psiFile.firstChild)
+            }
+        }
     }
 }

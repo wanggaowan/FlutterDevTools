@@ -8,7 +8,6 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
 import com.jetbrains.lang.dart.psi.impl.AbstractDartComponentImpl
@@ -93,27 +92,7 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
      * 添加序列化需要的Import导入
      */
     private fun addJsonSerializableImport(project: Project, psiFile: PsiFile) {
-        var lastImportElement: PsiElement? = null
-        var existAnyImport = false
-        for (child in psiFile.children) {
-            if (child is DartImportStatement) {
-                existAnyImport = true
-                if (child.textMatches("import 'package:json_annotation/json_annotation.dart';")) {
-                    return
-                }
-            } else if (child !is PsiWhiteSpace && existAnyImport) {
-                lastImportElement = child
-                break
-            }
-        }
-
-        DartPsiUtils.createCommonElement(project, "import 'package:json_annotation/json_annotation.dart';")?.also {
-            if (lastImportElement != null) {
-                psiFile.addBefore(it, lastImportElement)
-            } else {
-                psiFile.addBefore(it, psiFile.firstChild)
-            }
-        }
+        DartPsiUtils.addImport(project, psiFile, "import 'package:json_annotation/json_annotation.dart';")
     }
 
     /**
@@ -122,33 +101,7 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
     private fun addPartImport(project: Project, psiFile: PsiFile) {
         val fileName = psiFile.name.replace(".dart", "")
         val part = "part '$fileName.g.dart';"
-
-        var lastImportElement: PsiElement? = null
-        var lastPartElement: PsiElement? = null
-        var existAnyPart = false
-        for (child in psiFile.children) {
-            if (child is DartPartStatement) {
-                existAnyPart = true
-                if (child.textMatches(part)) {
-                    return
-                }
-            } else if (child is DartImportStatement) {
-                lastImportElement = child
-            } else if (child !is PsiWhiteSpace && existAnyPart) {
-                lastPartElement = child
-                break
-            }
-        }
-
-        DartPsiUtils.createCommonElement(project, part)?.also {
-            if (lastPartElement != null) {
-                psiFile.addAfter(it, lastPartElement)
-            } else if (lastImportElement != null) {
-                psiFile.addAfter(it, lastImportElement)
-            } else {
-                psiFile.addBefore(it, psiFile.firstChild)
-            }
-        }
+        DartPsiUtils.addPartImport(project, psiFile, part)
     }
 
     /**
@@ -243,8 +196,31 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
         createFromList: Boolean
     ) {
 
+        if (createFactory) {
+            val fromJson =
+                "factory ${className}.fromJson(Map<String, dynamic> json) => _\$${className}FromJson(json);"
+            DartPsiUtils.createClassMember(project, fromJson)?.also {
+                classMembers.add(it)
+            }
+        }
+
+        if (createFromList) {
+            val fromJson =
+                "static List<${className}> fromJsonList(List<dynamic> json) => json.map((e) => ${className}.fromJson(e as Map<String, dynamic>)).toList();"
+            DartPsiUtils.createClassMember(project, fromJson)?.also {
+                classMembers.add(it)
+            }
+        }
+
+        if (createToJson) {
+            val toJson = "Map<String, dynamic> toJson() => _\$${className}ToJson(this);"
+            DartPsiUtils.createCommonElement(project, toJson)?.also {
+                classMembers.add(it)
+            }
+        }
+
         if (createConstructor) {
-            val constructor = StringBuilder("$className({")
+            var constructor = StringBuilder("$className({")
             var index = 0
             val privateFiled = mutableListOf<String>()
             classMembers.children.forEach {
@@ -297,10 +273,16 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
                 }
             }
 
+            val constructorStr: String
             if (privateFiled.size == 0) {
-                constructor.append("});")
+                constructorStr = if (index == 0) "$className();" else constructor.append("});").toString()
             } else {
-                constructor.append("}) {\n")
+                if (index == 0) {
+                    constructor = StringBuilder("$className() {\n")
+                } else {
+                    constructor.append("}) {\n")
+                }
+
                 privateFiled.forEach {
                     constructor.append(it)
                         .append(" = ")
@@ -308,33 +290,12 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
                         .append(";")
                 }
                 constructor.append("\n}")
+                constructorStr = constructor.toString()
             }
 
-            DartPsiUtils.createCommonElement(project, constructor.toString())?.also {
-                classMembers.add(it)
-            }
-        }
-
-        if (createFactory) {
-            val fromJson =
-                "factory ${className}.fromJson(Map<String, dynamic> json) => _\$${className}FromJson(json);"
-            DartPsiUtils.createClassMember(project, fromJson)?.also {
-                classMembers.add(it)
-            }
-        }
-
-        if (createFromList) {
-            val fromJson =
-                "static List<${className}> fromJsonList(List<dynamic> json) => json.map((e) => ${className}.fromJson(e as Map<String, dynamic>)).toList();"
-            DartPsiUtils.createClassMember(project, fromJson)?.also {
-                classMembers.add(it)
-            }
-        }
-
-        if (createToJson) {
-            val toJson = "Map<String, dynamic> toJson() => _\$${className}ToJson(this);"
-            DartPsiUtils.createCommonElement(project, toJson)?.also {
-                classMembers.add(it)
+            DartPsiUtils.createCommonElement(project, constructorStr)?.also {
+                val parent = classMembers.parent
+                parent.addAfter(it, parent.firstChild)
             }
         }
     }
