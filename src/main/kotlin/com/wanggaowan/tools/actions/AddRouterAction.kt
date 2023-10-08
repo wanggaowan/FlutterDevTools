@@ -164,7 +164,7 @@ class AddRouterAction : DumbAwareAction() {
                             }
                         }
 
-                        pageElement = DartPsiUtils.createListItem(
+                        pageElement = DartPsiUtils.createArgumentItem(
                             project,
                             "GetPage(name: '$pagePath', page: () => const $pageName())"
                         )
@@ -174,7 +174,7 @@ class AddRouterAction : DumbAwareAction() {
                                 dartListLiteralExpression.addBefore(pageElement, dartListLiteralExpression.lastChild)
                         }
                     } else {
-                        pageElement = DartPsiUtils.createListItem(
+                        pageElement = DartPsiUtils.createArgumentItem(
                             project,
                             "GetPage(name: '$pagePath', page: () => const $pageName())"
                         )

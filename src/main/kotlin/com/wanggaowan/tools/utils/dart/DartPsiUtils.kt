@@ -12,10 +12,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.IncorrectOperationException
 import com.intellij.util.LocalTimeCounter
 import com.jetbrains.lang.dart.DartFileType
-import com.jetbrains.lang.dart.psi.DartFile
-import com.jetbrains.lang.dart.psi.DartImportStatement
-import com.jetbrains.lang.dart.psi.DartIncompleteDeclaration
-import com.jetbrains.lang.dart.psi.DartPartStatement
+import com.jetbrains.lang.dart.psi.*
 
 // import com.jetbrains.lang.dart.psi.DartFile
 
@@ -191,9 +188,9 @@ object DartPsiUtils {
     }
 
     /**
-     * 创建列表项
+     * 创建参数项[PsiElement]
      */
-    fun createListItem(project: Project, text: String): PsiElement? {
+    fun createArgumentItem(project: Project, text: String): PsiElement? {
         val psiFile = PsiFileFactory.getInstance(project).createFileFromText(
             "dummy.${DartFileType.INSTANCE.defaultExtension}",
             DartFileType.INSTANCE, "List dummy = [$text]; ", LocalTimeCounter.currentTime(), false
@@ -252,7 +249,8 @@ object DartPsiUtils {
 
                 if (!isRelPath && prePsiWhiteSpace
                     && lastImportElement != null
-                    && !child.text.startsWith("import 'package:")) {
+                    && !child.text.startsWith("import 'package:")
+                ) {
                     break
                 }
 
@@ -280,7 +278,7 @@ object DartPsiUtils {
     /**
      * 添加part导入,[partStr]为导入的内容，如：part 'test.g.dart';
      */
-    fun addPartImport(project: Project, psiFile: PsiFile,partStr:String) {
+    fun addPartImport(project: Project, psiFile: PsiFile, partStr: String) {
         var lastImportElement: PsiElement? = null
         var lastPartElement: PsiElement? = null
         var existAnyPart = false

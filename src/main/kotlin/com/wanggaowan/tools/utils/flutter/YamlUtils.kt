@@ -99,11 +99,11 @@ object YamlUtils {
     fun findElement(parent: PsiElement, name: String): PsiElement? {
         for (child in parent.children) {
             if (child is YAMLDocument) {
-                val element = child.firstChild
-                return if (element == null) {
+                val children = child.children
+                return if (children.isEmpty()) {
                     null
                 } else {
-                    findElement(child.firstChild, name)
+                    findElement(children[0], name)
                 }
             } else if (child is YAMLMapping) {
                 val element = findElement(child, name)

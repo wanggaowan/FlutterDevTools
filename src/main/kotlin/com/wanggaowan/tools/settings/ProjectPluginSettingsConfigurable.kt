@@ -33,6 +33,11 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
         if (PluginSettings.getCopyAndroidStrUseSimpleMode(getProjectWrapper()) != mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected) {
             return true
         }
+
+        if (PluginSettings.getExtractStr2L10nShowRenameDialog(getProjectWrapper()) != mSettingsView?.extractStr2L10nShowRenameDialog?.isSelected) {
+            return true
+        }
+
         return isCreateResourceModified()
     }
 
@@ -58,6 +63,8 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
     override fun apply() {
         PluginSettings.setCopyAndroidStrUseSimpleMode(getProjectWrapper(),
             mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected ?: true)
+        PluginSettings.setExtractStr2L10nShowRenameDialog(getProjectWrapper(),
+            mSettingsView?.extractStr2L10nShowRenameDialog?.isSelected ?: true)
         applyCreateResourceSet()
     }
 
@@ -106,6 +113,7 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
 
     override fun reset() {
         mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected = true
+        mSettingsView?.extractStr2L10nShowRenameDialog?.isSelected = true
         resetCreateResource()
     }
 
