@@ -19,10 +19,17 @@
       <li>页面路由配置</li>
       <li>Android &lt;string/&gt;转化arb文件格式</li>
       <li>创建Dart文件模版，支持一组文件同时创建</li>
+      <li>提取中文为多语言</li>
     </ol>
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>2.6</p>
+    <ul>
+       <li>增加提取中文为多语言功能</li>
+       <li>增加复制图片引用功能</li>
+    </ul>
+
     <p>2.5</p>
     <ul>
        <li>GenerateGroup分组增加执行pub get指令action</li>
