@@ -208,6 +208,10 @@
                     class="com.wanggaowan.tools.actions.RenameMultiSameNameFileAction"
                     text="重命名不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
                     description="重命名不同分辨率下的相同图片"/>
+            <action id="FlutterDevTools.CopyImageRefKeyAction"
+                    class="com.wanggaowan.tools.actions.CopyImageRefKeyAction"
+                    text="复制图片引用" icon="FlutterIcons.Flutter_13"
+                    description="复制图片引用"/>
             <separator/>
             <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
             <add-to-group group-id="EditorTabPopupMenu" relative-to-action="SplitVertically"
