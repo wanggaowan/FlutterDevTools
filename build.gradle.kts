@@ -36,11 +36,11 @@ intellij {
     instrumentCode.set(true)
 }
 
-dependencies {
-    implementation("com.aliyun:alimt20181012:1.2.0") {
-        exclude(group="org.slf4j")
-    }
-}
+// dependencies {
+//     implementation("com.aliyun:alimt20181012:1.2.0") {
+//         exclude(group="org.slf4j")
+//     }
+// }
 
 tasks {
     // Set the JVM compatibility versions

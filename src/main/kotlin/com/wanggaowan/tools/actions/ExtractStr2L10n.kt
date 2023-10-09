@@ -1,9 +1,5 @@
 package com.wanggaowan.tools.actions
 
-import com.aliyun.alimt20181012.Client
-import com.aliyun.alimt20181012.models.TranslateGeneralRequest
-import com.aliyun.teaopenapi.models.Config
-import com.aliyun.teautil.models.RuntimeOptions
 import com.intellij.json.JsonFileType
 import com.intellij.json.psi.JsonObject
 import com.intellij.json.psi.JsonPsiUtil
@@ -29,6 +25,7 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.LocalTimeCounter
+import com.intellij.util.io.URLUtil.encodeURIComponent
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
 import com.jetbrains.lang.dart.psi.DartShortTemplateEntry
@@ -42,6 +39,11 @@ import com.wanggaowan.tools.utils.flutter.YamlUtils
 import com.wanggaowan.tools.utils.msg.Toast
 import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -49,10 +51,15 @@ import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 import org.jetbrains.yaml.psi.YAMLKeyValue
+import org.json.JSONObject
 import java.awt.Dimension
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -329,36 +336,56 @@ class ExtractStr2L10n : DumbAwareAction() {
         }
     }
 
-    private fun translate(text: String, isFormat: Boolean): String? {
+    private suspend fun translate(text: String, isFormat: Boolean): String? {
+        val uuid = UUID.randomUUID().toString()
+        val dateformat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+        dateformat.timeZone = TimeZone.getTimeZone("UTC")
+        val time = dateformat.format(Date())
+
+        val queryMap = mutableMapOf<String, String>()
+        queryMap["AccessKeyId"] = "LTAI5tRqko67A8UxVC8kxtsn"
+        queryMap["Action"] = "TranslateGeneral"
+        queryMap["Format"] = "JSON"
+        queryMap["FormatType"] = "text"
+        queryMap["RegionId"] = "cn-hangzhou"
+        queryMap["Scene"] = "general"
+        queryMap["SignatureVersion"] = "1.0"
+        queryMap["SignatureMethod"] = "HMAC-SHA1"
+        queryMap["Status"] = "Available"
+        queryMap["SignatureNonce"] = uuid
+        queryMap["SourceLanguage"] = "zh"
+        queryMap["SourceText"] = text
+        queryMap["TargetLanguage"] = "en"
+        queryMap["Timestamp"] = time
+        queryMap["Version"] = "2018-10-12"
+        var queryString = getCanonicalizedQueryString(queryMap, queryMap.keys.toTypedArray())
+
+        val stringToSign = "GET" + "&" + encodeURIComponent("/") + "&" + encodeURIComponent(queryString)
+        val signature = encodeURIComponent(Base64.getEncoder().encodeToString(signatureMethod(stringToSign)))
+        queryString += "&Signature=$signature"
         try {
-            val config = Config()
-            config.accessKeyId = "LTAI5tRqko67A8UxVC8kxtsn"
-            config.accessKeySecret = "WqVDb7smtQok8bT9qvTxD6v3naun55"
-            config.endpoint = "mt.cn-hangzhou.aliyuncs.com"
-            config.readTimeout = 5000
-            config.connectTimeout = 5000
-            val client = Client(config)
-
-            val runtimeOption = RuntimeOptions()
-            runtimeOption.connectTimeout = 5000
-            runtimeOption.readTimeout = 5000
-            // 开启自动重试机制
-            runtimeOption.autoretry = false
-            // 设置自动重试次数
-            // runtimeOption.maxAttempts = 3
-
-            val translateRequest = TranslateGeneralRequest()
-            translateRequest.formatType = "text"
-            translateRequest.sourceText = text
-            translateRequest.sourceLanguage = "zh"
-            translateRequest.targetLanguage = "en"
-
-            val response = client.translateGeneralWithOptions(translateRequest, runtimeOption)
-            if (response.getStatusCode() != 200) {
+            val response = HttpClient(CIO) {
+                engine {
+                    requestTimeout = 5000
+                    endpoint {
+                        connectTimeout = 5000
+                    }
+                }
+            }.get("https://mt.cn-hangzhou.aliyuncs.com/?$queryString")
+            val body = response.bodyAsText()
+            if (body.isEmpty()) {
                 return null
             }
 
-            var value = response.body.data.translated
+            // {"RequestId":"A721413A-7DCD-51B0-8AEE-FCE433CEACA2","Data":{"WordCount":"4","Translated":"Test Translation"},"Code":"200"}
+            val jsonObject = JSONObject(body)
+            val code = jsonObject.getString("Code")
+            if (code != "200") {
+                return null
+            }
+
+            val data = jsonObject.getJSONObject("Data") ?: return null
+            var value = data.getString("Translated")
             if (value.isNullOrEmpty()) {
                 return null
             }
@@ -374,6 +401,47 @@ class ExtractStr2L10n : DumbAwareAction() {
         } catch (e: Exception) {
             return null
         }
+    }
+
+    @Throws(java.lang.Exception::class)
+    private fun signatureMethod(stringToSign: String?): ByteArray? {
+        val secret = "WqVDb7smtQok8bT9qvTxD6v3naun55&"
+        if (stringToSign == null) {
+            return null
+        }
+        val sha256Hmac = Mac.getInstance("HmacSHA1")
+        val secretKey = SecretKeySpec(secret.toByteArray(), "HmacSHA1")
+        sha256Hmac.init(secretKey)
+        return sha256Hmac.doFinal(stringToSign.toByteArray())
+    }
+
+    @Throws(java.lang.Exception::class)
+    fun getCanonicalizedQueryString(
+        query: Map<String, String?>,
+        keys: Array<String>
+    ): String {
+        if (query.isEmpty()) {
+            return ""
+        }
+        if (keys.isEmpty()) {
+            return ""
+        }
+
+        val sb = StringBuilder()
+        Arrays.sort(keys)
+        var key: String?
+        var value: String?
+        for (i in keys.indices) {
+            key = keys[i]
+            sb.append(encodeURIComponent(key))
+            value = query[key]
+            sb.append("=")
+            if (!value.isNullOrEmpty()) {
+                sb.append(encodeURIComponent(value))
+            }
+            sb.append("&")
+        }
+        return sb.deleteCharAt(sb.length - 1).toString()
     }
 }
 
@@ -410,8 +478,8 @@ class InputKeyDialog(
 
         val content = JBTextField()
         content.text = defaultValue
-        content.preferredSize = Dimension(240, 30)
-        content.minimumSize = Dimension(240, 30)
+        content.preferredSize = Dimension(240, 35)
+        content.minimumSize = Dimension(240, 35)
         contentTextField = content
         content.addFocusListener(object : FocusListener {
             override fun focusGained(p0: FocusEvent?) {
