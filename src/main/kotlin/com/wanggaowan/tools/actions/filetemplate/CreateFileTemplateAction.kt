@@ -10,17 +10,12 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.ui.DialogWrapper
 import com.jetbrains.lang.dart.DartFileType
-import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
-import io.flutter.FlutterInitializer
-import org.jetbrains.kotlin.idea.core.util.toPsiDirectory
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
-import java.lang.RuntimeException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -96,11 +91,11 @@ class CreateFileTemplateAction : DumbAwareAction() {
                             }
 
                             "${'$'}TIME${'$'}" -> {
-                                dialog.placeholderMap[it] = SimpleDateFormat("HH-mm").format(Date())
+                                dialog.placeholderMap[it] = SimpleDateFormat("HH:mm").format(Date())
                             }
 
                             "${'$'}DATETIME${'$'}" -> {
-                                dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd HH-mm").format(Date())
+                                dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())
                             }
 
                             "${'$'}USER${'$'}" -> {
