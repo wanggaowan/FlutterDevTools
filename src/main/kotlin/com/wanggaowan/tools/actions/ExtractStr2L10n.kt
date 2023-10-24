@@ -332,6 +332,7 @@ class ExtractStr2L10n : DumbAwareAction() {
             arbPsiFile.add(psiFile.firstChild)
         }
 
+        FileDocumentManager.getInstance().saveAllDocuments()
         FlutterSdk.getFlutterSdk(project)?.also { sdk ->
             val commandLine = FlutterCommandLine(sdk, rootDir, FlutterCommandLine.Type.GEN_L10N)
             commandLine.start()
