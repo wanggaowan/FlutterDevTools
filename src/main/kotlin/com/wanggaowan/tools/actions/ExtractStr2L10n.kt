@@ -344,8 +344,10 @@ class ExtractStr2L10n : DumbAwareAction() {
         dateformat.timeZone = TimeZone.getTimeZone("UTC")
         val time = dateformat.format(Date())
 
+        var accessKeyId = "TFRBSTV0UnFrbzY3QThVeFZDOGt4dHNu"
+        accessKeyId = String(mapValue(accessKeyId))
         val queryMap = mutableMapOf<String, String>()
-        queryMap["AccessKeyId"] = "LTAI5tRqko67A8UxVC8kxtsn"
+        queryMap["AccessKeyId"] = accessKeyId
         queryMap["Action"] = "TranslateGeneral"
         queryMap["Format"] = "JSON"
         queryMap["FormatType"] = "text"
@@ -420,12 +422,12 @@ class ExtractStr2L10n : DumbAwareAction() {
 
     @Throws(java.lang.Exception::class)
     private fun signatureMethod(stringToSign: String?): ByteArray? {
-        val secret = "WqVDb7smtQok8bT9qvTxD6v3naun55&"
+        val secret = "V3FWRGI3c210UW9rOGJUOXF2VHhENnYzbmF1bjU1Jg=="
         if (stringToSign == null) {
             return null
         }
         val sha256Hmac = Mac.getInstance("HmacSHA1")
-        val secretKey = SecretKeySpec(secret.toByteArray(), "HmacSHA1")
+        val secretKey = SecretKeySpec(mapValue(secret), "HmacSHA1")
         sha256Hmac.init(secretKey)
         return sha256Hmac.doFinal(stringToSign.toByteArray())
     }
@@ -457,6 +459,10 @@ class ExtractStr2L10n : DumbAwareAction() {
             sb.append("&")
         }
         return sb.deleteCharAt(sb.length - 1).toString()
+    }
+
+    private fun mapValue(value:String):ByteArray {
+        return Base64.getDecoder().decode(value)
     }
 }
 
