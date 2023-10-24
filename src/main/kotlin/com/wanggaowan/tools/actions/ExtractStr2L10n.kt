@@ -28,6 +28,8 @@ import com.intellij.util.LocalTimeCounter
 import com.intellij.util.io.URLUtil.encodeURIComponent
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
+import com.jetbrains.lang.dart.psi.DartLongTemplateEntry
+import com.jetbrains.lang.dart.psi.DartPsiCompositeElement
 import com.jetbrains.lang.dart.psi.DartShortTemplateEntry
 import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
 import com.wanggaowan.tools.settings.PluginSettings
@@ -177,14 +179,18 @@ class ExtractStr2L10n : DumbAwareAction() {
         val jsonObject = arbPsiFile.getChildOfType<JsonObject>()
         var text = selectedElement.text.replace("\"", "").replace("'", "")
         var translateText = text
-        val dartShortTemplateEntryList = mutableListOf<DartShortTemplateEntry>()
-        findAllDartShortTemplateEntry(selectedElement.firstChild, dartShortTemplateEntryList)
-        if (dartShortTemplateEntryList.isNotEmpty()) {
-            dartShortTemplateEntryList.indices.forEach {
-                val element = dartShortTemplateEntryList[it].text
-                val index = text.indexOf(element)
+        val dartTemplateEntryList = mutableListOf<DartPsiCompositeElement>()
+        findAllDartTemplateEntry(selectedElement.firstChild, dartTemplateEntryList)
+        if (dartTemplateEntryList.isNotEmpty()) {
+            dartTemplateEntryList.indices.forEach {
+                val element = dartTemplateEntryList[it].text
+                var index = text.indexOf(element)
                 if (index != -1) {
                     text = text.replaceRange(index, index + element.length, "{param$it}")
+                }
+
+                index = translateText.indexOf(element)
+                if (index != -1) {
                     translateText = translateText.replaceRange(index, index + element.length, "")
                 }
             }
@@ -200,17 +206,67 @@ class ExtractStr2L10n : DumbAwareAction() {
             }
         }
 
+        try {
+            changeData(
+                project,
+                selectedElement,
+                existKey,
+                dartTemplateEntryList,
+                text,
+                translateText,
+                jsonObject,
+                rootDir,
+                arbPsiFile
+            )
+        } catch (e: Exception) {
+            // FileDocumentManager.getInstance().saveAllDocuments()执行后，可能并没有立即保存内容到磁盘
+            // 此时执行PsiElement更改或Document更该，可能抛出异常，因此重试一次
+            CoroutineScope(Dispatchers.Default).launch {
+                Thread.sleep(100)
+                CoroutineScope(Dispatchers.Main).launch {
+                    changeData(
+                        project,
+                        selectedElement,
+                        existKey,
+                        dartTemplateEntryList,
+                        text,
+                        translateText,
+                        jsonObject,
+                        rootDir,
+                        arbPsiFile
+                    )
+                }
+            }
+        }
+    }
+
+    private fun changeData(
+        project: Project,
+        selectedElement: PsiElement,
+        existKey: String?,
+        dartTemplateEntryList: List<DartPsiCompositeElement>,
+        originalText: String,
+        translateText: String,
+        jsonObject: JsonObject?,
+        rootDir: VirtualFile,
+        arbPsiFile: PsiFile
+    ) {
         if (existKey != null) {
             WriteCommandAction.runWriteCommandAction(project) {
                 FileDocumentManager.getInstance().saveAllDocuments()
-                replaceElement(project, selectedElement, dartShortTemplateEntryList, existKey)
+                try {
+                    replaceElement(project, selectedElement, dartTemplateEntryList, existKey)
+                } catch (e: Exception) {
+                    Thread.sleep(100)
+                    replaceElement(project, selectedElement, dartTemplateEntryList, existKey)
+                }
             }
         } else {
             ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Translate") {
                 override fun run(progressIndicator: ProgressIndicator) {
                     progressIndicator.isIndeterminate = true
                     CoroutineScope(Dispatchers.Default).launch launch2@{
-                        val translate = translate(translateText, dartShortTemplateEntryList.isNotEmpty())
+                        val translate = translate(translateText, dartTemplateEntryList.isNotEmpty())
                         CoroutineScope(Dispatchers.Main).launch {
                             progressIndicator.isIndeterminate = false
                             progressIndicator.fraction = 1.0
@@ -234,14 +290,14 @@ class ExtractStr2L10n : DumbAwareAction() {
                                 val key = renameKey(project, translate, jsonObject) ?: return@launch
                                 WriteCommandAction.runWriteCommandAction(project) {
                                     FileDocumentManager.getInstance().saveAllDocuments()
-                                    replaceElement(project, selectedElement, dartShortTemplateEntryList, key)
-                                    insertElement(project, rootDir, arbPsiFile, jsonObject, key, text)
+                                    replaceElement(project, selectedElement, dartTemplateEntryList, key)
+                                    insertElement(project, rootDir, arbPsiFile, jsonObject, key, originalText)
                                 }
                             } else {
                                 WriteCommandAction.runWriteCommandAction(project) {
                                     FileDocumentManager.getInstance().saveAllDocuments()
-                                    replaceElement(project, selectedElement, dartShortTemplateEntryList, translate!!)
-                                    insertElement(project, rootDir, arbPsiFile, jsonObject, translate, text)
+                                    replaceElement(project, selectedElement, dartTemplateEntryList, translate!!)
+                                    insertElement(project, rootDir, arbPsiFile, jsonObject, translate, originalText)
                                 }
                             }
                         }
@@ -251,9 +307,9 @@ class ExtractStr2L10n : DumbAwareAction() {
         }
     }
 
-    private tailrec fun findAllDartShortTemplateEntry(
+    private tailrec fun findAllDartTemplateEntry(
         psiElement: PsiElement?,
-        list: MutableList<DartShortTemplateEntry>
+        list: MutableList<DartPsiCompositeElement>
     ) {
         if (psiElement == null) {
             return
@@ -261,8 +317,11 @@ class ExtractStr2L10n : DumbAwareAction() {
 
         if (psiElement is DartShortTemplateEntry) {
             list.add(psiElement)
+        } else if (psiElement is DartLongTemplateEntry) {
+            list.add(psiElement)
         }
-        findAllDartShortTemplateEntry(psiElement.nextSibling, list)
+
+        findAllDartTemplateEntry(psiElement.nextSibling, list)
     }
 
     // 重命名多语言在arb文件中的key
@@ -279,20 +338,25 @@ class ExtractStr2L10n : DumbAwareAction() {
     private fun replaceElement(
         project: Project,
         selectedElement: PsiElement,
-        dartShortTemplateEntryList: List<DartShortTemplateEntry>,
+        dartTemplateEntryList: List<DartPsiCompositeElement>,
         key: String
     ) {
 
-        val content = if (dartShortTemplateEntryList.isEmpty()) {
+        val content = if (dartTemplateEntryList.isEmpty()) {
             "S.current.$key"
         } else {
             val builder = StringBuilder("S.current.$key(")
             var index = 0
-            dartShortTemplateEntryList.forEach {
+            dartTemplateEntryList.forEach {
                 if (index > 0) {
                     builder.append(", ")
                 }
-                builder.append(it.text.substring(1))
+                val text = it.text
+                if (it is DartShortTemplateEntry) {
+                    builder.append(text.substring(1))
+                } else {
+                    builder.append(it.text.substring(2, text.length - 1))
+                }
                 index++
             }
             builder.append(")")
@@ -410,11 +474,25 @@ class ExtractStr2L10n : DumbAwareAction() {
             // N：数字（比如阿拉伯数字、罗马数字等）；
             //
             // C：其他字符
-            value = value.lowercase().replace(Regex("[\\pP\\pS]"), "")
+            value = value.lowercase().replace(Regex("[\\pP\\pS]"), "_")
                 .replace(" ", "_")
             if (isFormat) {
                 value += "_format"
             }
+
+            value = value.replace("_____", "_")
+                .replace("____", "_")
+                .replace("___", "_")
+                .replace("__", "_")
+
+            if (value.startsWith("_")) {
+                value = value.substring(1, value.length)
+            }
+
+            if (value.endsWith("_")) {
+                value = value.substring(0, value.length - 1)
+            }
+
             return value
         } catch (e: Exception) {
             return null
@@ -462,7 +540,7 @@ class ExtractStr2L10n : DumbAwareAction() {
         return sb.deleteCharAt(sb.length - 1).toString()
     }
 
-    private fun mapValue(value:String):ByteArray {
+    private fun mapValue(value: String): ByteArray {
         return Base64.getDecoder().decode(value)
     }
 }
