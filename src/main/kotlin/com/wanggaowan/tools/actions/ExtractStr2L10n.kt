@@ -202,6 +202,7 @@ class ExtractStr2L10n : DumbAwareAction() {
 
         if (existKey != null) {
             WriteCommandAction.runWriteCommandAction(project) {
+                FileDocumentManager.getInstance().saveAllDocuments()
                 replaceElement(project, selectedElement, dartShortTemplateEntryList, existKey)
             }
         } else {
@@ -232,11 +233,13 @@ class ExtractStr2L10n : DumbAwareAction() {
                             if (showRename) {
                                 val key = renameKey(project, translate, jsonObject) ?: return@launch
                                 WriteCommandAction.runWriteCommandAction(project) {
+                                    FileDocumentManager.getInstance().saveAllDocuments()
                                     replaceElement(project, selectedElement, dartShortTemplateEntryList, key)
                                     insertElement(project, rootDir, arbPsiFile, jsonObject, key, text)
                                 }
                             } else {
                                 WriteCommandAction.runWriteCommandAction(project) {
+                                    FileDocumentManager.getInstance().saveAllDocuments()
                                     replaceElement(project, selectedElement, dartShortTemplateEntryList, translate!!)
                                     insertElement(project, rootDir, arbPsiFile, jsonObject, translate, text)
                                 }
@@ -330,7 +333,6 @@ class ExtractStr2L10n : DumbAwareAction() {
         }
 
         FlutterSdk.getFlutterSdk(project)?.also { sdk ->
-            FileDocumentManager.getInstance().saveAllDocuments()
             val commandLine = FlutterCommandLine(sdk, rootDir, FlutterCommandLine.Type.GEN_L10N)
             commandLine.start()
         }
@@ -390,9 +392,22 @@ class ExtractStr2L10n : DumbAwareAction() {
                 return null
             }
 
-            value = value.lowercase()
-                .replace(",", "")
-                .replace(".", "")
+            // \pP：中的小写p是property的意思，表示Unicode属性，用于Unicode正表达式的前缀。
+            //
+            // P：标点字符
+            //
+            // L：字母；
+            //
+            // M：标记符号（一般不会单独出现）；
+            //
+            // Z：分隔符（比如空格、换行等）；
+            //
+            // S：符号（比如数学符号、货币符号等）；
+            //
+            // N：数字（比如阿拉伯数字、罗马数字等）；
+            //
+            // C：其他字符
+            value = value.lowercase().replace(Regex("[\\pP\\pS]"), "")
                 .replace(" ", "_")
             if (isFormat) {
                 value += "_format"
@@ -478,7 +493,6 @@ class InputKeyDialog(
 
         val content = JBTextField()
         content.text = defaultValue
-        content.preferredSize = Dimension(240, 35)
         content.minimumSize = Dimension(240, 35)
         contentTextField = content
         content.addFocusListener(object : FocusListener {

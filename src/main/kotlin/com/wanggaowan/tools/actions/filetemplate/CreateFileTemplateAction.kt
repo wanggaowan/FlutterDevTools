@@ -1,5 +1,6 @@
 package com.wanggaowan.tools.actions.filetemplate
 
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
@@ -12,6 +13,7 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.jetbrains.lang.dart.DartFileType
+import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import java.io.BufferedWriter
 import java.io.File
@@ -104,33 +106,38 @@ class CreateFileTemplateAction : DumbAwareAction() {
                         }
                     }
 
-                    children.forEach {
-                        var content = it.tempContent ?: it.content ?: ""
-                        if (content.isNotEmpty()) {
-                            dialog.placeholderMap.forEach { map ->
-                                content = content.replace(map.key, map.value)
+                    try {
+                        children.forEach {
+                            var content = it.tempContent ?: it.content ?: ""
+                            if (content.isNotEmpty()) {
+                                dialog.placeholderMap.forEach { map ->
+                                    content = content.replace(map.key, map.value)
+                                }
                             }
-                        }
 
-                        val file = File("${virtualFile.path}/${it.name!!}.${DartFileType.INSTANCE.defaultExtension}")
-                        if (!file.exists()) {
-                            file.createNewFile()
-                            val fw = FileWriter(file.absoluteFile)
-                            val bw = BufferedWriter(fw)
-                            bw.write(content)
-                            bw.close()
-                        } else {
-                            throw RuntimeException("${file.path} already exist")
-                        }
+                            val file =
+                                File("${virtualFile.path}/${it.name!!}.${DartFileType.INSTANCE.defaultExtension}")
+                            if (!file.exists()) {
+                                file.createNewFile()
+                                val fw = FileWriter(file.absoluteFile)
+                                val bw = BufferedWriter(fw)
+                                bw.write(content)
+                                bw.close()
+                            } else {
+                                throw RuntimeException("${file.path} already exist")
+                            }
 
-                        // 采用以下方式创建，创建的文件dart语法解析不会主动触发，不明白缘由
-                        // val psiParent = virtualFile.toPsiDirectory(project)
-                        // val file = DartPsiUtils.createFile(project, it.name!!, content)
-                        // file?.also { child ->
-                        //     psiParent.add(child)
-                        // }
+                            // 采用以下方式创建，创建的文件dart语法解析不会主动触发，不明白缘由
+                            // val psiParent = virtualFile.toPsiDirectory(project)
+                            // val file = DartPsiUtils.createFile(project, it.name!!, content)
+                            // file?.also { child ->
+                            //     psiParent.add(child)
+                            // }
+                        }
+                        virtualFile.refresh(false, false)
+                    } catch (e: Exception) {
+                        NotificationUtils.showBalloonMsg(project, e.message ?: "文件创建失败", NotificationType.ERROR)
                     }
-                    virtualFile.refresh(false, false)
                 }
                 progressIndicator.isIndeterminate = false
                 progressIndicator.fraction = 1.0
