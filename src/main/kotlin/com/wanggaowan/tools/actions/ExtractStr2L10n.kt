@@ -34,7 +34,6 @@ import com.jetbrains.lang.dart.psi.DartShortTemplateEntry
 import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.NotificationUtils
-import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
 import com.wanggaowan.tools.utils.flutter.YamlUtils
@@ -50,8 +49,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
+import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
+import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.yaml.psi.YAMLKeyValue
 import org.json.JSONObject
 import java.awt.Dimension
@@ -177,7 +178,7 @@ class ExtractStr2L10n : DumbAwareAction() {
 
         val arbPsiFile = arbFile.toPsiFile(project) ?: return
         val jsonObject = arbPsiFile.getChildOfType<JsonObject>()
-        var text = selectedElement.text.replace("\"", "").replace("'", "")
+        var text = selectedElement.text.replace("\"", "")
         var translateText = text
         val dartTemplateEntryList = mutableListOf<DartPsiCompositeElement>()
         findAllDartTemplateEntry(selectedElement.firstChild, dartTemplateEntryList)
@@ -206,42 +207,23 @@ class ExtractStr2L10n : DumbAwareAction() {
             }
         }
 
-        try {
-            changeData(
-                project,
-                selectedElement,
-                existKey,
-                dartTemplateEntryList,
-                text,
-                translateText,
-                jsonObject,
-                rootDir,
-                arbPsiFile
-            )
-        } catch (e: Exception) {
-            // FileDocumentManager.getInstance().saveAllDocuments()执行后，可能并没有立即保存内容到磁盘
-            // 此时执行PsiElement更改或Document更该，可能抛出异常，因此重试一次
-            CoroutineScope(Dispatchers.Default).launch {
-                Thread.sleep(100)
-                CoroutineScope(Dispatchers.Main).launch {
-                    changeData(
-                        project,
-                        selectedElement,
-                        existKey,
-                        dartTemplateEntryList,
-                        text,
-                        translateText,
-                        jsonObject,
-                        rootDir,
-                        arbPsiFile
-                    )
-                }
-            }
-        }
+        changeData(
+            project,
+            selectedFile,
+            selectedElement,
+            existKey,
+            dartTemplateEntryList,
+            text,
+            translateText,
+            jsonObject,
+            rootDir,
+            arbPsiFile
+        )
     }
 
     private fun changeData(
         project: Project,
+        selectedFile: PsiFile,
         selectedElement: PsiElement,
         existKey: String?,
         dartTemplateEntryList: List<DartPsiCompositeElement>,
@@ -251,26 +233,19 @@ class ExtractStr2L10n : DumbAwareAction() {
         rootDir: VirtualFile,
         arbPsiFile: PsiFile
     ) {
+
         if (existKey != null) {
             WriteCommandAction.runWriteCommandAction(project) {
-                FileDocumentManager.getInstance().saveAllDocuments()
-                try {
-                    replaceElement(project, selectedElement, dartTemplateEntryList, existKey)
-                } catch (e: Exception) {
-                    Thread.sleep(100)
-                    replaceElement(project, selectedElement, dartTemplateEntryList, existKey)
-                }
+                replaceElement(selectedFile, selectedElement, dartTemplateEntryList, existKey)
             }
         } else {
             ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Translate") {
                 override fun run(progressIndicator: ProgressIndicator) {
                     progressIndicator.isIndeterminate = true
+                    var finish = false
                     CoroutineScope(Dispatchers.Default).launch launch2@{
                         val translate = translate(translateText, dartTemplateEntryList.isNotEmpty())
                         CoroutineScope(Dispatchers.Main).launch {
-                            progressIndicator.isIndeterminate = false
-                            progressIndicator.fraction = 1.0
-
                             var showRename = false
                             if (translate == null || PluginSettings.getExtractStr2L10nShowRenameDialog(project)) {
                                 showRename = true
@@ -286,22 +261,28 @@ class ExtractStr2L10n : DumbAwareAction() {
                                 }
                             }
 
+                            finish = true
                             if (showRename) {
                                 val key = renameKey(project, translate, jsonObject) ?: return@launch
                                 WriteCommandAction.runWriteCommandAction(project) {
-                                    FileDocumentManager.getInstance().saveAllDocuments()
-                                    replaceElement(project, selectedElement, dartTemplateEntryList, key)
                                     insertElement(project, rootDir, arbPsiFile, jsonObject, key, originalText)
+                                    replaceElement(selectedFile, selectedElement, dartTemplateEntryList, key)
+
                                 }
                             } else {
                                 WriteCommandAction.runWriteCommandAction(project) {
-                                    FileDocumentManager.getInstance().saveAllDocuments()
-                                    replaceElement(project, selectedElement, dartTemplateEntryList, translate!!)
-                                    insertElement(project, rootDir, arbPsiFile, jsonObject, translate, originalText)
+                                    insertElement(project, rootDir, arbPsiFile, jsonObject, translate!!, originalText)
+                                    replaceElement(selectedFile, selectedElement, dartTemplateEntryList, translate)
                                 }
                             }
                         }
                     }
+
+                    while (!finish) {
+                        Thread.sleep(100)
+                    }
+                    progressIndicator.isIndeterminate = false
+                    progressIndicator.fraction = 1.0
                 }
             })
         }
@@ -336,7 +317,7 @@ class ExtractStr2L10n : DumbAwareAction() {
     }
 
     private fun replaceElement(
-        project: Project,
+        selectedFile: PsiFile,
         selectedElement: PsiElement,
         dartTemplateEntryList: List<DartPsiCompositeElement>,
         key: String
@@ -363,9 +344,9 @@ class ExtractStr2L10n : DumbAwareAction() {
             builder.toString()
         }
 
-        DartPsiUtils.createArgumentItem(project, content)?.also {
-            selectedElement.replace(it)
-        }
+        val manager = FileDocumentManager.getInstance()
+        val document = manager.getDocument(selectedFile.virtualFile)
+        document?.replaceString(selectedElement.startOffset, selectedElement.endOffset, content)
     }
 
     private fun insertElement(
@@ -396,7 +377,13 @@ class ExtractStr2L10n : DumbAwareAction() {
             arbPsiFile.add(psiFile.firstChild)
         }
 
-        FileDocumentManager.getInstance().saveAllDocuments()
+        val manager = FileDocumentManager.getInstance()
+        val document = manager.getDocument(arbPsiFile.virtualFile)
+        if (document != null) {
+            manager.saveDocument(document)
+        } else {
+            manager.saveAllDocuments()
+        }
         FlutterSdk.getFlutterSdk(project)?.also { sdk ->
             val commandLine = FlutterCommandLine(sdk, rootDir, FlutterCommandLine.Type.GEN_L10N)
             commandLine.start()
