@@ -25,7 +25,6 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.LocalTimeCounter
-import com.intellij.util.io.URLUtil.encodeURIComponent
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
 import com.jetbrains.lang.dart.psi.DartLongTemplateEntry
@@ -59,6 +58,9 @@ import java.awt.Dimension
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
 import java.io.File
+import java.io.UnsupportedEncodingException
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.crypto.Mac
@@ -178,8 +180,14 @@ class ExtractStr2L10n : DumbAwareAction() {
 
         val arbPsiFile = arbFile.toPsiFile(project) ?: return
         val jsonObject = arbPsiFile.getChildOfType<JsonObject>()
-        var text = selectedElement.text.replace("\"", "")
-        var translateText = text
+        // 得到的结果格式：'xx', "xx", 'xx$a', "xx$a", 'xx${a??''}', "xx${a??''}"
+        var text = selectedElement.text
+        if (text.length > 2) {
+            // 去除前后单引号或双引号
+            text = text.substring(1, text.length - 1)
+        }
+
+        var translateText = text.trim()
         val dartTemplateEntryList = mutableListOf<DartPsiCompositeElement>()
         findAllDartTemplateEntry(selectedElement.firstChild, dartTemplateEntryList)
         if (dartTemplateEntryList.isNotEmpty()) {
@@ -262,6 +270,8 @@ class ExtractStr2L10n : DumbAwareAction() {
                             }
 
                             finish = true
+                            progressIndicator.isIndeterminate = false
+                            progressIndicator.fraction = 1.0
                             if (showRename) {
                                 val key = renameKey(project, translate, jsonObject) ?: return@launch
                                 WriteCommandAction.runWriteCommandAction(project) {
@@ -416,8 +426,8 @@ class ExtractStr2L10n : DumbAwareAction() {
         queryMap["Version"] = "2018-10-12"
         var queryString = getCanonicalizedQueryString(queryMap, queryMap.keys.toTypedArray())
 
-        val stringToSign = "GET" + "&" + encodeURIComponent("/") + "&" + encodeURIComponent(queryString)
-        val signature = encodeURIComponent(Base64.getEncoder().encodeToString(signatureMethod(stringToSign)))
+        val stringToSign = "GET" + "&" + encodeURI("/") + "&" + encodeURI(queryString)
+        val signature = encodeURI(Base64.getEncoder().encodeToString(signatureMethod(stringToSign)))
         queryString += "&Signature=$signature"
         try {
             val response = HttpClient(CIO) {
@@ -512,15 +522,17 @@ class ExtractStr2L10n : DumbAwareAction() {
 
         val sb = StringBuilder()
         Arrays.sort(keys)
+
+
         var key: String?
         var value: String?
         for (i in keys.indices) {
             key = keys[i]
-            sb.append(encodeURIComponent(key))
+            sb.append(encodeURI(key))
             value = query[key]
             sb.append("=")
             if (!value.isNullOrEmpty()) {
-                sb.append(encodeURIComponent(value))
+                sb.append(encodeURI(value))
             }
             sb.append("&")
         }
@@ -529,6 +541,14 @@ class ExtractStr2L10n : DumbAwareAction() {
 
     private fun mapValue(value: String): ByteArray {
         return Base64.getDecoder().decode(value)
+    }
+
+    private fun encodeURI(content:String):String {
+        return try {
+            URLEncoder.encode(content, StandardCharsets.UTF_8.name()).replace("+", "%20").replace("%7E", "~")
+        } catch (var2: UnsupportedEncodingException) {
+            content
+        }
     }
 }
 
@@ -565,7 +585,7 @@ class InputKeyDialog(
 
         val content = JBTextField()
         content.text = defaultValue
-        content.minimumSize = Dimension(240, 35)
+        content.minimumSize = Dimension(300, 35)
         contentTextField = content
         content.addFocusListener(object : FocusListener {
             override fun focusGained(p0: FocusEvent?) {
