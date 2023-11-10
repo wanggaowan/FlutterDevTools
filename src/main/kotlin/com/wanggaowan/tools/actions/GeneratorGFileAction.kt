@@ -1,13 +1,11 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.wanggaowan.tools.utils.XUtils
-import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
 import com.wanggaowan.tools.utils.flutter.FlutterCommandUtils
 import com.wanggaowan.tools.utils.flutter.YamlUtils
@@ -22,15 +20,6 @@ import org.jetbrains.kotlin.idea.core.util.toPsiFile
  * @author Created by wanggaowan on 2023/2/6 15:44
  */
 open class GeneratorGFileAction : FlutterSdkAction() {
-
-    override fun update(e: AnActionEvent) {
-        if (!e.isFlutterProject) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        e.presentation.isVisible = true
-    }
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT

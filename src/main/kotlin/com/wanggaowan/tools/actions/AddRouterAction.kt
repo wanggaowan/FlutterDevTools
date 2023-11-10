@@ -43,12 +43,6 @@ class AddRouterAction : DumbAwareAction() {
             return
         }
 
-        val editor = e.getData(CommonDataKeys.EDITOR)
-        if (editor == null) {
-            e.presentation.isVisible = false
-            return
-        }
-
         val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE)
         if (virtualFile != null && !virtualFile.isDirectory) {
             e.presentation.isVisible = virtualFile.name.endsWith(".dart")

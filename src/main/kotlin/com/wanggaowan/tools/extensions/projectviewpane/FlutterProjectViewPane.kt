@@ -22,6 +22,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiManager
 import com.wanggaowan.tools.utils.ex.getModules
 import com.wanggaowan.tools.utils.ex.isFlutterProject
@@ -138,7 +139,7 @@ private class InnerProjectViewProjectNode(project: Project, viewSettings: ViewSe
         val topLevelContentRoots = ProjectViewDirectoryHelper.getInstance(project).topLevelRoots
         val modules: MutableSet<LoadedModuleDescriptionImpl> = LinkedHashSet(topLevelContentRoots.size)
         for (root in topLevelContentRoots) {
-            if (root.isFlutterProject) {
+            if (isFlutterProject(root)) {
                 val module = ModuleUtilCore.findModuleForFile(root!!, project)
                 if (module != null) {
                     modules.add(LoadedModuleDescriptionImpl(module))
@@ -148,6 +149,15 @@ private class InnerProjectViewProjectNode(project: Project, viewSettings: ViewSe
 
         @Suppress("UnstableApiUsage")
         return ArrayList(modulesAndGroups(modules))
+    }
+
+    private fun isFlutterProject(virtualFile: VirtualFile?):Boolean {
+        val path = virtualFile?.path
+        if (path.isNullOrEmpty()) {
+            return false
+        }
+        val file = VirtualFileManager.getInstance().findFileByUrl("file://$path/pubspec.yaml")
+        return file != null
     }
 
     /**

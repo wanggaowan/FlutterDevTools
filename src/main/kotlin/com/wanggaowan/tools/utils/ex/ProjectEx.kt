@@ -131,12 +131,6 @@ fun Module.findChild(name: String) = rootDir?.findChild(name)
 // <editor-fold desc="VirtualFile">
 
 /**
- * 是否输入Flutter项目文件
- */
-val VirtualFile?.isFlutterProject: Boolean
-    get() = this != null && isFlutterProjectInner(path)
-
-/**
  * 通过文件获取所属的模块
  */
 val VirtualFile.module: Module?
@@ -179,11 +173,7 @@ val AnActionEvent?.isFlutterProject: Boolean
         }
 
         val module = getData(LangDataKeys.MODULE)
-        if (module.isFlutterProject) {
-            return true
-        }
-
-        return project.isFlutterProject
+        return module.isFlutterProject
     }
 
 // </editor-fold>
