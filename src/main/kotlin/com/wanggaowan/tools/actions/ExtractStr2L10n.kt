@@ -8,6 +8,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
@@ -70,6 +71,8 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+
+private val LOG = logger<ExtractStr2L10n>()
 
 /**
  * 提取文本为多语言
@@ -447,6 +450,7 @@ class ExtractStr2L10n : DumbAwareAction() {
             val jsonObject = JSONObject(body)
             val code = jsonObject.getString("Code")
             if (code != "200") {
+                LOG.error("阿里翻译失败：$body")
                 return null
             }
 
@@ -492,6 +496,7 @@ class ExtractStr2L10n : DumbAwareAction() {
 
             return value
         } catch (e: Exception) {
+            LOG.error("阿里翻译失败：${e.message}")
             return null
         }
     }
