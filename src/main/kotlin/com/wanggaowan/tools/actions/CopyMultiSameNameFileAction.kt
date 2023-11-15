@@ -11,7 +11,7 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.wanggaowan.tools.utils.NotificationUtils
-import com.wanggaowan.tools.utils.ex.basePath
+import com.wanggaowan.tools.utils.TempFileUtils
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
@@ -32,28 +32,10 @@ class CopyMultiSameNameFileAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val module = e.getData(LangDataKeys.MODULE) ?: return
-        val basePath = module.basePath ?: return
-
         val project = module.project
-        val projectRootFolder = VirtualFileManager.getInstance().findFileByUrl("file://${basePath}") ?: return
-        WriteCommandAction.runWriteCommandAction(project) {
-            var ideaFolder = projectRootFolder.findChild(".idea")
-            if (ideaFolder == null) {
-                try {
-                    ideaFolder = projectRootFolder.createChildDirectory(module, ".idea")
-                } catch (e: Exception) {
-                    return@runWriteCommandAction
-                }
-            }
-            var copyCacheFolder = ideaFolder.findChild("copyCache")
-            if (copyCacheFolder == null) {
-                try {
-                    copyCacheFolder = ideaFolder.createChildDirectory(module, "copyCache")
-                } catch (e: Exception) {
-                    return@runWriteCommandAction
-                }
-            }
 
+        WriteCommandAction.runWriteCommandAction(project) {
+            val copyCacheFolder = TempFileUtils.getCopyCacheFolder(module) ?: return@runWriteCommandAction
             copyCacheFolder.children?.forEach { it.delete(null) }
             val selectFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY) ?: return@runWriteCommandAction
             if (selectFiles.isEmpty()) {

@@ -15,11 +15,14 @@ import com.intellij.psi.PsiFileSystemItem
 import com.intellij.refactoring.move.MoveCallback
 import com.intellij.refactoring.move.MoveHandlerDelegate
 import com.wanggaowan.tools.actions.ImportSameImageResUtils
-import com.wanggaowan.tools.utils.XUtils
+import com.wanggaowan.tools.settings.PluginSettings
+import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.isFlutterProject
+import org.jetbrains.kotlin.idea.base.util.module
 import org.jetbrains.kotlin.idea.refactoring.project
-import org.jetbrains.kotlin.idea.util.module
 import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 
 /**
  * 监听导入不同分辨率相同图片资源动作，满足条件则触发导入
@@ -32,12 +35,13 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
         return ActionUpdateThread.BGT
     }
 
+    // <editor-fold desc="复制粘贴监听">
     override fun performPaste(dataContext: DataContext) {
         files?.also {
             ImportSameImageResUtils.import(dataContext.project, it, importToFile)
-            importToFile = null
-            files = null
         }
+        importToFile = null
+        files = null
     }
 
     override fun isPastePossible(dataContext: DataContext): Boolean {
@@ -59,10 +63,36 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
         if (files.isNullOrEmpty()) {
             return false
         }
-        return canImport(files.iterator(), dataContext)
+        return canImport(files.iterator(), dataContext.getData(LangDataKeys.PASTE_TARGET_PSI_ELEMENT))
     }
+    // </editor-fold>
 
-    private fun <T> canImport(iterator: Iterator<T>, dataContext: DataContext?): Boolean {
+    private fun <T> canImport(iterator: Iterator<T>, targetElement: PsiElement?): Boolean {
+        importToFile = null
+        if (targetElement == null) {
+            return false
+        }
+
+        if (targetElement is PsiDirectory) {
+            val module = targetElement.module
+            if (module != null) {
+                val targetVirtualFile = targetElement.virtualFile
+                val filePath = targetVirtualFile.path
+                val imageRootPath = if (filePath.contains("/example/")) {
+                    "${module.basePath}/${PluginSettings.getExampleImagesFileDir(module.project)}"
+                } else {
+                    "${module.basePath}/${PluginSettings.getImagesFileDir(module.project)}"
+                }
+                if (filePath.startsWith(imageRootPath)) {
+                    importToFile = targetVirtualFile
+                }
+            }
+        }
+
+        if (importToFile == null) {
+            return false
+        }
+
         val virtualFiles = mutableListOf<VirtualFile>()
         for (file in iterator) {
             val isFile = file is File
@@ -78,8 +108,29 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
             }
 
             val isDirectory = if (isFile) (file as File).isDirectory else (file as PsiFileSystemItem).isDirectory
+            var isValidZipFile = false
             if (!isDirectory) {
-                // 只处理目录数据
+                if (fileName.lowercase().endsWith(".zip")) {
+                    val path = if (isFile) (file as File).path else (file as PsiFileSystemItem).virtualFile.path
+                    val zipFile = ZipFile(path)
+                    val entries = zipFile.entries()
+                    isValidZipFile = zipFile.size() > 0
+                    while (entries.hasMoreElements()) {
+                        val zipEntry: ZipEntry = entries.nextElement() as ZipEntry
+                        val zipEntryName: String = zipEntry.name.lowercase()
+                        if (!zipEntryName.startsWith("__macosx")
+                            && !zipEntryName.startsWith("mipmap")
+                            && !zipEntryName.startsWith("drawable")
+                        ) {
+                            isValidZipFile = false
+                            break
+                        }
+                    }
+                }
+            }
+
+            if (!isDirectory && !isValidZipFile) {
+                /// 不是目录且不是符合规范的压缩文件则不处理
                 return false
             }
 
@@ -92,6 +143,11 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
             if (virtualFile == null) {
                 // 只要导入的文件存在一个无法处理的文件则不拦截
                 return false
+            }
+
+            if (isValidZipFile) {
+                virtualFiles.add(virtualFile)
+                continue
             }
 
             val children = virtualFile.children
@@ -127,45 +183,10 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
         }
 
         files = virtualFiles
-        importToFile = null
-        dataContext?.getData(LangDataKeys.PASTE_TARGET_PSI_ELEMENT)?.also {
-            if (it is PsiDirectory) {
-                importToFile = it.virtualFile
-            }
-        }
         return true
     }
 
-    private fun canImportOneFile(virtualFile: VirtualFile): VirtualFile? {
-        if (virtualFile.isDirectory) {
-            val name = virtualFile.name
-            if (name.startsWith("drawable") || name.startsWith("mipmap")) {
-                return virtualFile.parent
-            }
-
-            for (child in virtualFile.children) {
-                val name2 = child.name
-                if (!child.isDirectory || (!name2.startsWith("drawable") && !name2.startsWith("mipmap"))) {
-                    return null
-                }
-            }
-
-            return virtualFile
-        }
-
-        var name = virtualFile.name
-        if (!XUtils.isImage(name)) {
-            return null
-        }
-
-        val parent = virtualFile.parent ?: return null
-        name = parent.name
-        if (!name.startsWith("drawable") && !name.startsWith("mipmap")) {
-            return null
-        }
-        return parent.parent
-    }
-
+    // <editor-fold desc="项目内移动到指定目录监听">
     override fun isValidTarget(targetElement: PsiElement?, sources: Array<out PsiElement>?): Boolean {
         if (sources.isNullOrEmpty()) {
             return false
@@ -175,7 +196,7 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
             return false
         }
 
-        return canImport(sources.iterator(), null)
+        return canImport(sources.iterator(), targetElement)
     }
 
     override fun doMove(
@@ -184,16 +205,20 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
         targetContainer: PsiElement?,
         callback: MoveCallback?
     ) {
+
         files?.also {
-            importToFile = null
-            if (targetContainer is PsiDirectory) {
-                importToFile = targetContainer.virtualFile
+            val clearFile = ArrayList(it)
+            ImportSameImageResUtils.import(project, clearFile, importToFile) {
+                // 移动的数据，要从原目录删除
+                clearFile.forEach { file ->
+                    file.delete(project)
+                }
             }
-            ImportSameImageResUtils.import(project, it, importToFile)
-            importToFile = null
-            files = null
         }
+        importToFile = null
+        files = null
     }
+    // </editor-fold>
 
     companion object {
         private var files: List<VirtualFile>? = null

@@ -53,6 +53,13 @@ class ImportImageFolderChooser(
      */
     private var mOkActionListener: (() -> Unit)? = null
 
+    /**
+     * 确定按钮点击监听
+     */
+    private var mCancelActionListener: (() -> Unit)? = null
+
+    private var mDoOk = false
+
     init {
         mSelectedFolder = initialFile
         setTitle(title)
@@ -108,6 +115,9 @@ class ImportImageFolderChooser(
             }
         }
         super.setVisible(visible)
+        if (!visible && !mDoOk) {
+            mCancelActionListener?.invoke()
+        }
     }
 
     /**
@@ -349,6 +359,7 @@ class ImportImageFolderChooser(
             Toast.show(rootPane, MessageType.ERROR, "请选择文件夹")
             return
         }
+        mDoOk = true
         isVisible = false
         mOkActionListener?.invoke()
     }
@@ -372,6 +383,13 @@ class ImportImageFolderChooser(
      */
     fun setOkActionListener(listener: (() -> Unit)?) {
         mOkActionListener = listener
+    }
+
+    /**
+     * 设置取消按钮点击监听
+     */
+    fun setCancelActionListener(listener: (() -> Unit)?) {
+        mCancelActionListener = listener
     }
 
     /**

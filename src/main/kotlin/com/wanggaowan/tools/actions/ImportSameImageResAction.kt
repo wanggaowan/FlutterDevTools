@@ -14,11 +14,11 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.ui.ImportImageFolderChooser
 import com.wanggaowan.tools.ui.RenameEntity
-import com.wanggaowan.tools.utils.NotificationUtils
-import com.wanggaowan.tools.utils.PropertiesSerializeUtils
+import com.wanggaowan.tools.utils.*
 import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.flutterModules
 import com.wanggaowan.tools.utils.ex.isFlutterProject
+import io.flutter.utils.ProgressHelper
 
 /**
  * 导入不同分辨率相同图片资源
@@ -28,7 +28,7 @@ import com.wanggaowan.tools.utils.ex.isFlutterProject
 class ImportSameImageResAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val descriptor = FileChooserDescriptor(true, true, false, false, false, true)
+        val descriptor = FileChooserDescriptor(true, true, true, true, false, true)
         val selectFile = PropertiesSerializeUtils.getString(project, IMPORT_FROM_FOLDER).let {
             if (it.isEmpty()) null else VirtualFileManager.getInstance().findFileByUrl("file://$it")
         }
@@ -72,8 +72,16 @@ object ImportSameImageResUtils {
      */
     private const val IMPORT_TO_FOLDER = "importToFolder"
 
-    fun import(project: Project, files: List<VirtualFile>, importToFolder: VirtualFile? = null) {
-        val distinctFiles = getDistinctFiles(files)
+    fun import(
+        project: Project,
+        files: List<VirtualFile>,
+        importToFolder: VirtualFile? = null,
+        doneCallback: (() -> Unit)? = null
+    ) {
+        val progressHelper = ProgressHelper(project)
+        progressHelper.start("parse image data")
+        val distinctFiles = getDistinctFiles(project, files)
+        progressHelper.done()
         var selectFile: VirtualFile? = importToFolder
         if (importToFolder == null) {
             val preSelectFileFolder = PropertiesSerializeUtils.getString(project, IMPORT_TO_FOLDER)
@@ -91,9 +99,17 @@ object ImportSameImageResUtils {
 
         val dialog = ImportImageFolderChooser(project, "导入图片", selectFile, distinctFiles)
         dialog.setOkActionListener {
-            val file = dialog.getSelectedFolder() ?: return@setOkActionListener
+            val file = dialog.getSelectedFolder()
+            if (file == null) {
+                TempFileUtils.clearUnZipCacheFolder(project)
+                return@setOkActionListener
+            }
+
             PropertiesSerializeUtils.putString(project, IMPORT_TO_FOLDER, file.path)
-            importImages(project, distinctFiles, file, dialog.getRenameFileMap())
+            importImages(project, distinctFiles, file, dialog.getRenameFileMap(), doneCallback)
+        }
+        dialog.setCancelActionListener {
+            TempFileUtils.clearUnZipCacheFolder(project)
         }
         dialog.isVisible = true
     }
@@ -101,7 +117,7 @@ object ImportSameImageResUtils {
     /**
      * 获取选择的文件去重后的数据
      */
-    private fun getDistinctFiles(selectedFiles: List<VirtualFile>): List<VirtualFile> {
+    private fun getDistinctFiles(project: Project, selectedFiles: List<VirtualFile>): List<VirtualFile> {
         val dataList = mutableListOf<VirtualFile>()
         selectedFiles.forEach {
             if (it.isDirectory) {
@@ -110,7 +126,9 @@ object ImportSameImageResUtils {
                     val name = child.name
                     if (!name.startsWith(".")) {
                         if (!child.isDirectory) {
-                            if (fileCouldAdd(child)) {
+                            if (it.name.lowercase().endsWith(".zip")) {
+                                parseZipFile(project, it, dirName, dataList)
+                            } else if (fileCouldAdd(child)) {
                                 dataList.add(child)
                             }
                         } else if (
@@ -120,16 +138,15 @@ object ImportSameImageResUtils {
                         ) {
                             // 只解析两层目录
                             child.children?.forEach { child2 ->
-                                val name2 = child2.name
-                                if (!name2.startsWith(".")) {
-                                    if (!child2.isDirectory) {
-                                        dataList.add(child2)
-                                    }
+                                if (fileCouldAdd(child2)) {
+                                    dataList.add(child2)
                                 }
                             }
                         }
                     }
                 }
+            } else if (it.name.lowercase().endsWith(".zip")) {
+                parseZipFile(project, it, "", dataList)
             } else if (fileCouldAdd(it)) {
                 dataList.add(it)
             }
@@ -139,16 +156,71 @@ object ImportSameImageResUtils {
         return distinctFile(dataList)
     }
 
+    private fun parseDirectory(directory: VirtualFile, dataList: MutableList<VirtualFile>) {
+        val dirName = directory.name
+        directory.children?.forEach { child ->
+            val name = child.name
+            if (!name.startsWith(".")) {
+                if (!child.isDirectory) {
+                    if (fileCouldAdd(child)) {
+                        dataList.add(child)
+                    }
+                } else if (
+                // 当前child父对象不是drawable或mipmap开头，只解析这个目录中的图片，不解析目录
+                    (!dirName.startsWith("drawable") && !dirName.startsWith("mipmap")) &&
+                    (name.startsWith("drawable") || name.startsWith("mipmap"))
+                ) {
+                    // 只解析两层目录
+                    child.children?.forEach { child2 ->
+                        if (fileCouldAdd(child2)) {
+                            dataList.add(child2)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun parseZipFile(
+        project: Project,
+        file: VirtualFile,
+        parentName: String,
+        dataList: MutableList<VirtualFile>
+    ) {
+        val folder = TempFileUtils.getUnZipCacheFolder(project)
+        if (folder != null) {
+            val descDir = if (parentName.isNotEmpty()) {
+                folder.path + parentName
+            } else {
+                folder.path
+            }
+
+            val unZipFile = ZipUtil.unzip(file.path, descDir) ?: return
+            val directory =
+                VirtualFileManager.getInstance().refreshAndFindFileByUrl("file://${unZipFile.path}") ?: return
+            parseDirectory(directory, dataList)
+        }
+    }
+
     private fun fileCouldAdd(file: VirtualFile): Boolean {
-        if (file.name.startsWith(".")) {
+        if (file.isDirectory) {
+            return false
+        }
+
+        val name = file.name
+        if (name.startsWith(".")) {
+            return false
+        }
+
+        if (!XUtils.isImage(name)) {
             return false
         }
 
         val parent = file.parent ?: return false
         val parentName = parent.name
         return parentName.startsWith("drawable") || parentName.startsWith("mipmap")
-
     }
+
 
     /**
      * 转化数据，获取所有需要导入的文件
@@ -208,8 +280,11 @@ object ImportSameImageResUtils {
 
     private fun importImages(
         project: Project, importFiles: List<VirtualFile>,
-        importToFolder: VirtualFile, renameMap: Map<String, List<RenameEntity>>
+        importToFolder: VirtualFile, renameMap: Map<String, List<RenameEntity>>,
+        doneCallback: (() -> Unit)? = null
     ) {
+        val progressHelper = ProgressHelper(project)
+        progressHelper.start("import image")
         WriteCommandAction.runWriteCommandAction(project) {
             val mapFiles = mapChosenFiles(importFiles)
             val folders: LinkedHashSet<VirtualFile> = LinkedHashSet()
@@ -279,7 +354,10 @@ object ImportSameImageResUtils {
                 }
             }
 
+            progressHelper.done()
             NotificationUtils.showBalloonMsg(project, "图片已导入", NotificationType.INFORMATION)
+            TempFileUtils.clearUnZipCacheFolder(project)
+            doneCallback?.invoke()
         }
     }
 }

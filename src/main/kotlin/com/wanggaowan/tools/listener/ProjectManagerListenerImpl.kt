@@ -3,7 +3,9 @@ package com.wanggaowan.tools.listener
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManagerListener
-import com.intellij.openapi.vfs.VirtualFileManager
+import com.wanggaowan.tools.utils.TempFileUtils
+import com.wanggaowan.tools.utils.ex.getModules
+import com.wanggaowan.tools.utils.ex.isFlutterProject
 
 /**
  * 程序监听器
@@ -15,23 +17,12 @@ class ProjectManagerListenerImpl : ProjectManagerListener {
             return
         }
 
-        val basePath = project.basePath ?: return
-        val projectRootFolder = VirtualFileManager.getInstance().findFileByUrl("file://${basePath}")
-            ?: return
-        try {
-            WriteCommandAction.runWriteCommandAction(project) {
-                val ideaFolder = projectRootFolder.findChild(".idea")
-                    ?: return@runWriteCommandAction
-                val copyCacheFolder = ideaFolder.findChild("copyCache")
-                    ?: return@runWriteCommandAction
-                copyCacheFolder.children?.forEach {
-                    if (it.exists()) {
-                        it.delete(null)
-                    }
+        WriteCommandAction.runWriteCommandAction(project) {
+            project.getModules()?.forEach {
+                if (it.isFlutterProject) {
+                    TempFileUtils.clearCopyCacheFolder(it)
                 }
             }
-        } catch (e: Exception) {
-            //
         }
     }
 }
