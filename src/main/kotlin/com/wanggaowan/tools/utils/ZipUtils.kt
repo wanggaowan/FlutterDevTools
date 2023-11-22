@@ -22,7 +22,7 @@ object ZipUtil {
             if (index != -1) {
                 folderName = folderName.substring(0, index)
             }
-            index = folderName.lastIndexOf("/")
+            index = folderName.lastIndexOf(File.separator)
             if (index != -1) {
                 folderName = folderName.substring(index + 1)
             }
