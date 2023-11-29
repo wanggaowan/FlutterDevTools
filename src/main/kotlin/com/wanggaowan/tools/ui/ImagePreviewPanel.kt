@@ -588,7 +588,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         if (layoutType == 0) {
             // 列表布局
             panel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
-            panel.preferredSize = Dimension(width, 100)
+            panel.minimumSize = Dimension(width, 100)
 
             val imageView = ImageView(getFile(image.value))
             imageView.preferredSize = Dimension(80, 80)
@@ -622,8 +622,8 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             val labelHeight = 60
             // 20 为padding 10
             panel.preferredSize = Dimension(mGridImageLayoutWidth + 20, mGridImageLayoutWidth + labelHeight + 20)
-            panel.minimumSize = Dimension(mGridImageLayoutWidth + 20, mGridImageLayoutWidth + labelHeight + 20)
-            panel.maximumSize = Dimension(mGridImageLayoutWidth + 20, mGridImageLayoutWidth + labelHeight + 20)
+            panel.minimumSize = panel.preferredSize
+            panel.maximumSize = panel.preferredSize
             panel.border = BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(10, 10, 10, 10),
                 LineBorder(UIColor.LINE_COLOR, 1)
@@ -631,6 +631,8 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
             val imageView = ImageView(getFile(image.value))
             imageView.preferredSize = Dimension(mGridImageLayoutWidth, mGridImageLayoutWidth)
+            imageView.minimumSize = imageView.preferredSize
+            imageView.maximumSize = imageView.preferredSize
             panel.add(imageView, BorderLayout.CENTER)
 
             val label = JLabel()
@@ -647,6 +649,8 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             box.background = UIColor.IMAGE_TITLE_BG_COLOR
             box.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
             box.preferredSize = Dimension(mGridImageLayoutWidth, labelHeight)
+            box.minimumSize = box.preferredSize
+            box.maximumSize = box.preferredSize
             box.add(Box.createVerticalGlue())
             box.add(label)
             box.add(label2)

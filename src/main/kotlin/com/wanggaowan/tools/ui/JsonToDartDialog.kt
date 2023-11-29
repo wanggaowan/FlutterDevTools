@@ -10,8 +10,7 @@ import com.intellij.util.ui.UIUtil
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.msg.Toast
 import java.awt.BorderLayout
-import java.awt.event.FocusEvent
-import java.awt.event.FocusListener
+import java.awt.Dimension
 import javax.swing.JCheckBox
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -34,15 +33,18 @@ class JsonToDartDialog(
     private lateinit var mCbGeneratorGFile: JCheckBox
     private lateinit var mCbNullSafe: JCheckBox
     private lateinit var mObjSuffix: JTextField
-    private lateinit var mCbCreateFromList: JCheckBox
     private lateinit var mCbSetConverters: JCheckBox
-    private lateinit var mConvertersValue: JTextField
+    private lateinit var mBottomPanel2: JPanel
+    private val mConvertersValue: ExtensionTextField = ExtensionTextField()
 
     private var mJsonValue: JsonObject? = null
 
     init {
         mEtJsonContent.isEnabled = true
         mJPEtRoot.add(mEtJsonContent, BorderLayout.CENTER)
+
+        mConvertersValue.preferredSize = Dimension(220, 38)
+        mBottomPanel2.add(mConvertersValue)
         initEvent()
         initData()
         init()
@@ -59,29 +61,14 @@ class JsonToDartDialog(
     override fun createCenterPanel(): JComponent = mRootPanel
 
     private fun initEvent() {
-        mConvertersValue.addFocusListener(object : FocusListener {
-            override fun focusGained(e: FocusEvent?) {
-                val text = mConvertersValue.text
-                if (text == CONVERTERS_HINT) {
-                    mConvertersValue.text = ""
-                }
-            }
 
-            override fun focusLost(e: FocusEvent?) {
-                val text = mConvertersValue.text.trim()
-                if (text.isEmpty()) {
-                    mConvertersValue.text = CONVERTERS_HINT
-                }
-            }
-        })
     }
 
     private fun initData() {
+        mConvertersValue.placeHolder = CONVERTERS_HINT
         mConvertersValue.font = UIUtil.getFont(UIUtil.FontSize.SMALL, mConvertersValue.font)
         val value = PropertiesSerializeUtils.getString(project, CONVERTERS_VALUE)
-        if (value.isNotEmpty()) {
-            mConvertersValue.text = PropertiesSerializeUtils.getString(project, CONVERTERS_VALUE)
-        }
+        mConvertersValue.text = value
 
         mCbSetConverters.isSelected = PropertiesSerializeUtils.getBoolean(project, SET_CONVERTERS, true)
 
@@ -186,11 +173,7 @@ class JsonToDartDialog(
     }
 
     fun getConvertersValue(): String {
-        val value = mConvertersValue.text.trim()
-        if (value == CONVERTERS_HINT) {
-            return ""
-        }
-        return value
+        return mConvertersValue.text.trim()
     }
 
     companion object {

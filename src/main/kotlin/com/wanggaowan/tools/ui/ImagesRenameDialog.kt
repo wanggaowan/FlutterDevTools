@@ -8,7 +8,10 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import java.awt.*
+import java.awt.BorderLayout
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
+import java.awt.Point
 import java.io.File
 import javax.swing.*
 import javax.swing.event.DocumentEvent
@@ -41,7 +44,7 @@ class ImagesRenameDialog(
 
         val rootPanel = JPanel(BorderLayout())
         contentPane = rootPanel
-        rootPanel.preferredSize = JBUI.size(580, 300)
+        rootPanel.preferredSize = JBUI.size(500, 300)
         rootPanel.add(createRenameFilePanel(renameFiles), BorderLayout.CENTER)
         rootPanel.add(createAction(), BorderLayout.SOUTH)
 
@@ -68,6 +71,7 @@ class ImagesRenameDialog(
         }
 
         mJRenamePanel = JPanel(GridBagLayout())
+        mJRenamePanel.border = BorderFactory.createEmptyBorder(0, 5, 0, 5)
         initRenamePanel()
         val scrollPane = ScrollPaneFactory.createScrollPane(mJRenamePanel)
         scrollPane.border = BorderFactory.createCompoundBorder(
@@ -82,45 +86,35 @@ class ImagesRenameDialog(
         var depth = 0
         val cc = GridBagConstraints()
         cc.fill = GridBagConstraints.HORIZONTAL
+        cc.weightx = 1.0
 
         mRenameFileList.forEach {
-            cc.gridy = depth
-
-            // 左边部分
-            val titleBox = Box.createHorizontalBox()
-            titleBox.preferredSize = JBUI.size(250, 35)
-            titleBox.minimumSize = JBUI.size(250, 35)
-            cc.weightx = 0.0
-            cc.gridx = 0
-            mJRenamePanel.add(titleBox, cc)
-
-            val imageView = ImageView(File(it.oldFile.path))
-            imageView.preferredSize = JBUI.size(35)
-            imageView.maximumSize = JBUI.size(35)
-            imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
-            titleBox.add(imageView)
-
-            val title = JLabel(it.oldName + "：")
-            titleBox.add(title)
-
-            // 右边部分
-            val box = Box.createVerticalBox()
-            cc.weightx = 1.0
-            cc.gridx = 1
+            val box = Box.createHorizontalBox()
+            cc.gridy = depth++
             mJRenamePanel.add(box, cc)
 
-            val rename = JTextField(it.newName)
-            rename.minimumSize = JBUI.size(0, 35)
-            rename.maximumSize = JBUI.size(Int.MAX_VALUE, 35)
+            val imageView = ImageView(File(it.oldFile.path))
+            imageView.preferredSize = JBUI.size(34)
+            imageView.maximumSize = JBUI.size(34)
+            imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
+            box.add(imageView)
+
+            val rename = ExtensionTextField(it.newName, placeHolder = it.oldName)
+            rename.minimumSize = JBUI.size(400, 34)
             box.add(rename)
 
             val box2 = Box.createHorizontalBox()
+            cc.gridy = depth++
+            box2.border = BorderFactory.createEmptyBorder(2, 0, 2, 0)
+            mJRenamePanel.add(box2, cc)
+
             val existFile = isImageExist(it)
             val existFileImageView = ImageView(if (existFile != null) File(existFile.path) else null)
-            existFileImageView.preferredSize = JBUI.size(25)
-            existFileImageView.border = BorderFactory.createEmptyBorder(2, 2, 2, 5)
+            existFileImageView.preferredSize = JBUI.size(34,16)
+            existFileImageView.minimumSize = JBUI.size(34,16)
+            existFileImageView.maximumSize = JBUI.size(34,16)
+            existFileImageView.border = BorderFactory.createEmptyBorder(0, 9, 0, 9)
             existFileImageView.isVisible = existFile != null
-            existFileImageView.maximumSize = JBUI.size(25)
             box2.add(existFileImageView)
 
             val hintStr = "已存在同名文件,是否继续重命名？不勾选则跳过重命名"
@@ -132,7 +126,6 @@ class ImagesRenameDialog(
             box2.add(hint)
 
             box2.add(Box.createHorizontalGlue())
-            box.add(box2)
 
             hint.addChangeListener { _ ->
                 it.coverExistFile = hint.isSelected
@@ -142,23 +135,22 @@ class ImagesRenameDialog(
             rename.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(p0: DocumentEvent?) {
                     val str = rename.text.trim()
-                    it.newName = str
+                    it.newName = str.ifEmpty { it.oldName }
                     refreshRenamePanel()
                 }
 
                 override fun removeUpdate(p0: DocumentEvent?) {
                     val str = rename.text.trim()
-                    it.newName = str
+                    it.newName = str.ifEmpty { it.oldName }
                     refreshRenamePanel()
                 }
 
                 override fun changedUpdate(p0: DocumentEvent?) {
                     val str = rename.text.trim()
-                    it.newName = str
+                    it.newName = str.ifEmpty { it.oldName }
                     refreshRenamePanel()
                 }
             })
-            depth++
         }
 
         val placeHolder = JLabel()
@@ -170,10 +162,9 @@ class ImagesRenameDialog(
     private fun refreshRenamePanel() {
         val components = mJRenamePanel.components
         for (index in 0 until ((components.size - 1) / 2)) {
-            val rightRoot = components[index * 2 + 1] as Box?
-            val rightHintRoot = rightRoot?.getComponent(1) as Box?
-            val imageView = rightHintRoot?.getComponent(0) as? ImageView
-            val checkBox = rightHintRoot?.getComponent(1) as? JCheckBox
+            val hintRoot = components[index * 2 + 1] as Box?
+            val imageView = hintRoot?.getComponent(0) as? ImageView
+            val checkBox = hintRoot?.getComponent(1) as? JCheckBox
             refreshHintVisible(mRenameFileList[index], checkBox, imageView)
         }
     }
@@ -194,11 +185,6 @@ class ImagesRenameDialog(
                 imageView?.setImage(File(existFile2.path))
             } else {
                 imageView?.isVisible = false
-            }
-
-            if (preVisible != null) {
-                val resize = JBUI.scale(if (visible) 25 else -25)
-                mJRenamePanel.preferredSize = Dimension(mJRenamePanel.width, mJRenamePanel.height + resize)
             }
         }
     }

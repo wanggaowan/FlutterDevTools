@@ -11,10 +11,8 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import com.wanggaowan.tools.listener.SimpleComponentListener
 import com.wanggaowan.tools.utils.msg.Toast
 import java.awt.*
-import java.awt.event.ComponentEvent
 import java.io.File
 import javax.swing.*
 import javax.swing.event.DocumentEvent
@@ -66,19 +64,9 @@ class ImportImageFolderChooser(
 
         val rootPanel = JPanel(BorderLayout())
         contentPane = rootPanel
-        rootPanel.preferredSize = JBUI.size(680, 300)
+        rootPanel.preferredSize = JBUI.size(500, 300)
         rootPanel.add(createRenameFilePanel(renameFiles), BorderLayout.CENTER)
         rootPanel.add(createAction(), BorderLayout.SOUTH)
-        rootPanel.addComponentListener(object : SimpleComponentListener() {
-            override fun componentResized(p0: ComponentEvent?) { // 窗体大小改变时，动态计算显示导入路径文本组件宽度
-                var maxWidth = rootPanel.width - JBUI.scale(300)
-                if (maxWidth < 0) {
-                    maxWidth = 0
-                }
-                setChosenFolderWrapWidth(maxWidth)
-            }
-        })
-
         pack()
 
         if (initialFile != null) {
@@ -168,45 +156,40 @@ class ImportImageFolderChooser(
 
             val cc = GridBagConstraints()
             cc.fill = GridBagConstraints.HORIZONTAL
+            cc.weightx = 1.0
+
             it.value.forEach { it2 ->
                 val panel = JPanel(GridBagLayout())
                 panel.border = BorderFactory.createEmptyBorder(0, 5, 5, 5)
                 c.gridy = depth++
                 mJRenamePanel.add(panel, c)
 
-                // 左边部分
-                val titleBox = Box.createHorizontalBox()
-                titleBox.preferredSize = JBUI.size(250, 35)
-                titleBox.minimumSize = JBUI.size(250, 35)
-                cc.weightx = 0.0
-                panel.add(titleBox, cc)
-
-                val imageView = ImageView(File(it2.oldFile.path))
-                imageView.preferredSize = JBUI.size(35)
-                imageView.maximumSize = JBUI.size(35)
-                imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
-                titleBox.add(imageView)
-
-                val title = JLabel(it2.oldName + "：")
-                titleBox.add(title)
-
-                // 右边部分
-                val box = Box.createVerticalBox()
-                cc.weightx = 1.0
+                val box = Box.createHorizontalBox()
+                cc.gridy = 0
                 panel.add(box, cc)
 
-                val rename = JTextField(it2.newName)
-                rename.minimumSize = JBUI.size(0, 35)
-                rename.maximumSize = JBUI.size(Int.MAX_VALUE, 35)
+                val imageView = ImageView(File(it2.oldFile.path))
+                imageView.preferredSize = JBUI.size(34)
+                imageView.maximumSize = JBUI.size(34)
+                imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
+                box.add(imageView)
+
+                val rename = ExtensionTextField(it2.newName, placeHolder = it2.oldName)
+                rename.minimumSize = JBUI.size(400, 34)
                 box.add(rename)
 
                 val box2 = Box.createHorizontalBox()
+                cc.gridy = 1
+                box2.border = BorderFactory.createEmptyBorder(2, 0, 2, 0)
+                panel.add(box2, cc)
+
                 val (existFile, isInMap) = isImageExist(it2)
                 val existFileImageView = ImageView(if (existFile != null) File(existFile.path) else null)
-                existFileImageView.preferredSize = JBUI.size(25)
-                existFileImageView.border = BorderFactory.createEmptyBorder(2, 2, 2, 5)
+                existFileImageView.preferredSize = JBUI.size(34,16)
+                existFileImageView.minimumSize = JBUI.size(34,16)
+                existFileImageView.maximumSize = JBUI.size(34,16)
+                existFileImageView.border = BorderFactory.createEmptyBorder(0, 9, 0, 9)
                 existFileImageView.isVisible = existFile != null
-                existFileImageView.maximumSize = JBUI.size(25)
                 box2.add(existFileImageView)
 
                 val hintStr =
@@ -216,10 +199,9 @@ class ImportImageFolderChooser(
                 hint.font = UIUtil.getFont(UIUtil.FontSize.MINI, rename.font)
                 it2.existFile = existFile != null
                 hint.isVisible = existFile != null
+                hint.minimumSize = JBUI.size(400, 22)
                 box2.add(hint)
-
                 box2.add(Box.createHorizontalGlue())
-                box.add(box2)
 
                 hint.addChangeListener {
                     it2.coverExistFile = hint.isSelected
@@ -229,19 +211,19 @@ class ImportImageFolderChooser(
                 rename.document.addDocumentListener(object : DocumentListener {
                     override fun insertUpdate(p0: DocumentEvent?) {
                         val str = rename.text.trim()
-                        it2.newName = str
+                        it2.newName = str.ifEmpty { it2.oldName }
                         refreshRenamePanel()
                     }
 
                     override fun removeUpdate(p0: DocumentEvent?) {
                         val str = rename.text.trim()
-                        it2.newName = str
+                        it2.newName = str.ifEmpty { it2.oldName }
                         refreshRenamePanel()
                     }
 
                     override fun changedUpdate(p0: DocumentEvent?) {
                         val str = rename.text.trim()
-                        it2.newName = str
+                        it2.newName = str.ifEmpty { it2.oldName }
                         refreshRenamePanel()
                     }
                 })
@@ -265,10 +247,9 @@ class ImportImageFolderChooser(
                 }
                 isDrawable = value
             } else if (component is JPanel) {
-                val rightRoot = component.getComponent(1) as Box?
-                val rightHintRoot = rightRoot?.getComponent(1) as Box?
-                val imageView = rightHintRoot?.getComponent(0) as? ImageView
-                val checkBox = rightHintRoot?.getComponent(1) as? JCheckBox
+                val hintRoot = component.getComponent(1) as Box?
+                val imageView = hintRoot?.getComponent(0) as? ImageView
+                val checkBox = hintRoot?.getComponent(1) as? JCheckBox
                 val key = if (isDrawable) "Drawable" else "Mipmap"
                 val values = mRenameFileMap[key]
                 if (values != null && index < values.size) {
@@ -298,11 +279,6 @@ class ImportImageFolderChooser(
                 imageView?.setImage(File(existFile2.path))
             } else {
                 imageView?.isVisible = false
-            }
-
-            if (preVisible != null) {
-                val resize = JBUI.scale(if (visible) 25 else -25)
-                mJRenamePanel.preferredSize = Dimension(mJRenamePanel.width, mJRenamePanel.height + resize)
             }
         }
     }

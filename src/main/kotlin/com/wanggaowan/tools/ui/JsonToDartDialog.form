@@ -126,7 +126,7 @@
               <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
             </constraints>
           </vspacer>
-          <grid id="631ce" layout-manager="FlowLayout" hgap="5" vgap="5" flow-align="0">
+          <grid id="631ce" binding="mBottomPanel2" layout-manager="FlowLayout" hgap="5" vgap="5" flow-align="0">
             <constraints>
               <grid row="1" column="0" row-span="1" col-span="2" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
             </constraints>
@@ -140,13 +140,6 @@
                   <text value="创建序列化方法"/>
                 </properties>
               </component>
-              <component id="beabb" class="javax.swing.JCheckBox" binding="mCbCreateFromList">
-                <constraints/>
-                <properties>
-                  <text value="创建序列化列表方法"/>
-                  <visible value="false"/>
-                </properties>
-              </component>
               <component id="d99e3" class="javax.swing.JCheckBox" binding="mCbGeneratorGFile">
                 <constraints/>
                 <properties>
@@ -158,13 +151,6 @@
                 <properties>
                   <selected value="true"/>
                   <text value="配置converters"/>
-                </properties>
-              </component>
-              <component id="b40f8" class="javax.swing.JTextField" binding="mConvertersValue">
-                <constraints/>
-                <properties>
-                  <preferredSize width="220" height="38"/>
-                  <text value="nullFieldConvertList"/>
                 </properties>
               </component>
             </children>

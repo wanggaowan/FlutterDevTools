@@ -24,6 +24,7 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiManager
+import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.getModules
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import icons.FlutterIcons
@@ -151,7 +152,7 @@ private class InnerProjectViewProjectNode(project: Project, viewSettings: ViewSe
         return ArrayList(modulesAndGroups(modules))
     }
 
-    private fun isFlutterProject(virtualFile: VirtualFile?):Boolean {
+    private fun isFlutterProject(virtualFile: VirtualFile?): Boolean {
         val path = virtualFile?.path
         if (path.isNullOrEmpty()) {
             return false
@@ -223,7 +224,7 @@ private class InnerProjectViewModuleNode(project: Project, module: Module, viewS
     }
 
     override fun contains(file: VirtualFile): Boolean {
-        return fileCouldShow(file)
+        return fileCouldShow(value, file)
     }
 }
 
@@ -238,7 +239,7 @@ private fun createModuleNodeInner(project: Project, module: Module, viewSettings
         if (psi != null) {
             return PsiDirectoryNode(project, psi, viewSettings) { item ->
                 // 过滤模块下文件，将不需要展示的文件剔除
-                fileCouldShow(item.virtualFile)
+                fileCouldShow(module, item.virtualFile)
             }
         }
     }
@@ -249,7 +250,7 @@ private fun createModuleNodeInner(project: Project, module: Module, viewSettings
 /**
  * 判断文件是否需要展示
  */
-private fun fileCouldShow(file: VirtualFile?): Boolean {
+private fun fileCouldShow(module: Module?, file: VirtualFile?): Boolean {
     if (file != null) {
         val name = file.name
         if (name.endsWith(".lock")
@@ -261,13 +262,17 @@ private fun fileCouldShow(file: VirtualFile?): Boolean {
             return false
         }
 
-        if (file.isDirectory
-            && (name == "android"
-                || name == "ios"
-                || name == "web"
-                || name == "build")
-        ) {
-            return false
+        if (file.isDirectory) {
+            if (name == "build") {
+                return false
+            }
+
+            if (name == "android" || name == "ios" || name == "web") {
+                val parent = file.parent
+                if (parent != null && parent.path == module.basePath) {
+                    return false
+                }
+            }
         }
 
         if (name == "") {
