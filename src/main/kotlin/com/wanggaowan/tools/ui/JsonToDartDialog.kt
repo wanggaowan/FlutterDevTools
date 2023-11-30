@@ -11,10 +11,8 @@ import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.msg.Toast
 import java.awt.BorderLayout
 import java.awt.Dimension
-import javax.swing.JCheckBox
-import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.JTextField
+import java.awt.GridBagConstraints
+import javax.swing.*
 
 /**
  * json文件转JAVA对象
@@ -25,26 +23,48 @@ class JsonToDartDialog(
 ) : DialogWrapper(project, false) {
 
     private lateinit var mRootPanel: JPanel
-    private lateinit var mCreateObjectName: JTextField
+    private lateinit var mHeadRootPanel: JPanel
+    private val mCreateObjectName: ExtensionTextField = ExtensionTextField("", placeHolder = "请输入类名称")
+    private val mObjSuffix: ExtensionTextField = ExtensionTextField("", placeHolder = "类名后缀")
     private lateinit var mJPEtRoot: JPanel
     private val mEtJsonContent: EditorTextField = JsonLanguageTextField(project)
     private lateinit var mCbCreateDoc: JCheckBox
     private lateinit var mCbGeneratorJsonSerializable: JCheckBox
     private lateinit var mCbGeneratorGFile: JCheckBox
     private lateinit var mCbNullSafe: JCheckBox
-    private lateinit var mObjSuffix: JTextField
     private lateinit var mCbSetConverters: JCheckBox
-    private lateinit var mBottomPanel2: JPanel
+    private lateinit var mBottomRootPanel2: JPanel
     private val mConvertersValue: ExtensionTextField = ExtensionTextField()
 
     private var mJsonValue: JsonObject? = null
 
     init {
+        val cc = GridBagConstraints()
+        cc.fill = GridBagConstraints.HORIZONTAL
+        cc.weightx = 0.0
+        cc.gridx = 0
+
+        val label = JLabel("类名称")
+        label.border = BorderFactory.createEmptyBorder(0, 0, 0, 6)
+        mHeadRootPanel.add(label, cc)
+
+        cc.weightx = 10.0
+        cc.gridx = 1
+        mCreateObjectName.minimumSize = Dimension(100, 30)
+        mHeadRootPanel.add(mCreateObjectName, cc)
+
+        cc.weightx = 1.0
+        cc.gridx = 2
+        mObjSuffix.text = "Entity"
+        mObjSuffix.border = BorderFactory.createEmptyBorder(0, 4, 0, 0)
+        mObjSuffix.minimumSize = Dimension(100, 30)
+        mHeadRootPanel.add(mObjSuffix, cc)
+
         mEtJsonContent.isEnabled = true
         mJPEtRoot.add(mEtJsonContent, BorderLayout.CENTER)
 
         mConvertersValue.preferredSize = Dimension(220, 38)
-        mBottomPanel2.add(mConvertersValue)
+        mBottomRootPanel2.add(mConvertersValue)
         initEvent()
         initData()
         init()
