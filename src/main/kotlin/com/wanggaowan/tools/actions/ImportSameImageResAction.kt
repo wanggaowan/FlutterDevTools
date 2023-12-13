@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.project.DumbAwareAction
@@ -19,6 +20,8 @@ import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.flutterModules
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import io.flutter.utils.ProgressHelper
+
+private val LOG = logger<ImportSameImageResUtils>()
 
 /**
  * 导入不同分辨率相同图片资源
@@ -311,6 +314,7 @@ object ImportSameImageResUtils {
                 }
             }
 
+            var existsException = false
             folders.forEach { folder ->
                 val files = if (folder == importToFolder) {
                     mapFiles["1.0x"]
@@ -348,14 +352,19 @@ object ImportSameImageResUtils {
 
                             child.copy(project, folder, renameEntity?.newName ?: child.name)
                         } catch (e: Exception) {
-                            // 可能是导入文件已经存在
+                            existsException = true
+                            LOG.error(e)
                         }
                     }
                 }
             }
 
             progressHelper.done()
-            NotificationUtils.showBalloonMsg(project, "图片已导入", NotificationType.INFORMATION)
+            if (existsException) {
+                NotificationUtils.showBalloonMsg(project, "图片已导入，部分图片导入失败", NotificationType.WARNING)
+            } else {
+                NotificationUtils.showBalloonMsg(project, "图片已导入", NotificationType.INFORMATION)
+            }
             TempFileUtils.clearUnZipCacheFolder(project)
             doneCallback?.invoke()
         }
