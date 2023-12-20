@@ -31,7 +31,8 @@ class PluginSettingsView(pubRoot: PubRoot?) {
     val exampleImagesRefClassName = JBTextField()
 
     val copyAndroidStrUseSimpleMode = JBCheckBox("复制 android <string/> 转为为flutter多语言采用简易模式")
-    val extractStr2L10nShowRenameDialog = JBCheckBox("提取文本为多语言时展示重命名弹窗")
+    val extractStr2L10nShowRenameDialog = JBCheckBox("展示重命名弹窗")
+    val extractStr2L10nTranslateOther = JBCheckBox("翻译成其它语言")
 
     init {
         var builder = FormBuilder.createFormBuilder()
@@ -50,12 +51,15 @@ class PluginSettingsView(pubRoot: PubRoot?) {
                 .addLabeledComponent(createItemLabel("图片引用文件类名称: ", marginLeft = 20), exampleImagesRefClassName, 1, false)
         }
 
-        builder = builder.addComponent(createCategoryTitle("其它设置", marginTop = 10), 1)
-
-        copyAndroidStrUseSimpleMode.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
-        builder = builder.addComponent(copyAndroidStrUseSimpleMode, 1)
+        builder = builder.addComponent(createCategoryTitle("提取多语言设置", marginTop = 10), 1)
         extractStr2L10nShowRenameDialog.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
         builder = builder.addComponent(extractStr2L10nShowRenameDialog, 1)
+        extractStr2L10nTranslateOther.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
+        builder = builder.addComponent(extractStr2L10nTranslateOther, 1)
+
+        builder = builder.addComponent(createCategoryTitle("其它设置", marginTop = 10), 1)
+        copyAndroidStrUseSimpleMode.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
+        builder = builder.addComponent(copyAndroidStrUseSimpleMode, 1)
 
         panel = builder.addComponentFillVertically(JPanel(), 0).panel
     }

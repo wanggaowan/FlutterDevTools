@@ -34,7 +34,7 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
             return true
         }
 
-        if (PluginSettings.getExtractStr2L10nShowRenameDialog(getProjectWrapper()) != mSettingsView?.extractStr2L10nShowRenameDialog?.isSelected) {
+        if (isExtractStr2L10nModified()) {
             return true
         }
 
@@ -60,12 +60,26 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
             || PluginSettings.getExampleImagesRefClassName(getProjectWrapper()) != mSettingsView?.exampleImagesRefClassName?.text
     }
 
+    private fun isExtractStr2L10nModified(): Boolean {
+        if (PluginSettings.getExtractStr2L10nShowRenameDialog(getProjectWrapper()) != mSettingsView?.extractStr2L10nShowRenameDialog?.isSelected) {
+            return true
+        }
+
+        if (PluginSettings.getExtractStr2L10nTranslateOther(getProjectWrapper()) != mSettingsView?.extractStr2L10nTranslateOther?.isSelected) {
+            return true
+        }
+
+        return false
+    }
+
     override fun apply() {
-        PluginSettings.setCopyAndroidStrUseSimpleMode(getProjectWrapper(),
-            mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected ?: true)
-        PluginSettings.setExtractStr2L10nShowRenameDialog(getProjectWrapper(),
-            mSettingsView?.extractStr2L10nShowRenameDialog?.isSelected ?: true)
         applyCreateResourceSet()
+        applyExtractStr2L10n()
+        PluginSettings.setCopyAndroidStrUseSimpleMode(
+            getProjectWrapper(),
+            mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected ?: true
+        )
+
     }
 
     private fun applyCreateResourceSet() {
@@ -111,10 +125,22 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
         )
     }
 
+    private fun applyExtractStr2L10n() {
+        PluginSettings.setExtractStr2L10nShowRenameDialog(
+            getProjectWrapper(),
+            mSettingsView?.extractStr2L10nShowRenameDialog?.isSelected ?: true
+        )
+        PluginSettings.setExtractStr2L10nTranslateOther(
+            getProjectWrapper(),
+            mSettingsView?.extractStr2L10nTranslateOther?.isSelected ?: true
+        )
+    }
+
     override fun reset() {
-        mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected = true
-        mSettingsView?.extractStr2L10nShowRenameDialog?.isSelected = true
         resetCreateResource()
+        resetExtractStr2L10n()
+        mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected =
+            PluginSettings.getCopyAndroidStrUseSimpleMode(getProjectWrapper())
     }
 
     private fun resetCreateResource() {
@@ -132,6 +158,13 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
         mSettingsView?.exampleImagesRefFileName?.text = PluginSettings.getExampleImagesRefFileName(getProjectWrapper())
         mSettingsView?.exampleImagesRefClassName?.text =
             PluginSettings.getExampleImagesRefClassName(getProjectWrapper())
+    }
+
+    private fun resetExtractStr2L10n() {
+        mSettingsView?.extractStr2L10nShowRenameDialog?.isSelected =
+            PluginSettings.getExtractStr2L10nShowRenameDialog(getProjectWrapper())
+        mSettingsView?.extractStr2L10nTranslateOther?.isSelected =
+            PluginSettings.getExtractStr2L10nTranslateOther(getProjectWrapper())
     }
 
     override fun disposeUIResources() {

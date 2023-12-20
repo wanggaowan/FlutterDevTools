@@ -1,5 +1,7 @@
 package com.wanggaowan.tools.actions
 
+import ai.grazie.text.TextRange
+import ai.grazie.text.replace
 import com.intellij.json.JsonFileType
 import com.intellij.json.psi.JsonObject
 import com.intellij.json.psi.JsonPsiUtil
@@ -24,7 +26,8 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.ui.JBColor
-import com.intellij.ui.components.JBTextField
+import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.JBTextArea
 import com.intellij.util.LocalTimeCounter
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
@@ -33,6 +36,7 @@ import com.jetbrains.lang.dart.psi.DartPsiCompositeElement
 import com.jetbrains.lang.dart.psi.DartShortTemplateEntry
 import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
 import com.wanggaowan.tools.settings.PluginSettings
+import com.wanggaowan.tools.ui.UIColor
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
@@ -66,9 +70,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
-import javax.swing.JComponent
-import javax.swing.JLabel
-import javax.swing.JPanel
+import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 
@@ -218,6 +220,34 @@ class ExtractStr2L10n : DumbAwareAction() {
             }
         }
 
+        val otherArbFile = mutableListOf<TranslateArbFile>()
+        if (PluginSettings.getExtractStr2L10nTranslateOther(project)) {
+            arbPsiFile.parent?.files?.let { files ->
+                for (file in files) {
+                    val name = file.name
+                    if (!name.endsWith(".arb")) {
+                        continue
+                    }
+
+                    if (name == arbPsiFile.name) {
+                        continue
+                    }
+
+                    val json = file.getChildOfType<JsonObject>() ?: continue
+
+                    if (existKey != null && json.findProperty(existKey) != null) {
+                        // 其它语言已存在当前key
+                        continue
+                    }
+
+                    val targetLanguage = json.findProperty("@@locale")?.value?.text?.replace("\"", "")
+                    if (targetLanguage != null) {
+                        otherArbFile.add(TranslateArbFile(targetLanguage, file, json))
+                    }
+                }
+            }
+        }
+
         changeData(
             project,
             selectedFile,
@@ -228,7 +258,8 @@ class ExtractStr2L10n : DumbAwareAction() {
             translateText,
             jsonObject,
             rootDir,
-            arbPsiFile
+            arbPsiFile,
+            otherArbFile
         )
     }
 
@@ -242,7 +273,8 @@ class ExtractStr2L10n : DumbAwareAction() {
         translateText: String,
         jsonObject: JsonObject?,
         rootDir: VirtualFile,
-        arbPsiFile: PsiFile
+        arbPsiFile: PsiFile,
+        otherArbFile: List<TranslateArbFile>
     ) {
 
         if (existKey != null) {
@@ -255,20 +287,28 @@ class ExtractStr2L10n : DumbAwareAction() {
                     progressIndicator.isIndeterminate = true
                     var finish = false
                     CoroutineScope(Dispatchers.Default).launch launch2@{
-                        val translate = translate(translateText, dartTemplateEntryList.isNotEmpty())
+                        val enTranslate = translate(translateText, "en")
+                        val isFormat = dartTemplateEntryList.isNotEmpty()
+                        val key = mapStrToKey(enTranslate, isFormat)
+                        otherArbFile.forEach { file ->
+                            if (file.targetLanguage == "en" && !isFormat) {
+                                file.translate = enTranslate
+                            } else {
+                                val translate2 = fixTranslatePlaceHolderStr(
+                                    translate(originalText, file.targetLanguage),
+                                    dartTemplateEntryList
+                                )
+                                file.translate = translate2
+                            }
+                        }
+
                         CoroutineScope(Dispatchers.Main).launch {
                             var showRename = false
-                            if (translate == null || PluginSettings.getExtractStr2L10nShowRenameDialog(project)) {
+                            if (key == null || PluginSettings.getExtractStr2L10nShowRenameDialog(project)) {
                                 showRename = true
                             } else {
-                                val propertyList = jsonObject?.propertyList
-                                if (!propertyList.isNullOrEmpty()) {
-                                    for (property in propertyList) {
-                                        if (property.name == translate) {
-                                            showRename = true
-                                            break
-                                        }
-                                    }
+                                if (jsonObject?.findProperty(key) != null) {
+                                    showRename = true
                                 }
                             }
 
@@ -276,16 +316,43 @@ class ExtractStr2L10n : DumbAwareAction() {
                             progressIndicator.isIndeterminate = false
                             progressIndicator.fraction = 1.0
                             if (showRename) {
-                                val key = renameKey(project, translate, jsonObject) ?: return@launch
+                                val newKey = renameKey(project, key, jsonObject, otherArbFile) ?: return@launch
                                 WriteCommandAction.runWriteCommandAction(project) {
-                                    insertElement(project, rootDir, arbPsiFile, jsonObject, key, originalText)
-                                    replaceElement(selectedFile, selectedElement, dartTemplateEntryList, key)
-
+                                    insertElement(project, rootDir, arbPsiFile, jsonObject, newKey, originalText)
+                                    replaceElement(selectedFile, selectedElement, dartTemplateEntryList, newKey)
+                                    otherArbFile.forEach { file ->
+                                        val tl = file.translate
+                                        if (!tl.isNullOrEmpty()) {
+                                            insertElement(
+                                                project,
+                                                rootDir,
+                                                file.arbFile,
+                                                file.jsonObject,
+                                                newKey,
+                                                tl,
+                                                false
+                                            )
+                                        }
+                                    }
                                 }
                             } else {
                                 WriteCommandAction.runWriteCommandAction(project) {
-                                    insertElement(project, rootDir, arbPsiFile, jsonObject, translate!!, originalText)
-                                    replaceElement(selectedFile, selectedElement, dartTemplateEntryList, translate)
+                                    insertElement(project, rootDir, arbPsiFile, jsonObject, key!!, originalText)
+                                    replaceElement(selectedFile, selectedElement, dartTemplateEntryList, key)
+                                    otherArbFile.forEach { file ->
+                                        val tl = file.translate
+                                        if (!tl.isNullOrEmpty()) {
+                                            insertElement(
+                                                project,
+                                                rootDir,
+                                                file.arbFile,
+                                                file.jsonObject,
+                                                key,
+                                                tl,
+                                                false
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -299,6 +366,38 @@ class ExtractStr2L10n : DumbAwareAction() {
                 }
             })
         }
+    }
+
+    /// 修复因翻译，导致占位符被翻译为大写的问题
+    private fun fixTranslatePlaceHolderStr(translate: String?, list: List<DartPsiCompositeElement>): String? {
+        if (translate.isNullOrEmpty()) {
+            return null
+        }
+
+        if (list.isEmpty()) {
+            return translate
+        }
+
+        var start = 0
+        var newValue = translate
+        for (i in list.indices) {
+            val param = "{Param$i}"
+            val index = translate.indexOf(param, start)
+            if (index != -1) {
+                val index2 = translate.indexOf("'$param'", start)
+                if (index2 != -1) {
+                    if (index2 == index - 1) {
+                        continue
+                    }
+
+                    newValue = newValue?.replace(TextRange(index, index + param.length), "{param$i}")
+                } else {
+                    newValue = newValue?.replace(TextRange(index, index + param.length), "{param$i}")
+                }
+                start = index + param.length
+            }
+        }
+        return newValue
     }
 
     private tailrec fun findAllDartTemplateEntry(
@@ -319,8 +418,13 @@ class ExtractStr2L10n : DumbAwareAction() {
     }
 
     // 重命名多语言在arb文件中的key
-    private fun renameKey(project: Project, translate: String?, jsonObject: JsonObject?): String? {
-        val dialog = InputKeyDialog(project, translate, jsonObject)
+    private fun renameKey(
+        project: Project,
+        translate: String?,
+        jsonObject: JsonObject?,
+        otherArbFile: List<TranslateArbFile>
+    ): String? {
+        val dialog = InputKeyDialog(project, translate, jsonObject, otherArbFile)
         dialog.show()
         if (dialog.exitCode != DialogWrapper.OK_EXIT_CODE) {
             return null
@@ -369,6 +473,7 @@ class ExtractStr2L10n : DumbAwareAction() {
         jsonObject: JsonObject?,
         key: String,
         value: String,
+        doGenL10n: Boolean = true
     ) {
         val psiFile = PsiFileFactory.getInstance(project).createFileFromText(
             "dummy.${JsonFileType.INSTANCE.defaultExtension}",
@@ -397,13 +502,19 @@ class ExtractStr2L10n : DumbAwareAction() {
         } else {
             manager.saveAllDocuments()
         }
-        FlutterSdk.getFlutterSdk(project)?.also { sdk ->
-            val commandLine = FlutterCommandLine(sdk, rootDir, FlutterCommandLine.Type.GEN_L10N)
-            commandLine.start()
+
+        if (doGenL10n) {
+            FlutterSdk.getFlutterSdk(project)?.also { sdk ->
+                val commandLine = FlutterCommandLine(sdk, rootDir, FlutterCommandLine.Type.GEN_L10N)
+                commandLine.start()
+            }
         }
     }
 
-    private suspend fun translate(text: String, isFormat: Boolean): String? {
+    private suspend fun translate(
+        text: String,
+        targetLanguage: String,
+    ): String? {
         val uuid = UUID.randomUUID().toString()
         val dateformat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
         dateformat.timeZone = TimeZone.getTimeZone("UTC")
@@ -424,7 +535,7 @@ class ExtractStr2L10n : DumbAwareAction() {
         queryMap["SignatureNonce"] = uuid
         queryMap["SourceLanguage"] = "zh"
         queryMap["SourceText"] = text
-        queryMap["TargetLanguage"] = "en"
+        queryMap["TargetLanguage"] = targetLanguage
         queryMap["Timestamp"] = time
         queryMap["Version"] = "2018-10-12"
         var queryString = getCanonicalizedQueryString(queryMap, queryMap.keys.toTypedArray())
@@ -455,50 +566,54 @@ class ExtractStr2L10n : DumbAwareAction() {
             }
 
             val data = jsonObject.getJSONObject("Data") ?: return null
-            var value = data.getString("Translated")
-            if (value.isNullOrEmpty()) {
-                return null
-            }
-
-            // \pP：中的小写p是property的意思，表示Unicode属性，用于Unicode正表达式的前缀。
-            //
-            // P：标点字符
-            //
-            // L：字母；
-            //
-            // M：标记符号（一般不会单独出现）；
-            //
-            // Z：分隔符（比如空格、换行等）；
-            //
-            // S：符号（比如数学符号、货币符号等）；
-            //
-            // N：数字（比如阿拉伯数字、罗马数字等）；
-            //
-            // C：其他字符
-            value = value.lowercase().replace(Regex("[\\pP\\pS]"), "_")
-                .replace(" ", "_")
-            if (isFormat) {
-                value += "_format"
-            }
-
-            value = value.replace("_____", "_")
-                .replace("____", "_")
-                .replace("___", "_")
-                .replace("__", "_")
-
-            if (value.startsWith("_")) {
-                value = value.substring(1, value.length)
-            }
-
-            if (value.endsWith("_")) {
-                value = value.substring(0, value.length - 1)
-            }
-
-            return value
+            return data.getString("Translated")
         } catch (e: Exception) {
             LOG.error("阿里翻译失败：${e.message}")
             return null
         }
+    }
+
+    private fun mapStrToKey(str: String?, isFormat: Boolean): String? {
+        if (str.isNullOrEmpty()) {
+            return null
+        }
+
+        // \pP：中的小写p是property的意思，表示Unicode属性，用于Unicode正表达式的前缀。
+        //
+        // P：标点字符
+        //
+        // L：字母；
+        //
+        // M：标记符号（一般不会单独出现）；
+        //
+        // Z：分隔符（比如空格、换行等）；
+        //
+        // S：符号（比如数学符号、货币符号等）；
+        //
+        // N：数字（比如阿拉伯数字、罗马数字等）；
+        //
+        // C：其他字符
+        var value = str
+        value = value.lowercase().replace(Regex("[\\pP\\pS]"), "_")
+            .replace(" ", "_")
+        if (isFormat) {
+            value += "_format"
+        }
+
+        value = value.replace("_____", "_")
+            .replace("____", "_")
+            .replace("___", "_")
+            .replace("__", "_")
+
+        if (value.startsWith("_")) {
+            value = value.substring(1, value.length)
+        }
+
+        if (value.endsWith("_")) {
+            value = value.substring(0, value.length - 1)
+        }
+
+        return value
     }
 
     @Throws(java.lang.Exception::class)
@@ -548,7 +663,7 @@ class ExtractStr2L10n : DumbAwareAction() {
         return Base64.getDecoder().decode(value)
     }
 
-    private fun encodeURI(content:String):String {
+    private fun encodeURI(content: String): String {
         return try {
             URLEncoder.encode(content, StandardCharsets.UTF_8.name()).replace("+", "%20").replace("%7E", "~")
         } catch (var2: UnsupportedEncodingException) {
@@ -560,11 +675,12 @@ class ExtractStr2L10n : DumbAwareAction() {
 class InputKeyDialog(
     val project: Project,
     private var defaultValue: String?,
-    private val jsonObject: JsonObject?
+    private val jsonObject: JsonObject?,
+    private val otherArbFile: List<TranslateArbFile>,
 ) : DialogWrapper(project, false) {
 
     private val rootPanel: JComponent
-    private var contentTextField: JBTextField? = null
+    private var contentTextField: JBTextArea? = null
     private var existKey: Boolean = false
 
     init {
@@ -588,12 +704,26 @@ class InputKeyDialog(
         existKey = if (defaultValue.isNullOrEmpty()) false else isExistKey(defaultValue!!)
         existKeyHint.isVisible = existKey
 
-        val content = JBTextField()
+        val content = JBTextArea()
         content.text = defaultValue
-        content.minimumSize = Dimension(300, 35)
+        content.minimumSize = Dimension(300, 40)
+        content.lineWrap = true
+        content.wrapStyleWord = true
         contentTextField = content
+
+        val jsp = JBScrollPane(content)
+        jsp.minimumSize = Dimension(300, 40)
+        jsp.border = BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true),
+            BorderFactory.createEmptyBorder(2, 2, 2, 2)
+        )
+
         content.addFocusListener(object : FocusListener {
             override fun focusGained(p0: FocusEvent?) {
+                jsp.border = BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(UIColor.INPUT_FOCUS_COLOR, 2, true),
+                    BorderFactory.createEmptyBorder(2, 2, 2, 2)
+                )
                 if (this@InputKeyDialog.defaultValue == null) {
                     contentTextField?.also {
                         Toast.show(it, MessageType.WARNING, "翻译失败，请输入多语言key")
@@ -603,7 +733,10 @@ class InputKeyDialog(
             }
 
             override fun focusLost(p0: FocusEvent?) {
-
+                jsp.border = BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true),
+                    BorderFactory.createEmptyBorder(2, 2, 2, 2)
+                )
             }
         })
 
@@ -627,8 +760,68 @@ class InputKeyDialog(
             }
         })
 
-        builder.addComponent(content)
+        builder.addComponent(jsp)
         builder.addComponent(existKeyHint)
+
+        if (otherArbFile.isNotEmpty()) {
+            val label = JLabel("以下为其它语言翻译内容：")
+            label.border = BorderFactory.createEmptyBorder(10, 0, 0, 0)
+            builder.addComponent(label)
+
+            otherArbFile.forEach {
+                val box = Box.createHorizontalBox()
+                box.border = BorderFactory.createEmptyBorder(4, 0, 0, 0)
+
+                val label2 = JLabel("${it.targetLanguage}：")
+                label2.preferredSize = Dimension(40, 60)
+                box.add(label2)
+
+                val textArea = JBTextArea(it.translate)
+                textArea.minimumSize = Dimension(260, 60)
+                textArea.lineWrap = true
+                textArea.wrapStyleWord = true
+
+                val jsp2 = JBScrollPane(textArea)
+                jsp2.minimumSize = Dimension(260, 60)
+                box.add(jsp2)
+
+                textArea.addFocusListener(object : FocusListener {
+                    override fun focusGained(p0: FocusEvent?) {
+                        jsp2.border = BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(UIColor.INPUT_FOCUS_COLOR, 2, true),
+                            BorderFactory.createEmptyBorder(2, 2, 2, 2)
+                        )
+                    }
+
+                    override fun focusLost(p0: FocusEvent?) {
+                        jsp2.border = BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true),
+                            BorderFactory.createEmptyBorder(2, 2, 2, 2)
+                        )
+                    }
+                })
+
+                textArea.document.addDocumentListener(object : DocumentListener {
+                    override fun insertUpdate(p0: DocumentEvent?) {
+                        val str = textArea.text.trim()
+                        it.translate = str
+                    }
+
+                    override fun removeUpdate(p0: DocumentEvent?) {
+                        val str = textArea.text.trim()
+                        it.translate = str
+                    }
+
+                    override fun changedUpdate(p0: DocumentEvent?) {
+                        val str = textArea.text.trim()
+                        it.translate = str
+                    }
+                })
+
+                builder.addComponent(box)
+            }
+        }
+
         return builder.addComponentFillVertically(JPanel(), 0).panel
     }
 
@@ -667,4 +860,12 @@ class InputKeyDialog(
         super.doOKAction()
     }
 }
+
+// 需要翻译的arbFile数据
+data class TranslateArbFile(
+    val targetLanguage: String,
+    val arbFile: PsiFile,
+    val jsonObject: JsonObject?,
+    var translate: String? = null
+)
 

@@ -21,6 +21,7 @@ object PluginSettings {
 
     private const val COPY_ANDROID_STR_USE_SIMPLE_MODE = "copyAndroidStrUseSimpleMode"
     private const val EXTRACT_STR_2_L10N_SHOW_RENAME_DIALOG = "extractStr2L10nShowRenameDialog"
+    private const val EXTRACT_STR_2_L10N_TRANSLATE_OTHER = "extractStr2L10nTranslateOther"
 
     const val DEFAULT_IMAGE_DIR = "assets/images"
     const val DEFAULT_IMAGES_REF_FILE_PATH = "lib/resources"
@@ -116,6 +117,14 @@ object PluginSettings {
 
     fun setExtractStr2L10nShowRenameDialog(project: Project? = null, value: Boolean) {
         setValue(project, EXTRACT_STR_2_L10N_SHOW_RENAME_DIALOG, if (value) "1" else "0")
+    }
+
+    fun getExtractStr2L10nTranslateOther(project: Project? = null): Boolean {
+        return getValue(project, EXTRACT_STR_2_L10N_TRANSLATE_OTHER, "1") == "1"
+    }
+
+    fun setExtractStr2L10nTranslateOther(project: Project? = null, value: Boolean) {
+        setValue(project, EXTRACT_STR_2_L10N_TRANSLATE_OTHER, if (value) "1" else "0")
     }
 
     private fun getValue(project: Project?, key: String, defValue: String): String {
