@@ -145,6 +145,7 @@ class ExtractStr2L10n : DumbAwareAction() {
         var resDirPath = "lib/l10n"
         var resName = "app_en.arb"
         val config = rootDir.findChild("l10n.yaml")
+        var useEscaping = false
         if (config != null) {
             val psiFile = config.toPsiFile(project)
             if (psiFile != null) {
@@ -168,8 +169,14 @@ class ExtractStr2L10n : DumbAwareAction() {
                         resName = it
                     }
                 }
-            }
 
+                element = YamlUtils.findElement(psiFile, "use-escaping")
+                if (element != null && element is YAMLKeyValue) {
+                    element.value?.text?.also {
+                        useEscaping = "true".equals(it, true)
+                    }
+                }
+            }
         }
 
         val arbFilePath = rootDirPath + File.separator + resDirPath + File.separator + resName
@@ -259,7 +266,8 @@ class ExtractStr2L10n : DumbAwareAction() {
             jsonObject,
             rootDir,
             arbPsiFile,
-            otherArbFile
+            otherArbFile,
+            useEscaping
         )
     }
 
@@ -274,7 +282,8 @@ class ExtractStr2L10n : DumbAwareAction() {
         jsonObject: JsonObject?,
         rootDir: VirtualFile,
         arbPsiFile: PsiFile,
-        otherArbFile: List<TranslateArbFile>
+        otherArbFile: List<TranslateArbFile>,
+        useEscaping: Boolean
     ) {
 
         if (existKey != null) {
@@ -296,7 +305,8 @@ class ExtractStr2L10n : DumbAwareAction() {
                             } else {
                                 val translate2 = fixTranslatePlaceHolderStr(
                                     translate(originalText, file.targetLanguage),
-                                    dartTemplateEntryList
+                                    dartTemplateEntryList,
+                                    useEscaping
                                 )
                                 file.translate = translate2
                             }
@@ -369,7 +379,11 @@ class ExtractStr2L10n : DumbAwareAction() {
     }
 
     /// 修复因翻译，导致占位符被翻译为大写的问题
-    private fun fixTranslatePlaceHolderStr(translate: String?, list: List<DartPsiCompositeElement>): String? {
+    private fun fixTranslatePlaceHolderStr(
+        translate: String?,
+        list: List<DartPsiCompositeElement>,
+        useEscaping: Boolean
+    ): String? {
         if (translate.isNullOrEmpty()) {
             return null
         }
@@ -384,16 +398,21 @@ class ExtractStr2L10n : DumbAwareAction() {
             val param = "{Param$i}"
             val index = translate.indexOf(param, start)
             if (index != -1) {
-                val index2 = translate.indexOf("'$param'", start)
-                if (index2 != -1) {
-                    if (index2 == index - 1) {
-                        continue
-                    }
+                if (useEscaping) {
+                    val index2 = translate.indexOf("'$param'", start)
+                    if (index2 != -1) {
+                        if (index2 == index - 1) {
+                            continue
+                        }
 
-                    newValue = newValue?.replace(TextRange(index, index + param.length), "{param$i}")
+                        newValue = newValue?.replace(TextRange(index, index + param.length), "{param$i}")
+                    } else {
+                        newValue = newValue?.replace(TextRange(index, index + param.length), "{param$i}")
+                    }
                 } else {
                     newValue = newValue?.replace(TextRange(index, index + param.length), "{param$i}")
                 }
+
                 start = index + param.length
             }
         }
