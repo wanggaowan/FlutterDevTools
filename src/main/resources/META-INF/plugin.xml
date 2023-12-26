@@ -1,4 +1,3 @@
-<!--suppress PluginXmlCapitalization -->
 <idea-plugin>
     <id>com.wanggaowan.tools</id>
     <name>FlutterDevTools</name>
@@ -322,6 +321,10 @@
 
         <fileType name="ARB" extensions="arb" language="JSON"
                   implementationClass="com.wanggaowan.tools.extensions.filetype.ArbFileType"/>
+
+        <!--自动提示-->
+        <!--<completion.contributor language="Dart"-->
+        <!--                        implementationClass="com.wanggaowan.tools.extensions.DartServerCompletionContributor"/>-->
     </extensions>
 
 </idea-plugin>
