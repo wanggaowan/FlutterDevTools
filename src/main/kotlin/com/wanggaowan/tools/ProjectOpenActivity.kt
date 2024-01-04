@@ -5,8 +5,10 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.ModuleListener
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.modules
 import com.intellij.openapi.startup.StartupActivity
 import com.wanggaowan.tools.actions.filetemplate.FileTemplateUtils
+import com.wanggaowan.tools.extensions.complete.CodeAnalysisService
 import com.wanggaowan.tools.extensions.toolwindow.ResourcePreviewToolWindowFactory
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import io.flutter.bazel.WorkspaceCache
@@ -32,9 +34,10 @@ class ProjectOpenActivity : StartupActivity, DumbAware {
             SwingUtilities.invokeLater {
                 ResourcePreviewToolWindowFactory.init(project)
             }
+            CodeAnalysisService.startAnalysisModules(project, project.modules.toList())
         } else {
             project.messageBus.connect().subscribe(ProjectTopics.MODULES, object : ModuleListener {
-                override fun modulesAdded(project: Project, modules: MutableList<Module>) {
+                override fun modulesAdded(project: Project, modules: List<Module>) {
                     for (module in modules) {
                         if (!toolWindowsInitialized && module.isFlutterProject) {
                             toolWindowsInitialized = true
@@ -44,6 +47,7 @@ class ProjectOpenActivity : StartupActivity, DumbAware {
                             break
                         }
                     }
+                    CodeAnalysisService.startAnalysisModules(project, modules)
                 }
             })
         }

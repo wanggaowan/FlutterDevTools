@@ -2,6 +2,8 @@ package com.wanggaowan.tools.settings
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.modules
+import com.wanggaowan.tools.extensions.complete.CodeAnalysisService
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.ex.rootDir
 import io.flutter.pub.PubRoot
@@ -35,6 +37,10 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
         }
 
         if (isExtractStr2L10nModified()) {
+            return true
+        }
+
+        if (isCodeCompleteModified()) {
             return true
         }
 
@@ -72,9 +78,22 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
         return false
     }
 
+    private fun isCodeCompleteModified(): Boolean {
+        if (PluginSettings.getCodeCompleteTypeDirectDev(getProjectWrapper()) != mSettingsView?.codeCompleteTypeDirectDev?.isSelected) {
+            return true
+        }
+
+        if (PluginSettings.getCodeCompleteTypeTransitive(getProjectWrapper()) != mSettingsView?.codeCompleteTypeTransitive?.isSelected) {
+            return true
+        }
+
+        return false
+    }
+
     override fun apply() {
         applyCreateResourceSet()
         applyExtractStr2L10n()
+        applyCodeComplete()
         PluginSettings.setCopyAndroidStrUseSimpleMode(
             getProjectWrapper(),
             mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected ?: true
@@ -136,9 +155,22 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
         )
     }
 
+    private fun applyCodeComplete() {
+        val oldDev = PluginSettings.getCodeCompleteTypeDirectDev(project)
+        val oldTransitive = PluginSettings.getCodeCompleteTypeTransitive(project)
+        val dev = mSettingsView?.codeCompleteTypeDirectDev?.isSelected ?: true
+        val transitive = mSettingsView?.codeCompleteTypeTransitive?.isSelected ?: true
+        PluginSettings.setCodeCompleteTypeDirectDev(getProjectWrapper(), dev)
+        PluginSettings.setCodeCompleteTypeTransitive(getProjectWrapper(), transitive)
+        if (oldDev != dev || oldTransitive != transitive) {
+            CodeAnalysisService.startAnalysisModules(project,project.modules.toList())
+        }
+    }
+
     override fun reset() {
         resetCreateResource()
         resetExtractStr2L10n()
+        resetCodeComplete()
         mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected =
             PluginSettings.getCopyAndroidStrUseSimpleMode(getProjectWrapper())
     }
@@ -165,6 +197,13 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
             PluginSettings.getExtractStr2L10nShowRenameDialog(getProjectWrapper())
         mSettingsView?.extractStr2L10nTranslateOther?.isSelected =
             PluginSettings.getExtractStr2L10nTranslateOther(getProjectWrapper())
+    }
+
+    private fun resetCodeComplete() {
+        mSettingsView?.codeCompleteTypeDirectDev?.isSelected =
+            PluginSettings.getCodeCompleteTypeDirectDev(getProjectWrapper())
+        mSettingsView?.codeCompleteTypeTransitive?.isSelected =
+            PluginSettings.getCodeCompleteTypeTransitive(getProjectWrapper())
     }
 
     override fun disposeUIResources() {

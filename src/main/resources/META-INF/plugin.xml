@@ -23,6 +23,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>2.9</p>
+    <ul>
+       <li>自动补全支持dev_dependencies和间接依赖的库，可在设置界面启用，默认不启用。</li>
+       <li>支持dev_dependencies和间接依赖的库import导入快速修复，采用自动补全的配置项</li>
+    </ul>
+
     <p>2.8</p>
     <ul>
        <li>提取多语言支持翻译模版文本为其它语言并插入到对应arb文件</li>
@@ -322,9 +328,19 @@
         <fileType name="ARB" extensions="arb" language="JSON"
                   implementationClass="com.wanggaowan.tools.extensions.filetype.ArbFileType"/>
 
+        <projectService serviceInterface="com.wanggaowan.tools.extensions.complete.CodeAnalysisService"
+                        serviceImplementation="com.wanggaowan.tools.extensions.complete.CodeAnalysisService"/>
         <!--自动提示-->
-        <!--<completion.contributor language="Dart"-->
-        <!--                        implementationClass="com.wanggaowan.tools.extensions.DartServerCompletionContributor"/>-->
+        <completion.contributor language="Dart"
+                                implementationClass="com.wanggaowan.tools.extensions.complete.CodeCompletionContributor"/>
+        <!--<intentionAction>-->
+        <!--    <className>com.wanggaowan.tools.extensions.assists.DartQuickAssistIntention</className>-->
+        <!--    <bundleName>messages.DartBundle</bundleName>-->
+        <!--    <categoryKey>inspections.group.name</categoryKey>-->
+        <!--    <descriptionDirectoryName>DartQuickAssistIntention</descriptionDirectoryName>-->
+        <!--</intentionAction>-->
+        <annotator language="Dart" implementationClass="com.wanggaowan.tools.extensions.annotator.FixImportAnnotator"/>
+
     </extensions>
 
 </idea-plugin>

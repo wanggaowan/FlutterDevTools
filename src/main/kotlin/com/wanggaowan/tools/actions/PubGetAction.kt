@@ -2,10 +2,10 @@ package com.wanggaowan.tools.actions
 
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.modules
+import com.wanggaowan.tools.extensions.complete.CodeAnalysisService
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.flutter.FlutterCommandUtils
 import io.flutter.actions.FlutterSdkAction
@@ -35,7 +35,11 @@ class PubGetAction : FlutterSdkAction() {
     override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
         root?.also { pubRoot ->
             val module = pubRoot.getModule(project) ?: return
-            FlutterCommandUtils.pubGet(module, pubRoot, sdk)
+            FlutterCommandUtils.pubGet(module, pubRoot, sdk, onDone = { existCode ->
+                if (existCode == 0) {
+                    CodeAnalysisService.startAnalysisModules(project, project.modules.toList())
+                }
+            })
         }
     }
 }

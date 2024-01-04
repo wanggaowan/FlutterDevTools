@@ -23,6 +23,10 @@ object PluginSettings {
     private const val EXTRACT_STR_2_L10N_SHOW_RENAME_DIALOG = "extractStr2L10nShowRenameDialog"
     private const val EXTRACT_STR_2_L10N_TRANSLATE_OTHER = "extractStr2L10nTranslateOther"
 
+    // 代码补全设置
+    private const val CODE_COMPLETE_TYPE_DIRECT_DEV = "codeCompleteTypeDirectDev"
+    private const val CODE_COMPLETE_TYPE_TRANSITIVE = "codeCompleteTypeTransitive"
+
     const val DEFAULT_IMAGE_DIR = "assets/images"
     const val DEFAULT_IMAGES_REF_FILE_PATH = "lib/resources"
     const val DEFAULT_IMAGES_REF_FILE_NAME = "images.dart"
@@ -125,6 +129,22 @@ object PluginSettings {
 
     fun setExtractStr2L10nTranslateOther(project: Project? = null, value: Boolean) {
         setValue(project, EXTRACT_STR_2_L10N_TRANSLATE_OTHER, if (value) "1" else "0")
+    }
+
+    fun getCodeCompleteTypeDirectDev(project: Project? = null): Boolean {
+        return getValue(project, CODE_COMPLETE_TYPE_DIRECT_DEV, "0") == "1"
+    }
+
+    fun setCodeCompleteTypeDirectDev(project: Project? = null, value: Boolean) {
+        setValue(project, CODE_COMPLETE_TYPE_DIRECT_DEV, if (value) "1" else "0")
+    }
+
+    fun getCodeCompleteTypeTransitive(project: Project? = null): Boolean {
+        return getValue(project, CODE_COMPLETE_TYPE_TRANSITIVE, "0") == "1"
+    }
+
+    fun setCodeCompleteTypeTransitive(project: Project? = null, value: Boolean) {
+        setValue(project, CODE_COMPLETE_TYPE_TRANSITIVE, if (value) "1" else "0")
     }
 
     private fun getValue(project: Project?, key: String, defValue: String): String {

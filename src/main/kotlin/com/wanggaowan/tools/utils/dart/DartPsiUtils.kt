@@ -226,11 +226,9 @@ object DartPsiUtils {
 
     /**
      * 添加Import导入,[importStr]为导入的内容，如：import 'package:json_annotation/json_annotation.dart'; 。
-     * [isRelPath]表示导入的内容是否采用相对路径
      */
-    fun addImport(project: Project, psiFile: PsiFile, importStr: String, isRelPath: Boolean = false) {
-        var lastImportElement: PsiElement? = null
-        var prePsiWhiteSpace = false
+    fun addImport(project: Project, psiFile: PsiFile, importStr: String) {
+        val isRelPath = !importStr.startsWith("import 'package:")
 
         // import 'dart:io';
         //
@@ -241,36 +239,37 @@ object DartPsiUtils {
         // import '../utils/account_util.dart';
 
         // 插入到import 'package:分组的最后一个
-        for (child in psiFile.children) {
-            if (child is DartImportStatement) {
-                if (child.textMatches(importStr)) {
-                    return
-                }
+        val imports = PsiTreeUtil.getChildrenOfType(psiFile,DartImportStatement::class.java)
+        if (imports.isNullOrEmpty()) {
+            createCommonElement(project, importStr)?.also {
+                psiFile.addBefore(it, psiFile.firstChild)
+            }
+            return
+        }
 
-                if (!isRelPath && prePsiWhiteSpace
-                    && lastImportElement != null
-                    && !child.text.startsWith("import 'package:")
-                ) {
-                    break
-                }
+        if (isRelPath) {
+            createCommonElement(project, importStr)?.also {
+                psiFile.addAfter(it, imports.last())
+            }
+            return
+        }
 
-                lastImportElement = child
-                prePsiWhiteSpace = false
-            } else if (child is PsiWhiteSpace) {
-                prePsiWhiteSpace = true
-            } else {
-                prePsiWhiteSpace = false
-                if (lastImportElement != null) {
-                    break
-                }
+        var lastPackageImport: PsiElement? = null
+        for (child in imports) {
+            if (child.text.startsWith("import 'package:")) {
+                lastPackageImport = child
+            } else if (lastPackageImport != null){
+                break
             }
         }
 
-        createCommonElement(project, importStr)?.also {
-            if (lastImportElement != null) {
-                psiFile.addAfter(it, lastImportElement)
-            } else {
+        if (lastPackageImport == null) {
+            createCommonElement(project, importStr)?.also {
                 psiFile.addBefore(it, psiFile.firstChild)
+            }
+        } else {
+            createCommonElement(project, importStr)?.also {
+                psiFile.addAfter(it, lastPackageImport)
             }
         }
     }

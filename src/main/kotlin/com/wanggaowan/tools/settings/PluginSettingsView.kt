@@ -34,6 +34,9 @@ class PluginSettingsView(pubRoot: PubRoot?) {
     val extractStr2L10nShowRenameDialog = JBCheckBox("展示重命名弹窗")
     val extractStr2L10nTranslateOther = JBCheckBox("翻译成其它语言")
 
+    val codeCompleteTypeDirectDev = JBCheckBox("支持dev_dependencies依赖的库自动补全")
+    val codeCompleteTypeTransitive = JBCheckBox("支持间接依赖的库自动补全")
+
     init {
         var builder = FormBuilder.createFormBuilder()
         builder
@@ -56,6 +59,12 @@ class PluginSettingsView(pubRoot: PubRoot?) {
         builder = builder.addComponent(extractStr2L10nShowRenameDialog, 1)
         extractStr2L10nTranslateOther.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
         builder = builder.addComponent(extractStr2L10nTranslateOther, 1)
+
+        builder = builder.addComponent(createCategoryTitle("代码自动补全", marginTop = 10), 1)
+        codeCompleteTypeDirectDev.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
+        builder = builder.addComponent(codeCompleteTypeDirectDev, 1)
+        codeCompleteTypeTransitive.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
+        builder = builder.addComponent(codeCompleteTypeTransitive, 1)
 
         builder = builder.addComponent(createCategoryTitle("其它设置", marginTop = 10), 1)
         copyAndroidStrUseSimpleMode.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)

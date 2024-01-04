@@ -6,7 +6,7 @@ plugins {
 
 group = "com.wanggaowan"
 // version = "1.0-SNAPSHOT"
-version = "2.8"
+version = "2.9"
 
 repositories {
     mavenCentral()
@@ -33,7 +33,7 @@ intellij {
     )
 
     // 是否开启增量构建
-    instrumentCode.set(true)
+    instrumentCode.set(false)
 }
 
 // dependencies {
@@ -69,5 +69,9 @@ tasks {
 
     publishPlugin {
         token.set(System.getenv("PUBLISH_TOKEN"))
+    }
+
+    instrumentCode {
+        compilerVersion.set("223.8836.35")
     }
 }
