@@ -5,9 +5,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.Module
-import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -20,6 +17,7 @@ import com.intellij.psi.util.elementType
 import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.entity.Property
 import com.wanggaowan.tools.settings.PluginSettings
+import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.StringUtils
 import com.wanggaowan.tools.utils.XUtils.isImage
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
@@ -99,33 +97,31 @@ object GeneratorImageRefUtils {
             return
         }
 
-        ProgressManager.getInstance().run(object : Task.Backgroundable(projectWrapper, "Create images res ref") {
-            override fun run(progressIndicator: ProgressIndicator) {
-                progressIndicator.isIndeterminate = true
-                WriteCommandAction.runWriteCommandAction(projectWrapper) {
-                    // 写入数据之前先对文件进行保存，否则可能抛出异常：对未保存的文件进行写入
-                    FileDocumentManager.getInstance().saveAllDocuments()
-                    try {
-                        createImageRefFile(
-                            projectWrapper,
-                            moduleRootFile,
-                            imagesDir,
-                            imagesRelDirPath,
-                            imageRefFilePath,
-                            imageRefFileName,
-                            imageRefClassName
-                        )
-                        progressIndicator.fraction = 0.5
-                        insertAssets(projectWrapper, moduleRootFile, imagesDir, imagesRelDirPath)
-                    } catch (e: Exception) {
-                        // 有时候由于编辑未保存的文件而报错
-                        e.printStackTrace()
-                    }
+        ProgressUtils.runBackground(projectWrapper, "Create images res ref") { progressIndicator ->
+            progressIndicator.isIndeterminate = true
+            WriteCommandAction.runWriteCommandAction(projectWrapper) {
+                // 写入数据之前先对文件进行保存，否则可能抛出异常：对未保存的文件进行写入
+                FileDocumentManager.getInstance().saveAllDocuments()
+                try {
+                    createImageRefFile(
+                        projectWrapper,
+                        moduleRootFile,
+                        imagesDir,
+                        imagesRelDirPath,
+                        imageRefFilePath,
+                        imageRefFileName,
+                        imageRefClassName
+                    )
+                    progressIndicator.fraction = 0.5
+                    insertAssets(projectWrapper, moduleRootFile, imagesDir, imagesRelDirPath)
+                } catch (e: Exception) {
+                    // 有时候由于编辑未保存的文件而报错
+                    e.printStackTrace()
                 }
-                progressIndicator.isIndeterminate = false
-                progressIndicator.fraction = 1.0
             }
-        })
+            progressIndicator.isIndeterminate = false
+            progressIndicator.fraction = 1.0
+        }
     }
 
     // <editor-fold desc="创建Images.dart相关逻辑">

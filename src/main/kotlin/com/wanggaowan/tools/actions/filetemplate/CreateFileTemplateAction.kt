@@ -6,14 +6,12 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.jetbrains.lang.dart.DartFileType
 import com.wanggaowan.tools.utils.NotificationUtils
+import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import java.io.BufferedWriter
 import java.io.File
@@ -67,82 +65,80 @@ class CreateFileTemplateAction : DumbAwareAction() {
             return
         }
 
-        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "create file template") {
-            override fun run(progressIndicator: ProgressIndicator) {
-                progressIndicator.isIndeterminate = true
-                WriteCommandAction.runWriteCommandAction(project) {
-                    if (dialog.dataChange) {
-                        FileTemplateUtils.saveTemplateList(dialog.templateData)
-                    }
+        ProgressUtils.runBackground(project, "create file template") { progressIndicator ->
+            progressIndicator.isIndeterminate = true
+            WriteCommandAction.runWriteCommandAction(project) {
+                if (dialog.dataChange) {
+                    FileTemplateUtils.saveTemplateList(dialog.templateData)
+                }
 
-                    val template = dialog.selectTemplate ?: return@runWriteCommandAction
-                    val children = template.children
-                    if (children.isNullOrEmpty()) {
-                        return@runWriteCommandAction
-                    }
+                val template = dialog.selectTemplate ?: return@runWriteCommandAction
+                val children = template.children
+                if (children.isNullOrEmpty()) {
+                    return@runWriteCommandAction
+                }
 
-                    var virtualFile = event.getData(CommonDataKeys.VIRTUAL_FILE) ?: return@runWriteCommandAction
-                    if (!virtualFile.isDirectory) {
-                        virtualFile = virtualFile.parent
-                    }
+                var virtualFile = event.getData(CommonDataKeys.VIRTUAL_FILE) ?: return@runWriteCommandAction
+                if (!virtualFile.isDirectory) {
+                    virtualFile = virtualFile.parent
+                }
 
-                    dialog.placeholderMap.keys.forEach {
-                        when (it) {
-                            "${'$'}DATE${'$'}" -> {
-                                dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd").format(Date())
-                            }
-
-                            "${'$'}TIME${'$'}" -> {
-                                dialog.placeholderMap[it] = SimpleDateFormat("HH:mm").format(Date())
-                            }
-
-                            "${'$'}DATETIME${'$'}" -> {
-                                dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())
-                            }
-
-                            "${'$'}USER${'$'}" -> {
-                                dialog.placeholderMap[it] = System.getenv("USER")
-                            }
+                dialog.placeholderMap.keys.forEach {
+                    when (it) {
+                        "${'$'}DATE${'$'}" -> {
+                            dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd").format(Date())
                         }
-                    }
 
-                    try {
-                        children.forEach {
-                            var content = it.tempContent ?: it.content ?: ""
-                            if (content.isNotEmpty()) {
-                                dialog.placeholderMap.forEach { map ->
-                                    content = content.replace(map.key, map.value)
-                                }
-                            }
-
-                            val file =
-                                File("${virtualFile.path}/${it.name!!}.${DartFileType.INSTANCE.defaultExtension}")
-                            if (!file.exists()) {
-                                file.createNewFile()
-                                val fw = FileWriter(file.absoluteFile)
-                                val bw = BufferedWriter(fw)
-                                bw.write(content)
-                                bw.close()
-                            } else {
-                                throw RuntimeException("${file.path} already exist")
-                            }
-
-                            // 采用以下方式创建，创建的文件dart语法解析不会主动触发，不明白缘由
-                            // val psiParent = virtualFile.toPsiDirectory(project)
-                            // val file = DartPsiUtils.createFile(project, it.name!!, content)
-                            // file?.also { child ->
-                            //     psiParent.add(child)
-                            // }
+                        "${'$'}TIME${'$'}" -> {
+                            dialog.placeholderMap[it] = SimpleDateFormat("HH:mm").format(Date())
                         }
-                        virtualFile.refresh(false, false)
-                    } catch (e: Exception) {
-                        NotificationUtils.showBalloonMsg(project, e.message ?: "文件创建失败", NotificationType.ERROR)
+
+                        "${'$'}DATETIME${'$'}" -> {
+                            dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())
+                        }
+
+                        "${'$'}USER${'$'}" -> {
+                            dialog.placeholderMap[it] = System.getenv("USER")
+                        }
                     }
                 }
-                progressIndicator.isIndeterminate = false
-                progressIndicator.fraction = 1.0
+
+                try {
+                    children.forEach {
+                        var content = it.tempContent ?: it.content ?: ""
+                        if (content.isNotEmpty()) {
+                            dialog.placeholderMap.forEach { map ->
+                                content = content.replace(map.key, map.value)
+                            }
+                        }
+
+                        val file =
+                            File("${virtualFile.path}/${it.name!!}.${DartFileType.INSTANCE.defaultExtension}")
+                        if (!file.exists()) {
+                            file.createNewFile()
+                            val fw = FileWriter(file.absoluteFile)
+                            val bw = BufferedWriter(fw)
+                            bw.write(content)
+                            bw.close()
+                        } else {
+                            throw RuntimeException("${file.path} already exist")
+                        }
+
+                        // 采用以下方式创建，创建的文件dart语法解析不会主动触发，不明白缘由
+                        // val psiParent = virtualFile.toPsiDirectory(project)
+                        // val file = DartPsiUtils.createFile(project, it.name!!, content)
+                        // file?.also { child ->
+                        //     psiParent.add(child)
+                        // }
+                    }
+                    virtualFile.refresh(false, false)
+                } catch (e: Exception) {
+                    NotificationUtils.showBalloonMsg(project, e.message ?: "文件创建失败", NotificationType.ERROR)
+                }
             }
-        })
+            progressIndicator.isIndeterminate = false
+            progressIndicator.fraction = 1.0
+        }
     }
 
     private fun justSaveTemplateChange(project: Project, dialog: CreateFileTemplateDialog) {

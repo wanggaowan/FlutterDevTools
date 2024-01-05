@@ -9,9 +9,6 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
@@ -20,6 +17,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.ui.JsonToDartDialog
+import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.StringUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
@@ -130,39 +128,36 @@ class JsonToDartAction : DumbAwareAction() {
 
         PropertiesSerializeUtils.putString(project, JsonToDartDialog.CONVERTERS_VALUE, config.convertersValue)
         PropertiesSerializeUtils.putBoolean(project, JsonToDartDialog.SET_CONVERTERS, config.setConverters)
-
-        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "GsonFormat") {
-            override fun run(progressIndicator: ProgressIndicator) {
-                progressIndicator.isIndeterminate = true
-                WriteCommandAction.runWriteCommandAction(project) {
-                    if (rootElement == null) {
-                        addClass(project, psiFile, null, className, jsonValue, config)
-                    } else {
-                        // 用户选中了对应的Dart class
-                        createFieldOnJsonObject(project, psiFile, rootElement, jsonValue, config)
-                        selectedClassInit(
-                            project, selectedClazzElement, rootElement, selectedClazzName,
-                            jsonValue, config
-                        )
-                    }
-
-                    if (config.generatorJsonSerializable) {
-                        addJsonSerializableImport(project, psiFile)
-                        addPartImport(project, psiFile)
-                    }
-
-                    DartPsiUtils.reformatFile(project, psiFile)
-
-                    flutterSdk?.also {
-                        FileDocumentManager.getInstance().saveAllDocuments()
-                        executeCommand(project, psiFile, it)
-                    }
+        ProgressUtils.runBackground(project, "GsonFormat") { progressIndicator ->
+            progressIndicator.isIndeterminate = true
+            WriteCommandAction.runWriteCommandAction(project) {
+                if (rootElement == null) {
+                    addClass(project, psiFile, null, className, jsonValue, config)
+                } else {
+                    // 用户选中了对应的Dart class
+                    createFieldOnJsonObject(project, psiFile, rootElement, jsonValue, config)
+                    selectedClassInit(
+                        project, selectedClazzElement, rootElement, selectedClazzName,
+                        jsonValue, config
+                    )
                 }
 
-                progressIndicator.isIndeterminate = false
-                progressIndicator.fraction = 1.0
+                if (config.generatorJsonSerializable) {
+                    addJsonSerializableImport(project, psiFile)
+                    addPartImport(project, psiFile)
+                }
+
+                DartPsiUtils.reformatFile(project, psiFile)
+
+                flutterSdk?.also {
+                    FileDocumentManager.getInstance().saveAllDocuments()
+                    executeCommand(project, psiFile, it)
+                }
             }
-        })
+
+            progressIndicator.isIndeterminate = false
+            progressIndicator.fraction = 1.0
+        }
     }
 
     /**

@@ -19,10 +19,16 @@
       <li>Android &lt;string/&gt;转化arb文件格式</li>
       <li>创建Dart文件模版，支持一组文件同时创建</li>
       <li>提取中文为多语言</li>
+      <li>根据模版arb翻译其它语言arb文件功能</li>
     </ol>
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>3.0</p>
+    <ul>
+      <li>增加根据模版arb翻译其它语言arb文件功能</li>
+    </ul>
+
     <p>2.9</p>
     <ul>
        <li>自动补全支持dev_dependencies和间接依赖的库，可在设置界面启用，默认不启用。</li>
@@ -255,12 +261,18 @@
         <group>
             <action
                 id="FlutterDevTools.ExtractStr2L10n"
-                class="com.wanggaowan.tools.actions.ExtractStr2L10n"
+                class="com.wanggaowan.tools.actions.translate.ExtractStr2L10n"
                 text="提取为多语言"/>
             <separator/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
         </group>
 
+        <action id="FlutterDevTools.TranslateArbAction"
+                class="com.wanggaowan.tools.actions.translate.TranslateArbAction"
+                text="根据模版arb翻译"
+                description="根据模版arb对应内容，将当前文件不存在的内容进行翻译并插入">
+            <add-to-group group-id="CutCopyPasteGroup" anchor="last" />
+        </action>
     </actions>
 
     <applicationListeners>

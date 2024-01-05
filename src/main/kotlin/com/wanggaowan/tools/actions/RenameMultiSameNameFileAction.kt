@@ -6,9 +6,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -20,6 +17,7 @@ import com.intellij.refactoring.rename.naming.AutomaticRenamerFactory
 import com.wanggaowan.tools.ui.ImagesRenameDialog
 import com.wanggaowan.tools.ui.RenameEntity
 import com.wanggaowan.tools.utils.NotificationUtils
+import com.wanggaowan.tools.utils.ProgressUtils
 
 
 /**
@@ -66,55 +64,53 @@ class RenameMultiSameNameFileAction : DumbAwareAction() {
     }
 
     private fun rename(project: Project, data: List<RenameEntity>) {
-        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "images rename") {
-            override fun run(progressIndicator: ProgressIndicator) {
-                progressIndicator.isIndeterminate = true
-                WriteCommandAction.runWriteCommandAction(project) {
-                    data.forEach {
-                        if (it.oldName.isNotEmpty() && it.newName.isNotEmpty()
-                            && it.oldName != it.newName
-                            && (!it.existFile || it.coverExistFile)
+        ProgressUtils.runBackground(project,"images rename") {progressIndicator->
+            progressIndicator.isIndeterminate = true
+            WriteCommandAction.runWriteCommandAction(project) {
+                data.forEach {
+                    if (it.oldName.isNotEmpty() && it.newName.isNotEmpty()
+                        && it.oldName != it.newName
+                        && (!it.existFile || it.coverExistFile)
+                    ) {
+                        val parentName = it.oldFile.parent.name
+                        val parent = if (parentName == "1.5x"
+                            || parentName == "2.0x"
+                            || parentName == "3.0x"
+                            || parentName == "4.0x"
                         ) {
-                            val parentName = it.oldFile.parent.name
-                            val parent = if (parentName == "1.5x"
-                                || parentName == "2.0x"
-                                || parentName == "3.0x"
-                                || parentName == "4.0x"
-                            ) {
-                                it.oldFile.parent.parent
-                            } else {
-                                it.oldFile.parent
-                            }
+                            it.oldFile.parent.parent
+                        } else {
+                            it.oldFile.parent
+                        }
 
-                            parent.findChild(it.oldName)?.also { file ->
-                                file.rename(project, it.newName)
-                            }
+                        parent.findChild(it.oldName)?.also { file ->
+                            file.rename(project, it.newName)
+                        }
 
-                            parent.findChild("1.5x")?.findChild(it.oldName)?.also { file ->
-                                file.rename(project, it.newName)
-                            }
+                        parent.findChild("1.5x")?.findChild(it.oldName)?.also { file ->
+                            file.rename(project, it.newName)
+                        }
 
-                            parent.findChild("2.0x")?.findChild(it.oldName)?.also { file ->
-                                file.rename(project, it.newName)
-                            }
+                        parent.findChild("2.0x")?.findChild(it.oldName)?.also { file ->
+                            file.rename(project, it.newName)
+                        }
 
-                            parent.findChild("3.0x")?.findChild(it.oldName)?.also { file ->
-                                file.rename(project, it.newName)
-                            }
+                        parent.findChild("3.0x")?.findChild(it.oldName)?.also { file ->
+                            file.rename(project, it.newName)
+                        }
 
-                            parent.findChild("4.0x")?.findChild(it.oldName)?.also { file ->
-                                file.rename(project, it.newName)
-                            }
+                        parent.findChild("4.0x")?.findChild(it.oldName)?.also { file ->
+                            file.rename(project, it.newName)
                         }
                     }
-
-                    NotificationUtils.showBalloonMsg(project, "图片已重命名", NotificationType.INFORMATION)
                 }
 
-                progressIndicator.isIndeterminate = false
-                progressIndicator.fraction = 1.0
+                NotificationUtils.showBalloonMsg(project, "图片已重命名", NotificationType.INFORMATION)
             }
-        })
+
+            progressIndicator.isIndeterminate = false
+            progressIndicator.fraction = 1.0
+        }
     }
 
     private fun reanmePsiElement(project: Project, psiElement: PsiElement, newName: String) {
