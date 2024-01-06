@@ -137,8 +137,12 @@ object TranslateUtils {
     }
 
     private fun encodeURI(content: String): String {
+        // 字符 A~Z、a~z、0~9 以及字符-、_、.、~不编码
+        // 空格编码成%20，而不是加号（+）
         return try {
-            URLEncoder.encode(content, StandardCharsets.UTF_8.name()).replace("+", "%20").replace("%7E", "~")
+            URLEncoder.encode(content, StandardCharsets.UTF_8.name()).replace("+", "%20")
+                .replace("%7E", "~")
+                .replace("*","%2A")
         } catch (var2: UnsupportedEncodingException) {
             content
         }
