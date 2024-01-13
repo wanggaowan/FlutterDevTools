@@ -24,6 +24,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>3.1</p>
+    <ul>
+      <li>自动补全和快速修复支持扩展方法</li>
+      <li>修复Json to Dart功能报错Bug</li>
+    </ul>
+
     <p>3.0</p>
     <ul>
       <li>增加根据模版arb翻译其它语言arb文件功能</li>

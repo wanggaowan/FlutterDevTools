@@ -9,6 +9,7 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.Consumer
 import com.intellij.util.ObjectUtils
@@ -19,7 +20,9 @@ import com.jetbrains.lang.dart.highlight.DartSyntaxHighlighterColors
 import com.jetbrains.lang.dart.psi.DartImportStatement
 import com.jetbrains.lang.dart.sdk.DartSdk
 import com.wanggaowan.tools.extensions.complete.CodeAnalysisService
+import com.wanggaowan.tools.extensions.complete.Suggestion
 import com.wanggaowan.tools.extensions.fixes.DartImportQuickFix
+import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.dartlang.analysis.server.protocol.AnalysisErrorSeverity
 import org.jetbrains.kotlin.idea.base.util.module
@@ -39,7 +42,7 @@ class FixImportAnnotator : Annotator {
             return
         }
 
-        var text = element.text
+        val text = element.text
         if (text.isEmpty()) {
             return
         }
@@ -50,6 +53,8 @@ class FixImportAnnotator : Annotator {
         if (!module.isFlutterProject) {
             return
         }
+
+        val document = file.viewProvider.document ?: return
 
         val session = holder.currentAnnotationSession
         var notYetAppliedErrors: MutableList<DartError>? = session.getUserData(DART_ERRORS)?.toMutableList()
@@ -76,39 +81,66 @@ class FixImportAnnotator : Annotator {
             }
         }
 
+        val parseDev = PluginSettings.getCodeCompleteTypeDirectDev(element.project)
+        val parseTransitive = PluginSettings.getCodeCompleteTypeTransitive(element.project)
         processDartRegionsInRange(notYetAppliedErrors, element.textRange,
             Consumer { err: DartError ->
                 if (AnalysisErrorSeverity.ERROR != err.severity) {
                     return@Consumer
                 }
 
-                val index = text.lastIndexOf("(")
+                var str = document.getText(TextRange(err.offset, err.offset + err.length))
+                val index = str.lastIndexOf("(")
                 if (index != -1) {
-                    text = text.substring(0, index).trim()
+                    str = str.substring(0, index).trim()
                 }
 
-                val suggestion = service.getSuggestions(module)?.find { it.name == text }
-                if (suggestion == null || suggestion.libraryUriToImport.isNullOrEmpty()) {
-                    return@Consumer
+                val isCall = document.getText(TextRange(err.offset - 1, err.offset)) == "."
+
+                val suggestions = service.getSuggestions(module)?.filterIndexed { _, it ->
+                    it.name == str
+                        && ((parseDev && it.libType == Suggestion.LIB_TYPE_DEV)
+                        || (parseTransitive && it.libType == Suggestion.LIB_TYPE_TRANSITIVE))
                 }
 
-                val imports = PsiTreeUtil.getChildrenOfType(file, DartImportStatement::class.java)
-                val libraryUri = suggestion.libraryUriToImport
-                if (imports?.find {
-                        val text2 = it.text
-                        text2 == "import '${libraryUri}';" || text2 == "import \"${libraryUri}\";"
-                    } != null) {
-                    /// 如果import已导入，则跳过，此时官方Dart插件自动补全会出现提示
-                    return@Consumer
+                suggestions?.forEach {
+                    createAnnotation(holder, file, err, it, isCall)
                 }
-
-                holder.newAnnotation(HighlightSeverity.ERROR, err.message)
-                    .range(element.textRange)
-                    .tooltip("")
-                    .textAttributes(DartSyntaxHighlighterColors.ERROR)
-                    .withFix(DartImportQuickFix(suggestion, err))
-                    .create()
             })
+    }
+
+    private fun createAnnotation(
+        holder: AnnotationHolder, file: PsiFile, err: DartError,
+        suggestion: Suggestion, isCall: Boolean
+    ) {
+        if (suggestion.libraryUriToImport.isNullOrEmpty()) {
+            return
+        }
+
+        if (!suggestion.isExtension && isCall) {
+            return
+        }
+
+        if (suggestion.isExtension && !isCall) {
+            return
+        }
+
+        val imports = PsiTreeUtil.getChildrenOfType(file, DartImportStatement::class.java)
+        val libraryUri = suggestion.libraryUriToImport
+        if (imports?.find {
+                val text2 = it.text
+                text2 == "import '${libraryUri}';" || text2 == "import \"${libraryUri}\";"
+            } != null) {
+            /// 如果import已导入，则跳过，此时官方Dart插件自动补全会出现提示
+            return
+        }
+
+        holder.newAnnotation(HighlightSeverity.ERROR, err.message)
+            .range(TextRange(err.offset, err.offset + err.length))
+            .tooltip("")
+            .textAttributes(DartSyntaxHighlighterColors.ERROR)
+            .withFix(DartImportQuickFix(suggestion, err))
+            .create()
     }
 
     private fun canBeAnalyzedByServer(project: Project, file: VirtualFile?): Boolean {

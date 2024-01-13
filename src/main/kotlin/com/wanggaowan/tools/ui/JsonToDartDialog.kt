@@ -6,12 +6,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.MessageType
 import com.intellij.ui.EditorTextField
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.msg.Toast
 import java.awt.BorderLayout
-import java.awt.Dimension
 import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
 import javax.swing.*
 
 /**
@@ -22,49 +23,83 @@ class JsonToDartDialog(
     private val className: String?,
 ) : DialogWrapper(project, false) {
 
-    private lateinit var mRootPanel: JPanel
-    private lateinit var mHeadRootPanel: JPanel
+    private val mRootPanel: JPanel = JPanel(BorderLayout())
     private val mCreateObjectName: ExtensionTextField = ExtensionTextField("", placeHolder = "请输入类名称")
     private val mObjSuffix: ExtensionTextField = ExtensionTextField("", placeHolder = "类名后缀")
-    private lateinit var mJPEtRoot: JPanel
     private val mEtJsonContent: EditorTextField = JsonLanguageTextField(project)
-    private lateinit var mCbCreateDoc: JCheckBox
-    private lateinit var mCbGeneratorJsonSerializable: JCheckBox
-    private lateinit var mCbGeneratorGFile: JCheckBox
-    private lateinit var mCbNullSafe: JCheckBox
-    private lateinit var mCbSetConverters: JCheckBox
-    private lateinit var mBottomRootPanel2: JPanel
+    private val mCbCreateDoc: JCheckBox = JCheckBox("json值生成注释文档")
+    private val mCbGeneratorJsonSerializable: JCheckBox = JCheckBox("创建序列化方法")
+    private val mCbGeneratorGFile: JCheckBox = JCheckBox("生成.g.dart文件")
+    private val mCbNullSafe: JCheckBox = JCheckBox("空安全")
+    private val mCbSetConverters: JCheckBox = JCheckBox("配置converters")
     private val mConvertersValue: ExtensionTextField = ExtensionTextField()
 
     private var mJsonValue: JsonObject? = null
 
     init {
+        val headRootPanel = JPanel(GridBagLayout())
+
         val cc = GridBagConstraints()
         cc.fill = GridBagConstraints.HORIZONTAL
         cc.weightx = 0.0
         cc.gridx = 0
 
         val label = JLabel("类名称")
-        label.border = BorderFactory.createEmptyBorder(0, 0, 0, 6)
-        mHeadRootPanel.add(label, cc)
+        label.border = BorderFactory.createEmptyBorder(0, 0, 0, JBUI.scale(6))
+        headRootPanel.add(label, cc)
 
         cc.weightx = 10.0
         cc.gridx = 1
-        mCreateObjectName.minimumSize = Dimension(100, 30)
-        mHeadRootPanel.add(mCreateObjectName, cc)
+        mCreateObjectName.minimumSize = JBUI.size(100, 30)
+        headRootPanel.add(mCreateObjectName, cc)
+
+        cc.weightx = 0.0
+        cc.gridx = 2
+        val emptyLabel = JLabel()
+        emptyLabel.border = BorderFactory.createEmptyBorder(0,2,0,JBUI.scale(2))
+        headRootPanel.add(emptyLabel, cc)
 
         cc.weightx = 1.0
-        cc.gridx = 2
+        cc.gridx = 3
         mObjSuffix.text = "Entity"
-        mObjSuffix.border = BorderFactory.createEmptyBorder(0, 4, 0, 0)
-        mObjSuffix.minimumSize = Dimension(100, 30)
-        mHeadRootPanel.add(mObjSuffix, cc)
+        mObjSuffix.minimumSize = JBUI.size(100, 30)
+        headRootPanel.add(mObjSuffix, cc)
+        mRootPanel.add(headRootPanel,BorderLayout.NORTH)
 
+        val contentRootPanel = JPanel(BorderLayout())
+        contentRootPanel.add(JLabel("JSON"),BorderLayout.NORTH)
         mEtJsonContent.isEnabled = true
-        mJPEtRoot.add(mEtJsonContent, BorderLayout.CENTER)
+        contentRootPanel.add(mEtJsonContent, BorderLayout.CENTER)
+        mRootPanel.add(contentRootPanel,BorderLayout.CENTER)
 
-        mConvertersValue.preferredSize = Dimension(220, 38)
-        mBottomRootPanel2.add(mConvertersValue)
+        val bottomPanel = Box.createVerticalBox()
+        mRootPanel.add(bottomPanel,BorderLayout.SOUTH)
+
+        val bottomRootPanel = Box.createHorizontalBox()
+        bottomRootPanel.border = BorderFactory.createEmptyBorder(JBUI.scale(4),0,0,0)
+        mCbCreateDoc.isSelected = true
+        mCbCreateDoc.border = BorderFactory.createEmptyBorder(0,0,0,JBUI.scale(6))
+        bottomRootPanel.add(mCbCreateDoc)
+        bottomRootPanel.add(mCbNullSafe)
+        bottomRootPanel.add(Box.createHorizontalGlue())
+        bottomPanel.add(bottomRootPanel)
+
+        val bottomRootPanel2 = Box.createHorizontalBox()
+        mCbGeneratorJsonSerializable.isSelected = true
+        mCbGeneratorJsonSerializable.border = BorderFactory.createEmptyBorder(0,0,0,JBUI.scale(6))
+        bottomRootPanel2.add(mCbGeneratorJsonSerializable)
+        mCbGeneratorGFile.border = BorderFactory.createEmptyBorder(0,0,0,JBUI.scale(6))
+        bottomRootPanel2.add(mCbGeneratorGFile)
+        mCbSetConverters.border = BorderFactory.createEmptyBorder(0,0,0,JBUI.scale(6))
+        bottomRootPanel2.add(mCbSetConverters)
+        mConvertersValue.preferredSize = JBUI.size(220, 30)
+        mConvertersValue.maximumSize = mConvertersValue.preferredSize
+        bottomRootPanel2.add(mConvertersValue)
+        bottomRootPanel2.add(Box.createHorizontalGlue())
+        bottomPanel.add(bottomRootPanel2)
+
+        mRootPanel.preferredSize = JBUI.size(1000, 500)
+
         initEvent()
         initData()
         init()

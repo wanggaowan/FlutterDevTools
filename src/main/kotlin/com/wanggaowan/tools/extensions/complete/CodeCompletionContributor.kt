@@ -7,6 +7,7 @@ import com.intellij.codeInsight.lookup.LookupElementWeigher
 import com.intellij.icons.AllIcons
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.util.TextRange
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.patterns.StandardPatterns
@@ -19,6 +20,7 @@ import com.jetbrains.lang.dart.DartLanguage
 import com.jetbrains.lang.dart.ide.completion.DartLookupObject
 import com.jetbrains.lang.dart.psi.*
 import com.jetbrains.lang.dart.util.DartResolveUtil
+import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import org.dartlang.analysis.server.protocol.ElementKind
 import org.jetbrains.kotlin.idea.base.util.module
@@ -42,6 +44,17 @@ class CodeCompletionContributor : CompletionContributor() {
                 ) {
                     val originalFile = parameters.originalFile
                     val project = originalFile.project
+                    val parseDev = PluginSettings.getCodeCompleteTypeDirectDev(project)
+                    val parseTransitive = PluginSettings.getCodeCompleteTypeTransitive(project)
+                    if (!parseDev && !parseTransitive) {
+                        return
+                    }
+
+                    var inputText = getInputText(parameters.editor.document, parameters.offset, "")
+                    if (inputText.isEmpty()) {
+                        return
+                    }
+
                     if (originalResultSet.prefixMatcher.prefix.isEmpty() &&
                         isRightAfterBadIdentifier(parameters.editor.document.immutableCharSequence, parameters.offset)
                     ) {
@@ -64,14 +77,56 @@ class CodeCompletionContributor : CompletionContributor() {
                     val module = originalFile.module ?: return
                     val elements = CodeAnalysisService.getInstance(project).getSuggestions(module)
                     val imports = PsiTreeUtil.getChildrenOfType(originalFile, DartImportStatement::class.java)
+
+                    val isCall = inputText.contains(".")
+                    if (isCall) {
+                        val index = inputText.lastIndexOf(".")
+                        if (index != -1) {
+                            inputText = inputText.substring(index + 1)
+                        }
+                    }
+
                     elements?.forEach { element ->
+                        if (resultSet.isStopped) {
+                            return
+                        }
+
+                        if (!parseDev && element.libType == Suggestion.LIB_TYPE_DEV) {
+                            return@forEach
+                        }
+
+                        if (!parseTransitive && element.libType == Suggestion.LIB_TYPE_TRANSITIVE) {
+                            return@forEach
+                        }
+
+                        if (isCall && !element.isExtension) {
+                            return@forEach
+                        }
+
+                        if (!isCall && element.isExtension) {
+                            return@forEach
+                        }
+
                         val libraryUri = element.libraryUriToImport
                         if (libraryUri != null && imports?.find {
-                                val text = it.text
-                                text == "import '${libraryUri}';" || text == "import \"${libraryUri}\";"
+                                val text2 = it.text
+                                text2 == "import '${libraryUri}';" || text2 == "import \"${libraryUri}\";"
                             } != null) {
                             /// 如果import已导入，则跳过，此时官方Dart插件自动补全会出现提示
                             return@forEach
+                        }
+
+                        var name = element.name
+                        var index = 0
+                        for (i in inputText.indices) {
+                            // 字符inputText包含在name里面，不要求inputText在name中内容的连贯性，
+                            // 只要inputText中每个字符的顺序在name中也是从左到右递增即可
+                            val str = inputText[i]
+                            val index2 = name.indexOf(str,index,true)
+                            if (index2 == -1) {
+                                return@forEach
+                            }
+                            index = index2
                         }
 
                         var libraryUriToDisplay = libraryUri
@@ -79,7 +134,19 @@ class CodeCompletionContributor : CompletionContributor() {
                             libraryUriToDisplay = "($libraryUriToDisplay)"
                         }
 
-                        val lookup = LookupElementBuilder.create(element, element.name)
+                        if (element.returnType != null) {
+                            libraryUriToDisplay = if (libraryUriToDisplay == null) {
+                                element.returnType
+                            } else {
+                                "${element.returnType} $libraryUriToDisplay"
+                            }
+                        }
+
+                        if (element.params != null) {
+                            name = "$name${element.params}"
+                        }
+
+                        val lookup = LookupElementBuilder.create(element, name)
                             .withTypeText(libraryUriToDisplay)
                             .withIcon(getBaseImage(element))
                             .withInsertHandler(myInsertHandler)
@@ -87,6 +154,22 @@ class CodeCompletionContributor : CompletionContributor() {
                     }
                 }
             })
+    }
+
+    private tailrec fun getInputText(document: Document, offset: Int, initText: String): String {
+        if (offset < 0) {
+            return initText
+        }
+
+        val text = document.getText(TextRange(offset - 1, offset))
+        if (text.isEmpty()) {
+            return initText
+        }
+
+        if (text == " ") {
+            return initText
+        }
+        return getInputText(document, offset - 1, text + initText)
     }
 
     override fun beforeCompletion(context: CompletionInitializationContext) {
@@ -174,8 +257,8 @@ class CodeCompletionContributor : CompletionContributor() {
                 ElementKind.ENUM_CONSTANT, ElementKind.FIELD -> AllIcons.Nodes.Field
                 ElementKind.COMPILATION_UNIT -> com.intellij.util.PlatformIcons.FILE_ICON
                 ElementKind.CONSTRUCTOR -> AllIcons.Nodes.ClassInitializer
-                ElementKind.GETTER -> AllIcons.Nodes.PropertyReadStatic
-                ElementKind.SETTER -> AllIcons.Nodes.PropertyWriteStatic
+                ElementKind.GETTER -> if (suggestion.isStatic) AllIcons.Nodes.PropertyReadStatic else AllIcons.Nodes.PropertyRead
+                ElementKind.SETTER -> if (suggestion.isStatic) AllIcons.Nodes.PropertyReadStatic else AllIcons.Nodes.PropertyRead
                 ElementKind.FUNCTION -> AllIcons.Nodes.Lambda
                 ElementKind.FUNCTION_TYPE_ALIAS -> AllIcons.Nodes.Annotationtype
                 ElementKind.TOP_LEVEL_VARIABLE -> AllIcons.Nodes.Variable
