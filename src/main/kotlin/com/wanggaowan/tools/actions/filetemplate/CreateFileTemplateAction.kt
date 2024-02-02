@@ -98,7 +98,7 @@ class CreateFileTemplateAction : DumbAwareAction() {
                         }
 
                         "${'$'}USER${'$'}" -> {
-                            dialog.placeholderMap[it] = System.getenv("USER")
+                            dialog.placeholderMap[it] = System.getenv("USER") ?: ""
                         }
                     }
                 }
