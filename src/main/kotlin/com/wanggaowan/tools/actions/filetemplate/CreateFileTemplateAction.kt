@@ -16,6 +16,7 @@ import com.wanggaowan.tools.utils.ex.isFlutterProject
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
+import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -116,7 +117,7 @@ class CreateFileTemplateAction : DumbAwareAction() {
                             File("${virtualFile.path}/${it.name!!}.${DartFileType.INSTANCE.defaultExtension}")
                         if (!file.exists()) {
                             file.createNewFile()
-                            val fw = FileWriter(file.absoluteFile)
+                            val fw = FileWriter(file.absoluteFile, Charset.forName("UTF-8"))
                             val bw = BufferedWriter(fw)
                             bw.write(content)
                             bw.close()
