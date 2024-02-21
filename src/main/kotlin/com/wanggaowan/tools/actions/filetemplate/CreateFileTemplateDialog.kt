@@ -37,6 +37,7 @@ import icons.DartIcons
 import org.jetbrains.kotlin.idea.core.util.toPsiDirectory
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import java.awt.BorderLayout
+import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.event.MouseAdapter
@@ -1027,6 +1028,10 @@ class MyMutableTreeNode(userObject: Any? = null) : DefaultMutableTreeNode(userOb
 }
 
 class MyTreeCellRenderer : DefaultTreeCellRenderer() {
+    init {
+        borderSelectionColor = null
+    }
+
     override fun getTreeCellRendererComponent(
         tree: JTree,
         value: Any?,
@@ -1045,7 +1050,7 @@ class MyTreeCellRenderer : DefaultTreeCellRenderer() {
             }
         }
 
-        super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus)
+        super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, false)
         if (isDisable && tree.isEnabled) {
             isEnabled = false
             val laf = UIManager.getLookAndFeel()
@@ -1081,6 +1086,14 @@ class MyTreeCellRenderer : DefaultTreeCellRenderer() {
             }
         }
         return this
+    }
+
+    override fun getBackgroundSelectionColor(): Color {
+        return Color(0x00ffffff, true)
+    }
+
+    override fun getBackgroundNonSelectionColor(): Color {
+        return Color(0x00ffffff, true)
     }
 }
 
