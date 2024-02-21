@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.ui
+package com.wanggaowan.tools.ui.language
 
 import com.intellij.codeInsight.folding.CodeFoldingManager
 import com.intellij.openapi.application.ApplicationManager
@@ -9,15 +9,15 @@ import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.project.Project
 import com.intellij.ui.LanguageTextField
-import com.jetbrains.lang.dart.DartLanguage
+import org.jetbrains.yaml.YAMLLanguage
 
 /**
- * dart语言文本编辑器，提供语法高亮及智能补全等
+ * yaml语言文本编辑器，提供语法高亮及智能补全等
  *
- * @author Created by wanggaowan on 2023/9/4 13:40
+ * @author Created by wanggaowan on 2024/2/21 14:25
  */
-class DartLanguageTextField(project: Project) :
-    LanguageTextField(DartLanguage.INSTANCE, project, "", false) {
+class YamlLanguageTextField(project: Project) :
+    LanguageTextField(YAMLLanguage.INSTANCE, project, "", false) {
 
     override fun createEditor(): EditorEx {
         val editorEx = super.createEditor()
@@ -26,10 +26,15 @@ class DartLanguageTextField(project: Project) :
         editorEx.setCaretEnabled(true)
         editorEx.document.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
+                if (editorEx.isDisposed) {
+                    return
+                }
+
                 ApplicationManager.getApplication().invokeLater({
-                    if (!editorEx.isDisposed) {
-                        CodeFoldingManager.getInstance(this@DartLanguageTextField.project).updateFoldRegions(editorEx)
+                    if (editorEx.isDisposed) {
+                        return@invokeLater
                     }
+                    CodeFoldingManager.getInstance(this@YamlLanguageTextField.project).updateFoldRegions(editorEx)
                 }, ModalityState.NON_MODAL)
             }
         })

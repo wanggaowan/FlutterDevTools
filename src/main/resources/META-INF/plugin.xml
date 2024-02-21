@@ -17,13 +17,18 @@
       <li>文件导航</li>
       <li>页面路由配置</li>
       <li>Android &lt;string/&gt;转化arb文件格式</li>
-      <li>创建Dart文件模版，支持一组文件同时创建</li>
+      <li>创建Dart文件模版，支持多级目录</li>
       <li>提取中文为多语言</li>
       <li>根据模版arb翻译其它语言arb文件功能</li>
     </ol>
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>3.2</p>
+    <ul>
+      <li>创建Dart文件模版，支持多级目录结构</li>
+    </ul>
+
     <p>3.1</p>
     <ul>
       <li>自动补全和快速修复支持扩展方法</li>

@@ -157,7 +157,7 @@ class CodeCompletionContributor : CompletionContributor() {
     }
 
     private tailrec fun getInputText(document: Document, offset: Int, initText: String): String {
-        if (offset < 0) {
+        if (offset < 1) {
             return initText
         }
 

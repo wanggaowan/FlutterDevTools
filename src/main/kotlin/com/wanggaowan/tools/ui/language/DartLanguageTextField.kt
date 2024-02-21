@@ -1,7 +1,6 @@
-package com.wanggaowan.tools.ui
+package com.wanggaowan.tools.ui.language
 
 import com.intellij.codeInsight.folding.CodeFoldingManager
-import com.intellij.json.JsonLanguage
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.editor.EditorSettings
@@ -10,14 +9,15 @@ import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.project.Project
 import com.intellij.ui.LanguageTextField
+import com.jetbrains.lang.dart.DartLanguage
 
 /**
- * JSON语言文本编辑器，提供语法高亮及只能补全等
+ * dart语言文本编辑器，提供语法高亮及智能补全等
  *
- * @author Created by wanggaowan on 2023/2/7 16:56
+ * @author Created by wanggaowan on 2023/9/4 13:40
  */
-class JsonLanguageTextField(project: Project) :
-    LanguageTextField(JsonLanguage.INSTANCE, project, "", false) {
+class DartLanguageTextField(project: Project) :
+    LanguageTextField(DartLanguage.INSTANCE, project, "", false) {
 
     override fun createEditor(): EditorEx {
         val editorEx = super.createEditor()
@@ -26,8 +26,15 @@ class JsonLanguageTextField(project: Project) :
         editorEx.setCaretEnabled(true)
         editorEx.document.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
+                if (editorEx.isDisposed) {
+                    return
+                }
+
                 ApplicationManager.getApplication().invokeLater({
-                    CodeFoldingManager.getInstance(this@JsonLanguageTextField.project).updateFoldRegions(editorEx)
+                    if (editorEx.isDisposed) {
+                        return@invokeLater
+                    }
+                    CodeFoldingManager.getInstance(this@DartLanguageTextField.project).updateFoldRegions(editorEx)
                 }, ModalityState.NON_MODAL)
             }
         })

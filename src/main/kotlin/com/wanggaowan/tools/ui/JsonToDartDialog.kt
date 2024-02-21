@@ -8,6 +8,7 @@ import com.intellij.openapi.ui.MessageType
 import com.intellij.ui.EditorTextField
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.wanggaowan.tools.ui.language.JsonLanguageTextField
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.msg.Toast
 import java.awt.BorderLayout

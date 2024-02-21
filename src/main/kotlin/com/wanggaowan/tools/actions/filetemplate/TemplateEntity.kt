@@ -7,13 +7,15 @@ package com.wanggaowan.tools.actions.filetemplate
  */
 class TemplateEntity {
     var name: String? = null
+    var createFolder: Boolean = false
     var children: MutableList<TemplateChildEntity>? = null
 }
 
 class TemplateChildEntity {
     var name: String? = null
     var content: String? = null
-
+    var isFolder: Boolean = false
+    var children: MutableList<TemplateChildEntity>? = null
 
     @Transient
     var tempContent: String? = null

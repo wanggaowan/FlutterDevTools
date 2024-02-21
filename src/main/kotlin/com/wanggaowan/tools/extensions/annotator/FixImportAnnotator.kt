@@ -95,7 +95,8 @@ class FixImportAnnotator : Annotator {
                     str = str.substring(0, index).trim()
                 }
 
-                val isCall = document.getText(TextRange(err.offset - 1, err.offset)) == "."
+                val isCall =
+                    if (err.offset < 1) false else document.getText(TextRange(err.offset - 1, err.offset)) == "."
 
                 val suggestions = service.getSuggestions(module)?.filterIndexed { _, it ->
                     it.name == str

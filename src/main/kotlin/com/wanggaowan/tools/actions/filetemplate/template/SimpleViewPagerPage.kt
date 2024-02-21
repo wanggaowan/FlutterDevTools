@@ -14,12 +14,12 @@ object SimpleViewPagerPage {
             template.children = children
 
             val view = TemplateChildEntity()
-            view.name = "view"
+            view.name = "view.dart"
             view.content = viewContent
             children.add(view)
 
             val controller = TemplateChildEntity()
-            controller.name = "controller"
+            controller.name = "controller.dart"
             controller.content = controllerContent
             children.add(controller)
 

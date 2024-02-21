@@ -2,14 +2,12 @@ package com.wanggaowan.tools.actions.filetemplate
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.intellij.icons.AllIcons
 import com.intellij.json.JsonFileType
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
-import com.intellij.openapi.editor.event.EditorMouseEvent
-import com.intellij.openapi.editor.event.EditorMouseListener
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.project.Project
@@ -18,44 +16,35 @@ import com.intellij.openapi.ui.JBMenuItem
 import com.intellij.openapi.ui.JBPopupMenu
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiFileFactory
+import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
-import com.intellij.ui.components.JBMenu
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.LocalTimeCounter
-import com.intellij.util.text.DateFormatUtil
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBDimension
-import com.jetbrains.lang.dart.DartFileType
-import com.jetbrains.lang.dart.psi.DartFile
-import com.wanggaowan.tools.actions.ImportSameImageResAction
-import com.wanggaowan.tools.actions.ImportSameImageResUtils
-import com.wanggaowan.tools.settings.PluginSettings
-import com.wanggaowan.tools.ui.DartLanguageTextField
 import com.wanggaowan.tools.ui.LineBorder
 import com.wanggaowan.tools.ui.UIColor
+import com.wanggaowan.tools.ui.language.DartLanguageTextField
+import com.wanggaowan.tools.ui.language.JsonLanguageTextField
+import com.wanggaowan.tools.ui.language.PlainTextLanguageTextField
+import com.wanggaowan.tools.ui.language.YamlLanguageTextField
 import com.wanggaowan.tools.utils.NotificationUtils
-import com.wanggaowan.tools.utils.PropertiesSerializeUtils
-import com.wanggaowan.tools.utils.dart.DartPsiUtils
-import com.wanggaowan.tools.utils.ex.basePath
-import com.wanggaowan.tools.utils.ex.flutterModules
-import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.msg.Toast
-import kotlinx.serialization.json.JsonNull.content
+import icons.DartIcons
 import org.jetbrains.kotlin.idea.core.util.toPsiDirectory
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
-import org.jetbrains.kotlin.preloading.ProfilingInstrumenterExample.e
 import java.awt.BorderLayout
+import java.awt.Component
 import java.awt.Dimension
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.*
 import javax.swing.*
+import javax.swing.tree.*
 
 /**
  * 创建文件模版
@@ -65,13 +54,13 @@ import javax.swing.*
 class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, false) {
     private val mRootPanel: JPanel
     private val templateList = JBList<String>()
-    private val templateChildrenList = JBList<String>()
-    private val languageTextField = DartLanguageTextField(project)
+    private val templateChildrenTree = JTree(MyMutableTreeNode())
+    private var languageTextFieldRoot: JPanel = JPanel(BorderLayout())
+    private var languageTextField: LanguageTextField? = null
     private val addTemplateBtn = JButton("+")
     private val importTemplateBtn = JButton("导入")
     private val exportTemplateBtn = JButton("导出")
     private val exportAllTemplateBtn = JButton("导出全部")
-    private val addTemplateChildBtn = JButton("+")
     private val applyLanguageTextBtn = JButton("应用")
     private val specialPlaceHolderDescBtn = JButton("特殊占位符说明")
 
@@ -80,7 +69,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
     var selectTemplate: TemplateEntity? = null
         private set
 
-    private var selectTemplateChild: TemplateChildEntity? = null
+    private var selectTemplateChild: MyMutableTreeNode? = null
 
     var dataChange: Boolean = false
         private set
@@ -138,7 +127,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
                         return
                     }
 
-                    showMenu(e, false, index)
+                    showMenu(e, index, selectTemplate!!)
                 }
             }
         })
@@ -148,18 +137,25 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
             if (index < 0 || index >= templateData.size) {
                 selectTemplate = null
                 selectTemplateChild = null
-                (templateChildrenList.model as DefaultListModel<String>).removeAllElements()
+                (templateChildrenTree.model as DefaultTreeModel).setRoot(null)
                 return@addListSelectionListener
             }
 
             selectTemplate = templateData[index]
-            val children = selectTemplate?.children?.map { it.name }
-            val childModel = templateChildrenList.model as DefaultListModel<String>
-            childModel.removeAllElements()
-            if (children != null) {
-                childModel.addAll(children)
+            val treeModel = (templateChildrenTree.model as DefaultTreeModel)
+            val rootNode = MyMutableTreeNode(selectTemplate)
+            var firstNode: MyMutableTreeNode? = null
+            selectTemplate?.children?.forEach {
+                val node = createChildrenTreeNode(it)
+                if (firstNode == null) {
+                    firstNode = node
+                }
+                rootNode.add(node)
             }
-            templateChildrenList.selectedIndex = 0
+            treeModel.setRoot(rootNode)
+            if (firstNode != null) {
+                templateChildrenTree.selectionModel.selectionPath = TreePath(treeModel.getPathToRoot(firstNode))
+            }
         }
 
         val scrollPane = JBScrollPane(templateList)
@@ -212,72 +208,70 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         rootPanel.layout = BorderLayout()
         rootPanel.border = LineBorder(UIColor.LINE_COLOR, 1, 0, 1, 1)
 
-        templateChildrenList.selectionMode = ListSelectionModel.SINGLE_SELECTION
-        templateChildrenList.visibleRowCount = 20
-        templateChildrenList.border = BorderFactory.createEmptyBorder(0, 10, 0, 10)
-        val model = DefaultListModel<String>()
-        templateChildrenList.model = model
+        val render = MyTreeCellRenderer()
+        templateChildrenTree.cellRenderer = render
+        templateChildrenTree.cellEditor = MyTreeCellEditRenderer(templateChildrenTree, render)
 
-        templateChildrenList.addMouseListener(object : MouseAdapter() {
+        templateChildrenTree.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
                 if (e.button == MouseEvent.BUTTON3) {
-                    val index = templateChildrenList.selectedIndex
-                    if (index == -1) {
-                        return
+                    if (selectTemplateChild != null) {
+                        showChildMenu(e, selectTemplateChild!!)
                     }
-
-                    showMenu(e, true, index)
                 }
             }
         })
 
-        templateChildrenList.addListSelectionListener {
-            if (selectTemplate == null) {
+        templateChildrenTree.addTreeSelectionListener {
+            val node = it.path.lastPathComponent
+            if (node !is MyMutableTreeNode) {
                 selectTemplateChild = null
-                languageTextField.text = ""
-                return@addListSelectionListener
+                languageTextField?.isVisible = false
+                return@addTreeSelectionListener
             }
 
-            val children = selectTemplate!!.children
-            if (children.isNullOrEmpty()) {
-                selectTemplateChild = null
-                languageTextField.text = ""
-                return@addListSelectionListener
+            selectTemplateChild = node
+            val obj = node.userObject
+            if (obj == null || obj !is TemplateChildEntity) {
+                languageTextField?.isVisible = false
+                return@addTreeSelectionListener
             }
 
-            val index2 = templateChildrenList.selectedIndex
-            if (index2 < 0 || index2 >= children.size) {
-                selectTemplateChild = null
-                languageTextField.text = ""
-                return@addListSelectionListener
+            if (!obj.isFolder) {
+                if (languageTextField == null) {
+                    languageTextField = createLanguageTextField(obj.name)
+                    languageTextFieldRoot.add(languageTextField!!, BorderLayout.CENTER)
+                } else if (needCreateLanguageTextField(languageTextField!!, obj.name)) {
+                    languageTextField = createLanguageTextField(obj.name)
+                    languageTextFieldRoot.removeAll()
+                    languageTextFieldRoot.add(languageTextField!!, BorderLayout.CENTER)
+                } else {
+                    languageTextField?.isVisible = true
+                }
+                languageTextField?.text = obj.content ?: ""
+            } else {
+                languageTextField?.isVisible = false
             }
-
-            selectTemplateChild = children[index2]
-            languageTextField.text = selectTemplateChild?.content ?: ""
-            languageTextField.autoscrolls = false
         }
 
-        val scrollPane = JBScrollPane(templateChildrenList)
+        val scrollPane = JBScrollPane(templateChildrenTree)
         scrollPane.preferredSize = JBDimension(200, 400)
         scrollPane.border = BorderFactory.createEmptyBorder()
         rootPanel.add(scrollPane, BorderLayout.CENTER)
-
-        val box = Box.createHorizontalBox()
-        box.border = BorderFactory.createCompoundBorder(
-            LineBorder(UIColor.LINE_COLOR, 1, 0, 0, 0),
-            BorderFactory.createEmptyBorder(0, 5, 0, 5)
-        )
-        rootPanel.add(box, BorderLayout.SOUTH)
-
-        box.add(Box.createHorizontalGlue())
-
-        addTemplateChildBtn.preferredSize = JBDimension(40, 40)
-        addTemplateChildBtn.addActionListener {
-            addTemplateChild()
-        }
-        box.add(addTemplateChildBtn)
-
         return rootPanel
+    }
+
+    private fun createChildrenTreeNode(child: TemplateChildEntity): MyMutableTreeNode {
+        val node = MyMutableTreeNode(child)
+        if (!child.isFolder) {
+            return node
+        }
+
+        val children = child.children
+        children?.forEach {
+            node.add(createChildrenTreeNode(it))
+        }
+        return node
     }
 
     private fun initLanguageTextField(): JComponent {
@@ -285,20 +279,8 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         rootPanel.layout = BorderLayout()
         rootPanel.border = LineBorder(UIColor.LINE_COLOR, 1, 0, 1, 1)
 
-        languageTextField.preferredSize = JBDimension(500, 400)
-        languageTextField.border = BorderFactory.createEmptyBorder()
-        languageTextField.editor?.setBorder(BorderFactory.createEmptyBorder())
-        languageTextField.document.addDocumentListener(object : DocumentListener {
-            override fun documentChanged(event: DocumentEvent) {
-                super.documentChanged(event)
-                val tempContent = languageTextField.text
-                selectTemplateChild?.tempContent = tempContent
-                val content = selectTemplateChild?.content ?: ""
-                applyLanguageTextBtn.isEnabled = tempContent != content
-            }
-        })
-
-        rootPanel.add(languageTextField, BorderLayout.CENTER)
+        languageTextFieldRoot.preferredSize = JBDimension(500, 400)
+        rootPanel.add(languageTextFieldRoot, BorderLayout.CENTER)
 
         val box = Box.createHorizontalBox()
         box.border = BorderFactory.createCompoundBorder(
@@ -325,8 +307,56 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         return rootPanel
     }
 
+    private fun createLanguageTextField(fileName: String?): LanguageTextField {
+        val suffix = if (fileName.isNullOrEmpty()) "" else {
+            val index = fileName.lastIndexOf(".")
+            if (index == -1) "" else fileName.substring(index + 1)
+        }.lowercase()
+
+        val languageTextField =
+            when (suffix) {
+                "dart" -> DartLanguageTextField(project)
+                "json" -> JsonLanguageTextField(project)
+                "yaml" -> YamlLanguageTextField(project)
+                else -> PlainTextLanguageTextField(project)
+            }
+
+        languageTextField.autoscrolls = false
+        languageTextField.border = BorderFactory.createEmptyBorder()
+        languageTextField.editor?.setBorder(BorderFactory.createEmptyBorder())
+        languageTextField.document.addDocumentListener(object : DocumentListener {
+            override fun documentChanged(event: DocumentEvent) {
+                super.documentChanged(event)
+                val tempContent = languageTextField.text
+                val obj = selectTemplateChild?.userObject
+                if (obj == null || obj !is TemplateChildEntity || obj.isFolder) {
+                    return
+                }
+
+                obj.tempContent = tempContent
+                val content = obj.content ?: ""
+                applyLanguageTextBtn.isEnabled = tempContent != content
+            }
+        })
+        return languageTextField
+    }
+
+    private fun needCreateLanguageTextField(languageTextField: LanguageTextField, fileName: String?): Boolean {
+        val suffix = if (fileName.isNullOrEmpty()) "" else {
+            val index = fileName.lastIndexOf(".")
+            if (index == -1) "" else fileName.substring(index + 1)
+        }.lowercase()
+
+        return when (suffix) {
+            "dart" -> languageTextField !is DartLanguageTextField
+            "json" -> languageTextField !is JsonLanguageTextField
+            "yaml" -> languageTextField !is YamlLanguageTextField
+            else -> languageTextField !is PlainTextLanguageTextField
+        }
+    }
+
     private fun addTemplate() {
-        val dialog = InputNameDialog(project)
+        val dialog = InputNameDialog(project, hint = "同时作为目录")
         dialog.show()
         if (dialog.exitCode != OK_EXIT_CODE) {
             return
@@ -336,34 +366,31 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         val name = dialog.textField.text.toString().trim()
         val entity = TemplateEntity()
         entity.name = name
+        entity.createFolder = dialog.createFolder.isSelected
         templateData.add(entity)
         val model = templateList.model as DefaultListModel<String>
         model.addElement(name)
         templateList.selectedIndex = model.size() - 1
     }
 
-    private fun deleteTemplate() {
-        if (selectTemplate == null) {
-            return
-        }
-
-        val index = templateList.selectedIndex
-        if (index == -1) {
-            return
-        }
-
+    private fun deleteTemplate(index: Int, templateEntity: TemplateEntity) {
         dataChange = true
-        templateData.remove(selectTemplate)
+        templateData.remove(templateEntity)
         val model = templateList.model as DefaultListModel<String>
         model.removeElementAt(index)
     }
 
-    private fun addTemplateChild() {
-        if (selectTemplate == null) {
+    private fun addTemplateChild(parentNode: MyMutableTreeNode) {
+        val obj = parentNode.userObject ?: return
+
+        val isChild = obj is TemplateChildEntity
+        val isParent = obj is TemplateEntity
+
+        if (!isChild && !isParent) {
             return
         }
 
-        val dialog = InputNameDialog(project)
+        val dialog = InputNameDialog(project, hint = "创建目录")
         dialog.show()
         if (dialog.exitCode != OK_EXIT_CODE) {
             return
@@ -373,44 +400,67 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         val name = dialog.textField.text.toString().trim()
         val entity = TemplateChildEntity()
         entity.name = name
+        entity.isFolder = dialog.createFolder.isSelected
 
-        var children = selectTemplate?.children
+        var children = if (obj is TemplateEntity) obj.children else (obj as TemplateChildEntity).children
         if (children == null) {
             children = mutableListOf()
-            selectTemplate?.children = children
+            if (obj is TemplateEntity) obj.children = children else (obj as TemplateChildEntity).children = children
         }
         children.add(entity)
 
-        val model = templateChildrenList.model as DefaultListModel<String>
-        model.addElement(name)
-        templateChildrenList.selectedIndex = model.size() - 1
+        val node = createChildrenTreeNode(entity)
+        val treeModel = (templateChildrenTree.model as DefaultTreeModel)
+        parentNode.add(node)
+        treeModel.reload(parentNode)
+        val path = TreePath(treeModel.getPathToRoot(parentNode))
+        if (!templateChildrenTree.isExpanded(path)) {
+            templateChildrenTree.expandPath(path)
+        }
     }
 
-    private fun deleteTemplateChild() {
-        if (selectTemplate == null || selectTemplateChild == null) {
+    private fun deleteTemplateChild(node: MyMutableTreeNode) {
+        val parent = node.parent ?: return
+        if (parent !is MyMutableTreeNode) {
             return
         }
 
-        val index = templateChildrenList.selectedIndex
-        if (index == -1) {
+        val totalCount = parent.childCount
+        if (totalCount == 0) {
+            return
+        }
+
+        val obj = parent.userObject ?: return
+
+        val isChild = obj is TemplateChildEntity
+        val isParent = obj is TemplateEntity
+        if (!isChild && !isParent) {
+            return
+        }
+
+        val children = if (obj is TemplateEntity) obj.children else (obj as TemplateChildEntity).children
+        if (children.isNullOrEmpty()) {
             return
         }
 
         dataChange = true
-        selectTemplate?.children?.remove(selectTemplateChild)
-        val model = templateChildrenList.model as DefaultListModel<String>
-        model.removeElementAt(index)
+        val index = parent.getIndex(node)
+        children.removeAt(index)
+        parent.remove(index)
+        val treeModel = templateChildrenTree.model as DefaultTreeModel
+        treeModel.reload(parent)
     }
 
     private fun applyTextChange() {
         applyLanguageTextBtn.isEnabled = false
-        if (selectTemplateChild == null) {
+        val obj = selectTemplateChild?.userObject
+        if (obj == null || obj !is TemplateChildEntity || obj.isFolder) {
             return
         }
 
         dataChange = true
-        val tempContent = selectTemplateChild?.tempContent ?: return
-        selectTemplateChild?.content = tempContent
+        val tempContent = obj.tempContent ?: return
+        obj.content = tempContent
     }
 
     override fun doOKAction() {
@@ -428,11 +478,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
             return
         }
 
-        children.forEach {
-            val content = it.tempContent ?: it.content ?: ""
-            val placeholders = FileTemplateUtils.getPlaceHolders(content)
-            this.placeholders.addAll(placeholders)
-        }
+        parsePlaceHolders(children)
 
         if (placeholders.isEmpty()) {
             super.doOKAction()
@@ -448,98 +494,132 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         super.doOKAction()
     }
 
-    private fun showMenu(e: MouseEvent, isChild: Boolean, index: Int) {
+    private fun parsePlaceHolders(children: List<TemplateChildEntity>?) {
+        if (children.isNullOrEmpty()) {
+            return
+        }
+
+        children.forEach {
+            if (!it.isFolder) {
+                val content = it.tempContent ?: it.content ?: ""
+                val placeholders = FileTemplateUtils.getPlaceHolders(content)
+                this.placeholders.addAll(placeholders)
+            } else {
+                parsePlaceHolders(it.children)
+            }
+        }
+    }
+
+    private fun showMenu(e: MouseEvent, index: Int, templateEntity: TemplateEntity) {
         val pop = JBPopupMenu()
         var menu = JBMenuItem("重命名")
         menu.addActionListener {
-            rename(isChild, index)
+            rename(index, templateEntity)
         }
         pop.add(menu)
 
         menu = JBMenuItem("删除")
         menu.addActionListener {
-            if (isChild) {
-                deleteTemplateChild()
-            } else {
-                deleteTemplate()
-            }
+            deleteTemplate(index, templateEntity)
         }
         pop.add(menu)
 
-        if (!isChild) {
-            menu = JBMenuItem("复制模版")
-            menu.addActionListener {
-                copy()
-            }
-            pop.add(menu)
+        menu = JBMenuItem("复制模版")
+        menu.addActionListener {
+            copy(templateEntity)
         }
+        pop.add(menu)
 
         menu = JBMenuItem("移动到第一个")
         menu.addActionListener {
-            if (isChild) {
-                moveChild(index, true, null)
-            } else {
-                move(index, true, null)
-            }
+            move(index, true, null)
         }
         pop.add(menu)
 
         menu = JBMenuItem("移动到最后一个")
         menu.addActionListener {
-            if (isChild) {
-                moveChild(index, false, null)
-            } else {
-                move(index, false, null)
-            }
+            move(index, false, null)
         }
         pop.add(menu)
 
         menu = JBMenuItem("往上移动")
         menu.addActionListener {
-            if (isChild) {
-                moveChild(index, null, true)
-            } else {
-                move(index, null, true)
-            }
+            move(index, null, true)
         }
         pop.add(menu)
 
         menu = JBMenuItem("往下移动")
         menu.addActionListener {
-            if (isChild) {
-                moveChild(index, null, false)
-            } else {
-                move(index, null, false)
+            move(index, null, false)
+        }
+        pop.add(menu)
+
+        menu = JBMenuItem(if (templateEntity.createFolder) "仅作为分类" else "同时作为目录")
+        menu.addActionListener {
+            dataChange = true
+            templateEntity.createFolder = !templateEntity.createFolder
+            val treeModel = (templateChildrenTree.model as DefaultTreeModel)
+            val path = templateChildrenTree.selectionModel.selectionPath
+            treeModel.reload()
+            templateChildrenTree.selectionModel.selectionPath = path
+        }
+        pop.add(menu)
+
+        pop.show(e.component, e.x, e.y)
+    }
+
+    private fun showChildMenu(e: MouseEvent, node: MyMutableTreeNode) {
+        val pop = JBPopupMenu()
+
+        val obj = node.userObject
+        if (obj != null && (obj is TemplateEntity || (obj is TemplateChildEntity && obj.isFolder))) {
+            val menu = JBMenuItem("新增")
+            menu.addActionListener {
+                addTemplateChild(node)
             }
+            pop.add(menu)
+        }
+
+        var menu = JBMenuItem("重命名")
+        menu.addActionListener {
+            renameChild(node)
+        }
+        pop.add(menu)
+
+        menu = JBMenuItem("删除")
+        menu.addActionListener {
+            deleteTemplateChild(node)
+        }
+        pop.add(menu)
+
+        menu = JBMenuItem("移动到第一个")
+        menu.addActionListener {
+            moveChild(node, true, null)
+        }
+        pop.add(menu)
+
+        menu = JBMenuItem("移动到最后一个")
+        menu.addActionListener {
+            moveChild(node, false, null)
+        }
+        pop.add(menu)
+
+        menu = JBMenuItem("往上移动")
+        menu.addActionListener {
+            moveChild(node, null, true)
+        }
+        pop.add(menu)
+
+        menu = JBMenuItem("往下移动")
+        menu.addActionListener {
+            moveChild(node, null, false)
         }
         pop.add(menu)
         pop.show(e.component, e.x, e.y)
     }
 
-    private fun rename(isChild: Boolean, index: Int) {
-        if (isChild) {
-            if (selectTemplateChild == null) {
-                return
-            }
-            val dialog = InputNameDialog(project, selectTemplateChild?.name ?: "")
-            dialog.show()
-            if (dialog.exitCode != OK_EXIT_CODE) {
-                return
-            }
-
-            dataChange = true
-            val name = dialog.textField.text.trim()
-            selectTemplateChild?.name = name
-            val model = templateChildrenList.model as DefaultListModel<String>
-            model.set(index, name)
-            return
-        }
-
-        if (selectTemplate == null) {
-            return
-        }
-
-        val dialog = InputNameDialog(project, selectTemplate?.name ?: "")
+    private fun rename(index: Int, templateEntity: TemplateEntity) {
+        val dialog = InputNameDialog(project, templateEntity.name ?: "")
         dialog.show()
         if (dialog.exitCode != OK_EXIT_CODE) {
             return
@@ -547,9 +627,28 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
 
         dataChange = true
         val name = dialog.textField.text.trim()
-        selectTemplate?.name = name
+        templateEntity.name = name
         val model = templateList.model as DefaultListModel<String>
         model.set(index, name)
+    }
+
+    private fun renameChild(node: MyMutableTreeNode) {
+        val obj = node.userObject
+        if (obj !is TemplateChildEntity) {
+            return
+        }
+        val dialog = InputNameDialog(project, obj.name ?: "")
+        dialog.show()
+        if (dialog.exitCode != OK_EXIT_CODE) {
+            return
+        }
+
+        dataChange = true
+        val name = dialog.textField.text.trim()
+        obj.name = name
+
+        val treeModel = (templateChildrenTree.model as DefaultTreeModel)
+        treeModel.reload(node)
     }
 
     private fun move(index: Int, first: Boolean?, up: Boolean?) {
@@ -584,12 +683,31 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         templateList.selectedIndex = index2
     }
 
-    private fun moveChild(index: Int, first: Boolean?, up: Boolean?) {
-        val children = selectTemplate?.children
+    private fun moveChild(node: MyMutableTreeNode, first: Boolean?, up: Boolean?) {
+        val parent = node.parent ?: return
+        if (parent !is MyMutableTreeNode) {
+            return
+        }
+
+        val totalCount = parent.childCount
+        if (totalCount == 0) {
+            return
+        }
+
+        val obj = parent.userObject ?: return
+
+        val isChild = obj is TemplateChildEntity
+        val isParent = obj is TemplateEntity
+        if (!isChild && !isParent) {
+            return
+        }
+
+        val children = if (obj is TemplateEntity) obj.children else (obj as TemplateChildEntity).children
         if (children.isNullOrEmpty()) {
             return
         }
 
+        val index = parent.getIndex(node)
         if ((first == true || up == true) && index == 0) {
             return
         }
@@ -601,20 +719,20 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         dataChange = true
         val data = children[index]
         children.removeAt(index)
-
-        val model = templateChildrenList.model as DefaultListModel<String>
-        val str = model.elementAt(index)
-        model.remove(index)
+        parent.remove(index)
 
         val index2 = if (first != null) {
-            if (first) 0 else model.size()
+            if (first) 0 else totalCount - 1
         } else {
             if (up == true) index - 1 else index + 1
         }
 
         children.add(index2, data)
-        model.add(index2, str)
-        templateChildrenList.selectedIndex = index2
+        parent.insert(node, index2)
+        val treeModel = templateChildrenTree.model as DefaultTreeModel
+        val path = templateChildrenTree.selectionModel.selectionPath
+        treeModel.reload(parent)
+        templateChildrenTree.selectionModel.selectionPath = path
     }
 
     // 0: 导入，1：导出，2：导出全部
@@ -689,8 +807,8 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         model.addAll(importList.map { it.name })
     }
 
-    private fun copy() {
-        var entity = selectTemplate ?: return
+    private fun copy(templateEntity: TemplateEntity) {
+        var entity = templateEntity
         val dialog = InputNameDialog(project)
         dialog.show()
         if (dialog.exitCode != OK_EXIT_CODE) {
@@ -767,9 +885,11 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
     }
 }
 
-class InputNameDialog(val project: Project, private val defaultValue: String = "") : DialogWrapper(project, false) {
+class InputNameDialog(val project: Project, private val defaultValue: String = "", private val hint: String? = null) :
+    DialogWrapper(project, false) {
     private val mRootPanel: JComponent
     val textField = JBTextField()
+    val createFolder = JCheckBox()
 
     override fun createCenterPanel(): JComponent = mRootPanel
 
@@ -793,6 +913,10 @@ class InputNameDialog(val project: Project, private val defaultValue: String = "
         textField.text = defaultValue
         rootPanel.add(textField, BorderLayout.CENTER)
 
+        createFolder.text = hint
+        if (!hint.isNullOrEmpty()) {
+            rootPanel.add(createFolder, BorderLayout.SOUTH)
+        }
         return rootPanel
     }
 
@@ -888,5 +1012,89 @@ class SpecialPlaceHolderDescDialog(val project: Project) : DialogWrapper(project
     }
 
     override fun createCenterPanel(): JComponent = rootPanel
+}
+
+class MyMutableTreeNode(userObject: Any? = null) : DefaultMutableTreeNode(userObject) {
+    override fun isLeaf(): Boolean {
+        val obj = userObject
+        return obj is TemplateChildEntity && !obj.isFolder
+    }
+
+    override fun toString(): String {
+        val obj = userObject
+        return if (obj is TemplateChildEntity) obj.name ?: "" else if (obj is TemplateEntity) obj.name ?: "" else ""
+    }
+}
+
+class MyTreeCellRenderer : DefaultTreeCellRenderer() {
+    override fun getTreeCellRendererComponent(
+        tree: JTree,
+        value: Any?,
+        sel: Boolean,
+        expanded: Boolean,
+        leaf: Boolean,
+        row: Int,
+        hasFocus: Boolean
+    ): Component {
+        var isDisable = false
+        var obj: Any? = null
+        if (value is MyMutableTreeNode) {
+            obj = value.userObject
+            if (obj == null || (obj is TemplateEntity && !obj.createFolder)) {
+                isDisable = true
+            }
+        }
+
+        super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus)
+        if (isDisable && tree.isEnabled) {
+            isEnabled = false
+            val laf = UIManager.getLookAndFeel()
+            val disabledIcon = laf.getDisabledIcon(tree, icon)
+            if (disabledIcon != null) icon = disabledIcon
+            setDisabledIcon(icon)
+        } else if (leaf) {
+            var suffix: String? = null
+            if (obj is TemplateChildEntity) {
+                val fileName = obj.name
+                suffix = if (fileName.isNullOrEmpty()) "" else {
+                    val index = fileName.lastIndexOf(".")
+                    if (index == -1) "" else fileName.substring(index + 1)
+                }.lowercase()
+            }
+
+            when (suffix) {
+                "dart" -> {
+                    icon = DartIcons.Dart_file
+                }
+
+                "json" -> {
+                    icon = AllIcons.FileTypes.Json
+                }
+
+                "yaml" -> {
+                    icon = AllIcons.FileTypes.Yaml
+                }
+
+                else -> {
+                    icon = AllIcons.FileTypes.Text
+                }
+            }
+        }
+        return this
+    }
+}
+
+class MyTreeCellEditRenderer(tree: JTree? = null, renderer: DefaultTreeCellRenderer? = null) :
+    DefaultTreeCellEditor(tree, renderer) {
+    override fun getTreeCellEditorComponent(
+        tree: JTree?,
+        value: Any?,
+        isSelected: Boolean,
+        expanded: Boolean,
+        leaf: Boolean,
+        row: Int
+    ): Component {
+        return super.getTreeCellEditorComponent(tree, value, isSelected, expanded, leaf, row)
+    }
 }
 

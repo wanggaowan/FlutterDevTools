@@ -2,6 +2,7 @@ package com.wanggaowan.tools.actions.filetemplate
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.jetbrains.lang.dart.DartFileType
 import com.wanggaowan.tools.actions.filetemplate.template.*
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 
@@ -15,7 +16,12 @@ object FileTemplateUtils {
     private const val TEMPLATE_VERSION_KEY = "templateVersion"
     private const val TEMPLATE_VERSION = 1
 
+    // 是否执行老数据的转化逻辑
+    private const val MAP_OLD_DATA_NAME = "isMapOldDataName"
+
     fun initDefaultTemplate() {
+        mapOldData()
+
         val version = PropertiesSerializeUtils.getInt(TEMPLATE_VERSION_KEY, 0)
         val templateList = getTemplateList()
         var haveInsert = false
@@ -41,6 +47,51 @@ object FileTemplateUtils {
             val defaultTemplate = Gson().toJson(templateList)
             PropertiesSerializeUtils.putString(TEMPLATE_DATA_KEY, defaultTemplate)
         }
+    }
+
+    private fun mapOldData() {
+        val isMapOldData = PropertiesSerializeUtils.getBoolean(MAP_OLD_DATA_NAME, false)
+        if (isMapOldData) {
+            return
+        }
+        PropertiesSerializeUtils.putBoolean(MAP_OLD_DATA_NAME, true)
+        val list = getTemplateList()
+        if (list.isEmpty()) {
+            return
+        }
+
+        var change = false
+        list.forEach {
+            change = mapOldDataName(it.children) || change
+        }
+
+        if (change) {
+            saveTemplateList(list)
+        }
+    }
+
+    private fun mapOldDataName(list: List<TemplateChildEntity>?): Boolean {
+        if (list.isNullOrEmpty()) {
+            return false
+        }
+
+        var change = false
+        list.forEach {
+            if (it.isFolder) {
+                change = mapOldDataName(it.children) || change
+            } else {
+                var name = it.name
+                if (!name.isNullOrEmpty()) {
+                    val index = name.lastIndexOf(".")
+                    if (index == -1) {
+                        name += ".${DartFileType.INSTANCE.defaultExtension}"
+                        it.name = name
+                        change = true
+                    }
+                }
+            }
+        }
+        return change
     }
 
     fun getTemplateList(): MutableList<TemplateEntity> {
