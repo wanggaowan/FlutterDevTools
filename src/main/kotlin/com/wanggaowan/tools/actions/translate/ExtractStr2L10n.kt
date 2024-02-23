@@ -24,6 +24,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.LocalTimeCounter
 import com.intellij.util.ui.FormBuilder
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.jetbrains.lang.dart.psi.DartLongTemplateEntry
 import com.jetbrains.lang.dart.psi.DartPsiCompositeElement
@@ -272,12 +273,19 @@ class ExtractStr2L10n : DumbAwareAction() {
                 replaceElement(selectedFile, selectedElement, dartTemplateEntryList, existKey)
             }
         } else {
-            ProgressUtils.runBackground(project, "Translate") { progressIndicator ->
-                progressIndicator.isIndeterminate = true
+            ProgressUtils.runBackground(project, "Translate",true) { progressIndicator ->
+                progressIndicator.isIndeterminate = false
+                val totalCount = 1.0 + otherArbFile.size
                 CoroutineScope(Dispatchers.Default).launch launch2@{
                     val enTranslate = TranslateUtils.translate(translateText, "en")
                     val isFormat = dartTemplateEntryList.isNotEmpty()
                     val key = TranslateUtils.mapStrToKey(enTranslate, isFormat)
+                    if (progressIndicator.isCanceled) {
+                        return@launch2
+                    }
+
+                    var current = 1.0
+                    progressIndicator.fraction = current / totalCount * 0.95
                     otherArbFile.forEach { file ->
                         if (file.targetLanguage == "en" && !isFormat) {
                             file.translate = enTranslate
@@ -290,6 +298,17 @@ class ExtractStr2L10n : DumbAwareAction() {
                             )
                             file.translate = translate2
                         }
+
+                        if (progressIndicator.isCanceled) {
+                            return@launch2
+                        }
+
+                        current++
+                        progressIndicator.fraction = current / totalCount * 0.95
+                    }
+
+                    if (progressIndicator.isCanceled) {
+                        return@launch2
                     }
 
                     CoroutineScope(Dispatchers.Main).launch {
@@ -302,8 +321,11 @@ class ExtractStr2L10n : DumbAwareAction() {
                             }
                         }
 
+                        if (progressIndicator.isCanceled) {
+                            return@launch
+                        }
+
                         if (showRename) {
-                            progressIndicator.isIndeterminate = false
                             progressIndicator.fraction = 1.0
                             val newKey = renameKey(project, key, jsonObject, otherArbFile) ?: return@launch
                             WriteCommandAction.runWriteCommandAction(project) {
@@ -342,7 +364,6 @@ class ExtractStr2L10n : DumbAwareAction() {
                                         )
                                     }
                                 }
-                                progressIndicator.isIndeterminate = false
                                 progressIndicator.fraction = 1.0
                             }
                         }
@@ -614,7 +635,16 @@ class InputKeyDialog(
             }
         }
 
-        return builder.addComponentFillVertically(JPanel(), 0).panel
+        val rootPanel: JPanel = if (otherArbFile.size > 5) {
+            builder.addComponentFillVertically(JPanel(), 0).panel
+        } else {
+            builder.panel
+        }
+
+        val jb = JBScrollPane(rootPanel)
+        jb.preferredSize = JBUI.size(300, 40 + 60 * (otherArbFile.size).coerceAtMost(5))
+        jb.border = BorderFactory.createEmptyBorder()
+        return jb
     }
 
     private fun isExistKey(text: String): Boolean {
