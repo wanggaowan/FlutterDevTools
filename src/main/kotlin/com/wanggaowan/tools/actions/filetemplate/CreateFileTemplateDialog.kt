@@ -63,6 +63,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
     private val exportTemplateBtn = JButton("导出")
     private val exportAllTemplateBtn = JButton("导出全部")
     private val applyLanguageTextBtn = JButton("应用")
+    private val addTemplateChildBtn = JButton("+")
     private val specialPlaceHolderDescBtn = JButton("特殊占位符说明")
 
     val templateData = FileTemplateUtils.getTemplateList()
@@ -143,17 +144,12 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
             }
 
             selectTemplate = templateData[index]
+            selectTemplateChild = null
             val treeModel = (templateChildrenTree.model as DefaultTreeModel)
             val rootNode = MyMutableTreeNode(selectTemplate)
-            var firstNode: MyMutableTreeNode? = null
-            selectTemplate?.children?.forEach {
-                val node = createChildrenTreeNode(it)
-                if (firstNode == null) {
-                    firstNode = node
-                }
-                rootNode.add(node)
-            }
+            val firstNode: TreeNode? = if (rootNode.childCount == 0) null else rootNode.firstChild
             treeModel.setRoot(rootNode)
+            templateChildrenTree.isRootVisible = selectTemplate?.createFolder == true
             if (firstNode != null) {
                 templateChildrenTree.selectionModel.selectionPath = TreePath(treeModel.getPathToRoot(firstNode))
             }
@@ -209,9 +205,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         rootPanel.layout = BorderLayout()
         rootPanel.border = LineBorder(UIColor.LINE_COLOR, 1, 0, 1, 1)
 
-        val render = MyTreeCellRenderer()
-        templateChildrenTree.cellRenderer = render
-        templateChildrenTree.cellEditor = MyTreeCellEditRenderer(templateChildrenTree, render)
+        templateChildrenTree.cellRenderer = MyTreeCellRenderer()
 
         templateChildrenTree.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
@@ -250,6 +244,8 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
                     languageTextField?.isVisible = true
                 }
                 languageTextField?.text = obj.content ?: ""
+                languageTextField?.editor?.scrollingModel?.disableAnimation()
+                languageTextField?.editor?.scrollingModel?.scroll(0, 0)
             } else {
                 languageTextField?.isVisible = false
             }
@@ -259,20 +255,28 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         scrollPane.preferredSize = JBDimension(200, 400)
         scrollPane.border = BorderFactory.createEmptyBorder()
         rootPanel.add(scrollPane, BorderLayout.CENTER)
+
+        val box = Box.createHorizontalBox()
+        box.border = BorderFactory.createCompoundBorder(
+            LineBorder(UIColor.LINE_COLOR, 1, 0, 0, 0),
+            BorderFactory.createEmptyBorder(0, 5, 0, 5)
+        )
+        rootPanel.add(box, BorderLayout.SOUTH)
+
+        box.add(Box.createHorizontalGlue())
+
+        addTemplateChildBtn.preferredSize = JBDimension(40, 40)
+        addTemplateChildBtn.addActionListener {
+            val treeModel = (templateChildrenTree.model as DefaultTreeModel)
+            val root = treeModel.root
+            if (root !is MyMutableTreeNode) {
+                return@addActionListener
+            }
+            addTemplateChild(root)
+        }
+        box.add(addTemplateChildBtn)
+
         return rootPanel
-    }
-
-    private fun createChildrenTreeNode(child: TemplateChildEntity): MyMutableTreeNode {
-        val node = MyMutableTreeNode(child)
-        if (!child.isFolder) {
-            return node
-        }
-
-        val children = child.children
-        children?.forEach {
-            node.add(createChildrenTreeNode(it))
-        }
-        return node
     }
 
     private fun initLanguageTextField(): JComponent {
@@ -384,13 +388,6 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
     private fun addTemplateChild(parentNode: MyMutableTreeNode) {
         val obj = parentNode.userObject ?: return
 
-        val isChild = obj is TemplateChildEntity
-        val isParent = obj is TemplateEntity
-
-        if (!isChild && !isParent) {
-            return
-        }
-
         val dialog = InputNameDialog(project, hint = "创建目录")
         dialog.show()
         if (dialog.exitCode != OK_EXIT_CODE) {
@@ -403,20 +400,26 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         entity.name = name
         entity.isFolder = dialog.createFolder.isSelected
 
-        var children = if (obj is TemplateEntity) obj.children else (obj as TemplateChildEntity).children
+        var children = obj.children
         if (children == null) {
             children = mutableListOf()
-            if (obj is TemplateEntity) obj.children = children else (obj as TemplateChildEntity).children = children
+            obj.children = children
         }
         children.add(entity)
 
-        val node = createChildrenTreeNode(entity)
-        val treeModel = (templateChildrenTree.model as DefaultTreeModel)
+        val node = MyMutableTreeNode(entity)
         parentNode.add(node)
+
+        val treeModel = (templateChildrenTree.model as DefaultTreeModel)
+        val selectionPath = templateChildrenTree.selectionModel.selectionPath
         treeModel.reload(parentNode)
         val path = TreePath(treeModel.getPathToRoot(parentNode))
         if (!templateChildrenTree.isExpanded(path)) {
             templateChildrenTree.expandPath(path)
+        }
+
+        if (selectionPath != null) {
+            templateChildrenTree.selectionModel.selectionPath = selectionPath
         }
     }
 
@@ -433,13 +436,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
 
         val obj = parent.userObject ?: return
 
-        val isChild = obj is TemplateChildEntity
-        val isParent = obj is TemplateEntity
-        if (!isChild && !isParent) {
-            return
-        }
-
-        val children = if (obj is TemplateEntity) obj.children else (obj as TemplateChildEntity).children
+        val children = obj.children
         if (children.isNullOrEmpty()) {
             return
         }
@@ -559,10 +556,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         menu.addActionListener {
             dataChange = true
             templateEntity.createFolder = !templateEntity.createFolder
-            val treeModel = (templateChildrenTree.model as DefaultTreeModel)
-            val path = templateChildrenTree.selectionModel.selectionPath
-            treeModel.reload()
-            templateChildrenTree.selectionModel.selectionPath = path
+            templateChildrenTree.isRootVisible = templateEntity.createFolder
         }
         pop.add(menu)
 
@@ -650,6 +644,35 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
 
         val treeModel = (templateChildrenTree.model as DefaultTreeModel)
         treeModel.reload(node)
+
+        if (obj.isFolder) {
+            return
+        }
+
+        if (selectTemplateChild?.userObject != obj) {
+            return
+        }
+
+        if (languageTextField == null) {
+            return
+        }
+
+        if (!needCreateLanguageTextField(languageTextField!!, obj.name)) {
+            return
+        }
+
+        val scrollingModel = languageTextField?.editor?.scrollingModel
+        val verticalScrollOffset = scrollingModel?.verticalScrollOffset
+        val horizontalScrollOffset = scrollingModel?.horizontalScrollOffset
+
+        languageTextField = createLanguageTextField(obj.name)
+        languageTextFieldRoot.removeAll()
+        languageTextFieldRoot.add(languageTextField!!, BorderLayout.CENTER)
+        languageTextField?.text = obj.tempContent ?: obj.content ?: ""
+        if (verticalScrollOffset != null) {
+            languageTextField?.editor?.scrollingModel?.disableAnimation()
+            languageTextField?.editor?.scrollingModel?.scroll(horizontalScrollOffset ?: 0, verticalScrollOffset)
+        }
     }
 
     private fun move(index: Int, first: Boolean?, up: Boolean?) {
@@ -697,13 +720,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
 
         val obj = parent.userObject ?: return
 
-        val isChild = obj is TemplateChildEntity
-        val isParent = obj is TemplateEntity
-        if (!isChild && !isParent) {
-            return
-        }
-
-        val children = if (obj is TemplateEntity) obj.children else (obj as TemplateChildEntity).children
+        val children = obj.children
         if (children.isNullOrEmpty()) {
             return
         }
@@ -1015,15 +1032,54 @@ class SpecialPlaceHolderDescDialog(val project: Project) : DialogWrapper(project
     override fun createCenterPanel(): JComponent = rootPanel
 }
 
-class MyMutableTreeNode(userObject: Any? = null) : DefaultMutableTreeNode(userObject) {
+class MyMutableTreeNode(template: BaseTemplate? = null) : DefaultMutableTreeNode(template) {
+
+    override fun getChildCount(): Int {
+        return if (userObject == null) 0 else if (children != null) {
+            children.size
+        } else {
+            getUserObject()?.children?.forEach {
+                val index = if (children == null) 0 else children.size
+                insert(MyMutableTreeNode(it), index)
+            }
+
+            if (children == null) {
+                children = Vector()
+                0
+            } else {
+                children.size
+            }
+        }
+    }
+
+    override fun children(): Enumeration<TreeNode> {
+        return if (userObject == null) EMPTY_ENUMERATION else if (children != null) {
+            children.elements()
+        } else {
+            getUserObject()?.children?.forEach {
+                val index = if (children == null) 0 else children.size
+                insert(MyMutableTreeNode(it), index)
+            }
+
+            if (children == null) {
+                children = Vector()
+                EMPTY_ENUMERATION
+            } else {
+                children.elements()
+            }
+        }
+    }
+
     override fun isLeaf(): Boolean {
-        val obj = userObject
-        return obj is TemplateChildEntity && !obj.isFolder
+        return getUserObject()?.children.isNullOrEmpty()
     }
 
     override fun toString(): String {
-        val obj = userObject
-        return if (obj is TemplateChildEntity) obj.name ?: "" else if (obj is TemplateEntity) obj.name ?: "" else ""
+        return getUserObject()?.name ?: ""
+    }
+
+    override fun getUserObject(): BaseTemplate? {
+        return super.getUserObject() as BaseTemplate?
     }
 }
 
@@ -1041,50 +1097,43 @@ class MyTreeCellRenderer : DefaultTreeCellRenderer() {
         row: Int,
         hasFocus: Boolean
     ): Component {
-        var isDisable = false
-        var obj: Any? = null
+        var obj: BaseTemplate? = null
         if (value is MyMutableTreeNode) {
             obj = value.userObject
-            if (obj == null || (obj is TemplateEntity && !obj.createFolder)) {
-                isDisable = true
-            }
         }
 
         super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, false)
-        if (isDisable && tree.isEnabled) {
-            isEnabled = false
-            val laf = UIManager.getLookAndFeel()
-            val disabledIcon = laf.getDisabledIcon(tree, icon)
-            if (disabledIcon != null) icon = disabledIcon
-            setDisabledIcon(icon)
-        } else if (leaf) {
-            var suffix: String? = null
-            if (obj is TemplateChildEntity) {
-                val fileName = obj.name
-                suffix = if (fileName.isNullOrEmpty()) "" else {
+        if (leaf) {
+            val isFolder = obj is TemplateEntity || (obj is TemplateChildEntity && obj.isFolder)
+            if (isFolder) {
+                icon = defaultClosedIcon
+            } else {
+                val fileName = obj?.name
+                val suffix = if (fileName.isNullOrEmpty()) "" else {
                     val index = fileName.lastIndexOf(".")
                     if (index == -1) "" else fileName.substring(index + 1)
                 }.lowercase()
-            }
 
-            when (suffix) {
-                "dart" -> {
-                    icon = DartIcons.Dart_file
-                }
+                when (suffix) {
+                    "dart" -> {
+                        icon = DartIcons.Dart_file
+                    }
 
-                "json" -> {
-                    icon = AllIcons.FileTypes.Json
-                }
+                    "json" -> {
+                        icon = AllIcons.FileTypes.Json
+                    }
 
-                "yaml" -> {
-                    icon = AllIcons.FileTypes.Yaml
-                }
+                    "yaml" -> {
+                        icon = AllIcons.FileTypes.Yaml
+                    }
 
-                else -> {
-                    icon = AllIcons.FileTypes.Text
+                    else -> {
+                        icon = AllIcons.FileTypes.Text
+                    }
                 }
             }
         }
+
         return this
     }
 
@@ -1096,18 +1145,3 @@ class MyTreeCellRenderer : DefaultTreeCellRenderer() {
         return Color(0x00ffffff, true)
     }
 }
-
-class MyTreeCellEditRenderer(tree: JTree? = null, renderer: DefaultTreeCellRenderer? = null) :
-    DefaultTreeCellEditor(tree, renderer) {
-    override fun getTreeCellEditorComponent(
-        tree: JTree?,
-        value: Any?,
-        isSelected: Boolean,
-        expanded: Boolean,
-        leaf: Boolean,
-        row: Int
-    ): Component {
-        return super.getTreeCellEditorComponent(tree, value, isSelected, expanded, leaf, row)
-    }
-}
-
