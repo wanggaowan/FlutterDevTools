@@ -55,14 +55,14 @@ class ImageUsagesHandler(psiElement: PsiElement) : FindUsagesHandler(psiElement)
 
         ApplicationManager.getApplication().runReadAction {
             val file = element.virtualFile
-            val pubRoot = PubRoot.forFile(file)?:return@runReadAction
+            val pubRoot = PubRoot.forFile(file) ?: return@runReadAction
             val parent = file.parent ?: return@runReadAction
 
             val exampleImagesDir = PluginSettings.getExampleImagesFileDir(element.project)
             val exampleDir = pubRoot.exampleDir
             val isExample = exampleDir != null && file.path.startsWith("${exampleDir.path}/$exampleImagesDir")
 
-            val dartClass: DartClass = findImagesClass(pubRoot,isExample,exampleDir!!) ?: return@runReadAction
+            val dartClass: DartClass = findImagesClass(pubRoot, isExample, exampleDir) ?: return@runReadAction
 
             val endDirName = if (isExample) {
                 val splits = exampleImagesDir.split("/")
@@ -82,8 +82,9 @@ class ImageUsagesHandler(psiElement: PsiElement) : FindUsagesHandler(psiElement)
                 }
             fileRelativePath = getFileRelativePath(fileRelativePath, parent, endDirName)
 
-            val member = dartClass.findMemberByName(getPropertyKey(fileRelativePath))?: return@runReadAction
-            val child = member.getChildOfType<DartComponentName>()?.getChildOfType<DartId>()?.firstChild?:return@runReadAction
+            val member = dartClass.findMemberByName(getPropertyKey(fileRelativePath)) ?: return@runReadAction
+            val child =
+                member.getChildOfType<DartComponentName>()?.getChildOfType<DartId>()?.firstChild ?: return@runReadAction
             val usageInfo = UsageInfo(member)
             processor.process(usageInfo)
             DartServerFindUsagesHandler(child).processElementUsages(child, processor, options)
@@ -91,15 +92,16 @@ class ImageUsagesHandler(psiElement: PsiElement) : FindUsagesHandler(psiElement)
         return true
     }
 
-    private fun findImagesClass(pubRoot: PubRoot,isExample:Boolean,exampleDir:VirtualFile?):DartClass? {
+    private fun findImagesClass(pubRoot: PubRoot, isExample: Boolean, exampleDir: VirtualFile?): DartClass? {
         if (isExample) {
             val path = PluginSettings.getExampleImagesRefFilePath(project)
             val fileName = PluginSettings.getExampleImagesRefFileName(project)
             val className = PluginSettings.getExampleImagesRefClassName(project)
-            val file = VirtualFileManager.getInstance().findFileByUrl("file://${exampleDir!!.path}/$path/$fileName")?:return null
+            val file = VirtualFileManager.getInstance().findFileByUrl("file://${exampleDir!!.path}/$path/$fileName")
+                ?: return null
             val psiFile = file.toPsiFile(project) ?: return null
 
-            var dartClazz:DartClass? = null
+            var dartClazz: DartClass? = null
             psiFile.getChildrenOfType<DartClass>().forEach {
                 if (it.name == className) {
                     dartClazz = it
@@ -112,10 +114,11 @@ class ImageUsagesHandler(psiElement: PsiElement) : FindUsagesHandler(psiElement)
         val path = PluginSettings.getImagesRefFilePath(project)
         val fileName = PluginSettings.getImagesRefFileName(project)
         val className = PluginSettings.getExampleImagesRefClassName(project)
-        val file = VirtualFileManager.getInstance().findFileByUrl("file://${pubRoot.root.path}/$path/$fileName")?:return null
+        val file =
+            VirtualFileManager.getInstance().findFileByUrl("file://${pubRoot.root.path}/$path/$fileName") ?: return null
         val psiFile = file.toPsiFile(project) ?: return null
 
-        var dartClazz:DartClass? = null
+        var dartClazz: DartClass? = null
         psiFile.getChildrenOfType<DartClass>().forEach {
             if (it.name == className) {
                 dartClazz = it
