@@ -26,6 +26,12 @@
     <change-notes><![CDATA[
     <p>3.2</p>
     <ul>
+      <li>多语言文件arb，按住(ctrl/command)点击多语言key或右键Find Usages时，支持查找所有引用此key的文件</li>
+      <li>图片资源文件，右键Find Usages时，支持查找所有引用此图片的文件</li>
+    </ul>
+
+    <p>3.2</p>
+    <ul>
       <li>创建Dart文件模版，支持多级目录结构</li>
     </ul>
 
@@ -364,6 +370,9 @@
         <!--</intentionAction>-->
         <annotator language="Dart" implementationClass="com.wanggaowan.tools.extensions.annotator.FixImportAnnotator"/>
 
+
+        <findUsagesHandlerFactory implementation="com.wanggaowan.tools.extensions.findusage.I18nFindUsagesHandlerFactory"/>
+        <findUsagesHandlerFactory implementation="com.wanggaowan.tools.extensions.findusage.ImageFindUsagesHandlerFactory"/>
     </extensions>
 
 </idea-plugin>

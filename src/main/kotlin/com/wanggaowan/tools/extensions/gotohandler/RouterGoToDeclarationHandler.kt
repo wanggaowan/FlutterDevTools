@@ -117,8 +117,7 @@ object RouterGoToDeclarationHandler {
                 continue
             }
 
-            val content = children[0]
-                ?.getChildOfType<DartStringLiteralExpression>()?.text?.replace("\"", "")
+            val content = children[0].getChildOfType<DartStringLiteralExpression>()?.text?.replace("\"", "")
                 ?.replace("\'", "")?.trim()
             if (content == text) {
                 elements.add(child)
