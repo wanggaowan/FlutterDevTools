@@ -70,6 +70,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private val defaultCoroutineScope = CoroutineScope(Dispatchers.Default)
     private val mainCoroutineScope = CoroutineScope(Dispatchers.Main)
     private var mGetImageJob: Job? = null
+    private var mSelectedImage: Property? = null
 
     init {
         Disposer.register(this, UiNotifyConnector(this, object : Activatable {
@@ -126,22 +127,33 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         }
 
         mImagePanel.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent?) {
+            override fun mouseClicked(e: MouseEvent) {
+                if (e.button == MouseEvent.BUTTON3) {
+                    // 双击
+                    return
+                }
+
+                if (e.clickCount > 1) {
+                    mSelectedImage?.also {
+                        openFile(it)
+                    }
+                    return
+                }
+
                 val selectedRow = mImagePanel.selectedRow
                 if (mLayoutMode == 0 || mImagePanel.maxColumns == 1) {
-                    val image = myListModel.getData(selectedRow) ?: return
-                    openFile(image)
+                    mSelectedImage = myListModel.getData(selectedRow) ?: return
                     return
                 }
 
                 val selectedColumn = mImagePanel.selectedColumn
                 if (selectedRow == -1 || selectedColumn == -1) {
+                    mSelectedImage = null
                     return
                 }
 
                 val index = mImagePanel.model.toListIndex(selectedRow, selectedColumn)
-                val image = myListModel.getData(index) ?: return
-                openFile(image)
+                mSelectedImage = myListModel.getData(index) ?: return
             }
         })
 
@@ -581,11 +593,11 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         panel.background = UIColor.BG_COLOR
         val image = myListModel.getData(index) ?: return panel
         panel.layout = BorderLayout()
-        if (focused) {
-            panel.background = UIColor.MOUSE_ENTER_COLOR
-        }
-
         if (layoutType == 0) {
+            if (focused) {
+                panel.background = UIColor.MOUSE_ENTER_COLOR
+            }
+
             // 列表布局
             panel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
             panel.minimumSize = Dimension(width, 100)
@@ -624,9 +636,12 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             panel.preferredSize = Dimension(mGridImageLayoutWidth + 20, mGridImageLayoutWidth + labelHeight + 20)
             panel.minimumSize = panel.preferredSize
             panel.maximumSize = panel.preferredSize
+            val emptyBorderWidth= if (focused) 9 else 10
+            val lineBorderWidth= if (focused) 2 else 1
+            val lineBorderColor= if (focused) UIColor.INPUT_FOCUS_COLOR else UIColor.LINE_COLOR
             panel.border = BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(10, 10, 10, 10),
-                LineBorder(UIColor.LINE_COLOR, 1)
+                BorderFactory.createEmptyBorder(emptyBorderWidth, emptyBorderWidth, emptyBorderWidth, emptyBorderWidth),
+                LineBorder(lineBorderColor, lineBorderWidth)
             )
 
             val imageView = ImageView(getFile(image.value))
