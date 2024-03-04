@@ -28,4 +28,23 @@ object XUtils {
             || lower.endsWith("gif")
             || lower.endsWith("svg")
     }
+
+    /**
+     * 判断是否是图片分辨率变体目录
+     */
+    fun isImageVariantsFolder(name: String?): Boolean {
+        return name == "1.5x" || name == "2.0x" || name == "3.0x" || name == "4.0x"
+    }
+
+    /**
+     * 将图片路径数据转化为符合Dart规则的Key
+     */
+    fun imagePathToDartKey(name: String): String {
+        return StringUtils.lowerCamelCase(
+            name.substring(0, name.lastIndexOf("."))
+                .replace("/", "_")
+                .replace("-", "_")
+                .replace("@", ""), false
+        )
+    }
 }

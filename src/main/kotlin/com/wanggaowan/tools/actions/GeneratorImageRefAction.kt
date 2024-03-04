@@ -18,8 +18,7 @@ import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.entity.Property
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.ProgressUtils
-import com.wanggaowan.tools.utils.StringUtils
-import com.wanggaowan.tools.utils.XUtils.isImage
+import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.ex.flutterModules
 import com.wanggaowan.tools.utils.ex.rootDir
@@ -205,34 +204,20 @@ object GeneratorImageRefUtils {
     ): LinkedHashSet<Property> {
         val childrenSet = linkedSetOf<Property>()
         val dirName = rootDir.name
-        // 记录rootDir下不同分辨率的变体目录
-        val variantsDir = mutableListOf<VirtualFile>()
-        // 记录rootDir下除variantsDir以为的目录
+        // 记录rootDir下除variantsDir以外的目录
         val childDir = mutableListOf<VirtualFile>()
         for (child in rootDir.children) {
             if (child.isDirectory) {
                 val name = child.name
-                if (name == "1.5x" || name == "2.0x" || name == "3.0x" || name == "4.0x") {
-                    variantsDir.add(child)
-                } else {
+                if (!XUtils.isImageVariantsFolder(name)) {
                     childDir.add(child)
                 }
-            } else if (isImage(child.name)) {
-                val path = if (dirName == "1.5x" || dirName == "2.0x" || dirName == "3.0x" || dirName == "4.0x") {
-                    parentPath.replace("$dirName/", "")
-                } else {
-                    parentPath
+            } else if (XUtils.isImage(child.name)) {
+                if (!XUtils.isImageVariantsFolder(dirName)) {
+                    val value = parentPath + child.name
+                    val key = XUtils.imagePathToDartKey(value)
+                    childrenSet.add(Property(key, "$basePath/$value"))
                 }
-
-                val value = path + child.name
-                val key = getPropertyKey(value)
-                childrenSet.add(Property(key, "$basePath/$value"))
-            }
-        }
-
-        if (variantsDir.isNotEmpty()) {
-            variantsDir.forEach {
-                childrenSet.addAll(getDeDuplicationList(it, basePath, "$parentPath${it.name}/"))
             }
         }
 
@@ -243,15 +228,6 @@ object GeneratorImageRefUtils {
         }
 
         return childrenSet
-    }
-
-    private fun getPropertyKey(value: String): String {
-        return StringUtils.lowerCamelCase(
-            value.substring(0, value.lastIndexOf("."))
-                .replace("/", "_")
-                .replace("-", "_")
-                .replace("@", ""), false
-        )
     }
 
     /**
@@ -387,7 +363,6 @@ object GeneratorImageRefUtils {
         parentPath: String
     ) {
         val dirs = mutableListOf<VirtualFile>()
-        val variantsDirs = mutableListOf<VirtualFile>()
         imagesDir.children.forEach {
             if (it.isDirectory && it.children.isNotEmpty()) {
                 YamlUtils.createYAMLSequenceItem(project, "$parentPath${it.name}/")?.also { element ->
@@ -395,16 +370,10 @@ object GeneratorImageRefUtils {
                 }
 
                 val name = it.name
-                if (name == "1.5x" || name == "2.0x" || name == "3.0x" || name == "4.0x") {
-                    variantsDirs.add(it)
-                } else {
+                if (!XUtils.isImageVariantsFolder(name)) {
                     dirs.add(it)
                 }
             }
-        }
-
-        variantsDirs.forEach {
-            addImagesDir(project, eolElement, it, yamlParent, "$parentPath${it.name}/")
         }
 
         dirs.forEach {

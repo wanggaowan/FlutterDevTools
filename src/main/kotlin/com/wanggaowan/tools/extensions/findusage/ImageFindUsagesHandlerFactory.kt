@@ -16,6 +16,7 @@ import com.jetbrains.lang.dart.psi.DartComponentName
 import com.jetbrains.lang.dart.psi.DartId
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.StringUtils
+import com.wanggaowan.tools.utils.XUtils
 import io.flutter.pub.PubRoot
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
@@ -33,6 +34,10 @@ class ImageFindUsagesHandlerFactory : FindUsagesHandlerFactory() {
         }
 
         val file = element.virtualFile ?: return false
+        if (!XUtils.isImage(element.name)) {
+            return false
+        }
+
         val imagesDir = PluginSettings.getImagesFileDir(element.project)
         val exampleImagesDir = PluginSettings.getExampleImagesFileDir(element.project)
         return !(!file.path.contains(imagesDir) && !file.path.contains(exampleImagesDir))
@@ -43,7 +48,11 @@ class ImageFindUsagesHandlerFactory : FindUsagesHandlerFactory() {
     }
 }
 
-class ImageUsagesHandler(psiElement: PsiElement) : FindUsagesHandler(psiElement) {
+/**
+ * 查找图片
+ */
+class ImageUsagesHandler(psiElement: PsiElement, private val findDefined: Boolean = true) :
+    FindUsagesHandler(psiElement) {
     override fun processElementUsages(
         element: PsiElement,
         processor: Processor<in UsageInfo>,
@@ -75,7 +84,7 @@ class ImageUsagesHandler(psiElement: PsiElement) : FindUsagesHandler(psiElement)
 
             val parentName = parent.name
             var fileRelativePath =
-                if (parentName == "1.5x" || parentName == "2.0x" || parentName == "3.0x" || parentName == "4.0x") {
+                if (XUtils.isImageVariantsFolder(parentName)) {
                     file.name
                 } else {
                     "$parentName/${file.name}"
@@ -85,8 +94,12 @@ class ImageUsagesHandler(psiElement: PsiElement) : FindUsagesHandler(psiElement)
             val member = dartClass.findMemberByName(getPropertyKey(fileRelativePath)) ?: return@runReadAction
             val child =
                 member.getChildOfType<DartComponentName>()?.getChildOfType<DartId>()?.firstChild ?: return@runReadAction
-            val usageInfo = UsageInfo(member)
-            processor.process(usageInfo)
+            if (findDefined) {
+                // 是否查找定义图片引用字段位置
+                val usageInfo = UsageInfo(member)
+                processor.process(usageInfo)
+            }
+
             DartServerFindUsagesHandler(child).processElementUsages(child, processor, options)
         }
         return true

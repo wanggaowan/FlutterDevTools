@@ -24,10 +24,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
-    <p>3.2</p>
+    <p>3.3</p>
     <ul>
       <li>多语言文件arb，按住(ctrl/command)点击多语言key或右键Find Usages时，支持查找所有引用此key的文件</li>
       <li>图片资源文件，右键Find Usages时，支持查找所有引用此图片的文件</li>
+      <li>提供安全删除图片资源功能，删除图片时，如果图片被引用则给予安全提示</li>
     </ul>
 
     <p>3.2</p>
@@ -288,7 +289,7 @@
                 class="com.wanggaowan.tools.actions.translate.TranslateArbAction"
                 text="根据模版arb翻译"
                 description="根据模版arb对应内容，将当前文件不存在的内容进行翻译并插入">
-            <add-to-group group-id="CutCopyPasteGroup" anchor="last" />
+            <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
         </action>
     </actions>
 
@@ -350,6 +351,7 @@
                            order="first"/>
         <refactoring.moveHandler
             implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first"/>
+        <refactoring.safeDeleteProcessor implementation="com.wanggaowan.tools.extensions.refactoring.SafeDeleteImageFileProcessorDelegate" order="first"/>
 
         <customPasteProvider
             implementation="com.wanggaowan.tools.extensions.AndroidStringPasteProvider"/>
@@ -370,9 +372,13 @@
         <!--</intentionAction>-->
         <annotator language="Dart" implementationClass="com.wanggaowan.tools.extensions.annotator.FixImportAnnotator"/>
 
+        <lang.refactoringSupport implementationClass=""/>
 
-        <findUsagesHandlerFactory implementation="com.wanggaowan.tools.extensions.findusage.I18nFindUsagesHandlerFactory"/>
-        <findUsagesHandlerFactory implementation="com.wanggaowan.tools.extensions.findusage.ImageFindUsagesHandlerFactory"/>
+
+        <findUsagesHandlerFactory
+            implementation="com.wanggaowan.tools.extensions.findusage.I18nFindUsagesHandlerFactory"/>
+        <findUsagesHandlerFactory
+            implementation="com.wanggaowan.tools.extensions.findusage.ImageFindUsagesHandlerFactory"/>
     </extensions>
 
 </idea-plugin>
