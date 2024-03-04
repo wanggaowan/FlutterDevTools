@@ -27,7 +27,7 @@ import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
  *
  * @author Created by wanggaowan on 2024/2/27 11:26
  */
-class ImageFindUsagesHandlerFactory : FindUsagesHandlerFactory() {
+class ImageFindUsagesHandlerFactory(private val findDefined: Boolean = true) : FindUsagesHandlerFactory() {
     override fun canFindUsages(element: PsiElement): Boolean {
         if (element !is PsiFile) {
             return false
@@ -44,7 +44,7 @@ class ImageFindUsagesHandlerFactory : FindUsagesHandlerFactory() {
     }
 
     override fun createFindUsagesHandler(element: PsiElement, forHighlightUsages: Boolean): FindUsagesHandler {
-        return ImageUsagesHandler(element)
+        return ImageUsagesHandler(element,findDefined)
     }
 }
 

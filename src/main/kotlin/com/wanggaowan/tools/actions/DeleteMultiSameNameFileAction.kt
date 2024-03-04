@@ -1,14 +1,20 @@
 package com.wanggaowan.tools.actions
 
-import com.intellij.notification.NotificationType
+import com.intellij.ide.util.DeleteHandler
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.LangDataKeys
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.wanggaowan.tools.utils.NotificationUtils
+import com.intellij.psi.PsiBinaryFile
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
+import com.intellij.psi.impl.PsiManagerImpl
+import com.intellij.psi.impl.file.PsiBinaryFileImpl
+import com.wanggaowan.tools.utils.XUtils
+import org.jetbrains.kotlin.idea.core.util.toPsiFile
 
 /**
  * 删除多个相同名称但在不同分辨率下的文件
@@ -22,45 +28,119 @@ class DeleteMultiSameNameFileAction : DumbAwareAction() {
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        val module = e.getData(LangDataKeys.MODULE) ?: return
+        val project = e.getData(LangDataKeys.PROJECT) ?: return
         val files = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
         if (files.isNullOrEmpty()) {
             return
         }
 
-        WriteCommandAction.runWriteCommandAction(module.project) {
-            for (file in files) {
-                deleteFile(module, file)
+        val allDeleteFiles = mutableListOf<PsiFile>()
+        for (file in files) {
+            var parent = file.parent
+            if (parent == null) {
+                allDeleteFiles.add(getPsiFile(project, file))
+                continue
             }
-            NotificationUtils.showBalloonMsg(module.project, "已删除", NotificationType.INFORMATION)
+
+            if (XUtils.isImageVariantsFolder(parent.name)) {
+                parent = parent.parent
+            }
+
+            if (parent == null) {
+                allDeleteFiles.add(getPsiFile(project, file))
+                continue
+            }
+
+            findChildren(project, parent, file.name, allDeleteFiles)
+        }
+
+        try {
+            DeleteHandler.deletePsiElement(allDeleteFiles.toTypedArray(), project)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
-    private fun deleteFile(requestor: Any, file: VirtualFile) {
-        var parent = file.parent
-        file.delete(requestor)
-        if (parent != null) {
-            val name = parent.name
-            if (isValidDir(name)) {
-                parent = parent.parent
+    private fun getPsiFile(project: Project, file: VirtualFile, needFind: Boolean = true): PsiFile {
+        val psiFile =
+            file.toPsiFile(project) ?: throw RuntimeException("can not map virtual file:${file.name} to psi file")
+        return if (psiFile is PsiBinaryFile) {
+            PsiBinaryFileDelegate(psiFile, needFind)
+        } else {
+            psiFile
+        }
+    }
+
+    private fun findChildren(project: Project, parent: VirtualFile, fileName: String, results: MutableList<PsiFile>) {
+        var needFind = true
+        var child = parent.findChild(fileName)
+        if (child != null) {
+            val psiFile = getPsiFile(project, child, needFind)
+            results.add(psiFile)
+            if (psiFile is PsiBinaryFile) {
+                needFind = false
             }
-            parent?.children?.forEach {
-                if (!it.isDirectory) {
-                    if (it.name == file.name) {
-                        it.delete(requestor)
-                    }
-                } else if (isValidDir(it.name)) {
-                    it.children.forEach { child ->
-                        if (!child.isDirectory && child.name == file.name) {
-                            child.delete(requestor)
-                        }
-                    }
+        }
+
+        child = parent.findChild("1.5x")
+        if (child != null) {
+            child = child.findChild(fileName)
+            if (child != null) {
+                val psiFile = getPsiFile(project, child, needFind)
+                results.add(psiFile)
+                if (psiFile is PsiBinaryFile) {
+                    needFind = false
                 }
             }
         }
+
+        child = parent.findChild("2.0x")
+        if (child != null) {
+            child = child.findChild(fileName)
+            if (child != null) {
+                val psiFile = getPsiFile(project, child, needFind)
+                results.add(psiFile)
+                if (psiFile is PsiBinaryFile) {
+                    needFind = false
+                }
+            }
+        }
+
+        child = parent.findChild("3.0x")
+        if (child != null) {
+            child = child.findChild(fileName)
+            if (child != null) {
+                val psiFile = getPsiFile(project, child, needFind)
+                results.add(psiFile)
+                if (psiFile is PsiBinaryFile) {
+                    needFind = false
+                }
+            }
+        }
+
+        child = parent.findChild("4.0x")
+        if (child != null) {
+            child = child.findChild(fileName)
+            if (child != null) {
+                val psiFile = getPsiFile(project, child, needFind)
+                results.add(psiFile)
+            }
+        }
+    }
+}
+
+// 二进制文件代理，主要是删除不同分辨率相同图片时,存储在变体目录下的图片文件名称，同时展示所处分辨率目录
+class PsiBinaryFileDelegate(val file: PsiFile, val needFind: Boolean = true) :
+    PsiBinaryFileImpl(file.manager as PsiManagerImpl, file.viewProvider) {
+    override fun getName(): String {
+        val parentName = parent?.name
+        if (XUtils.isImageVariantsFolder(parentName)) {
+            return "${parentName}/${super.getName()}"
+        }
+        return super.getName()
     }
 
-    private fun isValidDir(name: String): Boolean {
-        return name == "1.5x" || name == "2.0x" || name == "3.0x" || name == "4.0x"
+    override fun isEquivalentTo(another: PsiElement?): Boolean {
+        return file == another
     }
 }

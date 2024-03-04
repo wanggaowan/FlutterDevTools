@@ -10,6 +10,7 @@ import com.intellij.refactoring.safeDelete.NonCodeUsageSearchInfo
 import com.intellij.refactoring.safeDelete.SafeDeleteProcessorDelegateBase
 import com.intellij.refactoring.safeDelete.usageInfo.SafeDeleteReferenceSimpleDeleteUsageInfo
 import com.intellij.usageView.UsageInfo
+import com.wanggaowan.tools.actions.PsiBinaryFileDelegate
 import com.wanggaowan.tools.extensions.findusage.ImageUsagesHandler
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.XUtils
@@ -40,18 +41,21 @@ class SafeDeleteImageFileProcessorDelegate : SafeDeleteProcessorDelegateBase() {
         allElementsToDelete: Array<out PsiElement>,
         usages: MutableList<UsageInfo>
     ): NonCodeUsageSearchInfo {
-        ImageUsagesHandler(element,false).processElementUsages(element, {
-            val usage = SafeDeleteReferenceSimpleDeleteUsageInfo(
-                it.element,
-                element,
-                -1,
-                -1,
-                it.isNonCodeUsage,
-                false
-            )
-            usages.add(usage)
-            true
-        }, FindUsagesOptions(element.project))
+        if (element !is PsiBinaryFileDelegate || element.needFind) {
+            ImageUsagesHandler(element, false).processElementUsages(element, {
+                val usage = SafeDeleteReferenceSimpleDeleteUsageInfo(
+                    it.element,
+                    element,
+                    -1,
+                    -1,
+                    it.isNonCodeUsage,
+                    false
+                )
+                usages.add(usage)
+                true
+            }, FindUsagesOptions(element.project))
+        }
+
         return NonCodeUsageSearchInfo({ element is PsiFile && allElementsToDelete.contains(element) }, element)
     }
 
