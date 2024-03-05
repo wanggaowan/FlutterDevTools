@@ -14,7 +14,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFileSystemItem
 import com.intellij.refactoring.move.MoveCallback
 import com.intellij.refactoring.move.MoveHandlerDelegate
-import com.wanggaowan.tools.actions.ImportSameImageResUtils
+import com.wanggaowan.tools.actions.image.ImportSameImageResUtils
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.isFlutterProject

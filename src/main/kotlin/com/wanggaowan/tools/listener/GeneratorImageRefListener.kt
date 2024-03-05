@@ -8,7 +8,7 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.*
 import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.file.PsiDirectoryImpl
-import com.wanggaowan.tools.actions.GeneratorImageRefUtils
+import com.wanggaowan.tools.actions.image.GeneratorImageRefUtils
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.ex.basePath

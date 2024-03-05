@@ -235,33 +235,33 @@
                     description="开启根据Dart实体生成.g.dart文件观察者"/>
             <separator/>
             <action id="FlutterDevTools.ImportSameImageResAction"
-                    class="com.wanggaowan.tools.actions.ImportSameImageResAction"
+                    class="com.wanggaowan.tools.actions.image.ImportSameImageResAction"
                     text="导入不同分辨率下的相同图片"
                     description="导入 android drawable目录结构不同分辨率下的多张图片"/>
             <action id="FlutterDevTools.GeneratorImageRefAction"
-                    class="com.wanggaowan.tools.actions.GeneratorImageRefAction"
+                    class="com.wanggaowan.tools.actions.image.GeneratorImageRefAction"
                     text="生成图片资源引用文件并配置yaml assets节点"
                     description="生成图片资源引用文件并配置pubspec.yaml assets节点"/>
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
         </group>
 
         <group id="FlutterDevTools.ImageOperationActionGroup"
-               class="com.wanggaowan.tools.actions.ImageOperationActionGroup">
+               class="com.wanggaowan.tools.actions.image.ImageOperationActionGroup">
             <separator/>
             <action id="FlutterDevTools.CopyMultiSameNameFileAction"
-                    class="com.wanggaowan.tools.actions.CopyMultiSameNameFileAction"
+                    class="com.wanggaowan.tools.actions.image.CopyMultiSameNameImageAction"
                     text="复制不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
                     description="复制不同分辨率下的相同图片"/>
             <action id="FlutterDevTools.DeleteMultiSameNameFileAction"
-                    class="com.wanggaowan.tools.actions.DeleteMultiSameNameFileAction"
+                    class="com.wanggaowan.tools.actions.image.DeleteMultiSameNameImageAction"
                     text="删除不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
                     description="删除不同分辨率下的相同图片"/>
             <action id="FlutterDevTools.RenameMultiSameNameFileAction"
-                    class="com.wanggaowan.tools.actions.RenameMultiSameNameFileAction"
+                    class="com.wanggaowan.tools.actions.image.RenameMultiSameNameImageAction"
                     text="重命名不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
                     description="重命名不同分辨率下的相同图片"/>
             <action id="FlutterDevTools.CopyImageRefKeyAction"
-                    class="com.wanggaowan.tools.actions.CopyImageRefKeyAction"
+                    class="com.wanggaowan.tools.actions.image.CopyImageRefKeyAction"
                     text="复制图片引用" icon="FlutterIcons.Flutter_13"
                     description="复制图片引用"/>
             <separator/>
@@ -372,9 +372,6 @@
         <!--    <descriptionDirectoryName>DartQuickAssistIntention</descriptionDirectoryName>-->
         <!--</intentionAction>-->
         <annotator language="Dart" implementationClass="com.wanggaowan.tools.extensions.annotator.FixImportAnnotator"/>
-
-        <lang.refactoringSupport implementationClass=""/>
-
 
         <findUsagesHandlerFactory
             implementation="com.wanggaowan.tools.extensions.findusage.I18nFindUsagesHandlerFactory"/>

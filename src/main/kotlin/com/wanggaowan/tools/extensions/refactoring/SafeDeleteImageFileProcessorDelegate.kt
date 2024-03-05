@@ -10,7 +10,7 @@ import com.intellij.refactoring.safeDelete.NonCodeUsageSearchInfo
 import com.intellij.refactoring.safeDelete.SafeDeleteProcessorDelegateBase
 import com.intellij.refactoring.safeDelete.usageInfo.SafeDeleteReferenceSimpleDeleteUsageInfo
 import com.intellij.usageView.UsageInfo
-import com.wanggaowan.tools.actions.PsiBinaryFileDelegate
+import com.wanggaowan.tools.actions.image.PsiBinaryFileDelegate
 import com.wanggaowan.tools.extensions.findusage.ImageUsagesHandler
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.XUtils

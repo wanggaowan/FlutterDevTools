@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.actions
+package com.wanggaowan.tools.actions.image
 
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -8,7 +8,6 @@ import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.project.DumbAwareAction
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.NotificationUtils
-import com.wanggaowan.tools.utils.StringUtils
 import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.ex.basePath
 import java.awt.Toolkit
@@ -65,24 +64,15 @@ class CopyImageRefKeyAction : DumbAwareAction() {
         }
 
         val dirName = virtualFile.parent.name
-        var path = if (dirName == "1.5x" || dirName == "2.0x" || dirName == "3.0x" || dirName == "4.0x") {
+        var path = if (XUtils.isImageVariantsFolder(dirName)) {
             virtualFile.path.replace("$dirName/", "")
         } else {
             virtualFile.path
         }
         path = path.replace("$basePath/$imagesRelDirPath/", "")
-        path = imageRefClassName + "." + getPropertyKey(path)
+        path = imageRefClassName + "." + XUtils.imagePathToDartKey(path)
         Toolkit.getDefaultToolkit().systemClipboard.setContents(TextTransferable(path), null)
         NotificationUtils.showBalloonMsg(project, "已复制到剪切板", NotificationType.INFORMATION)
-    }
-
-    private fun getPropertyKey(value: String): String {
-        return StringUtils.lowerCamelCase(
-            value.substring(0, value.lastIndexOf("."))
-                .replace("/", "_")
-                .replace("-", "_")
-                .replace("@", ""), false
-        )
     }
 }
 

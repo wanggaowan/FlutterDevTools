@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.actions
+package com.wanggaowan.tools.actions.image
 
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread

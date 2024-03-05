@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.actions
+package com.wanggaowan.tools.actions.image
 
 import com.intellij.ide.util.DeleteHandler
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -21,7 +21,7 @@ import org.jetbrains.kotlin.idea.core.util.toPsiFile
  *
  * @author Created by wanggaowan on 2023/3/19 18:06
  */
-class DeleteMultiSameNameFileAction : DumbAwareAction() {
+class DeleteMultiSameNameImageAction : DumbAwareAction() {
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT

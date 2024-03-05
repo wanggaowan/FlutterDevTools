@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.actions
+package com.wanggaowan.tools.actions.image
 
 import com.intellij.openapi.actionSystem.*
 import com.wanggaowan.tools.settings.PluginSettings

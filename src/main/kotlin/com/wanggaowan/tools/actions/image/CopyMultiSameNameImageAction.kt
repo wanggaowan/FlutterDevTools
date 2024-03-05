@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.actions
+package com.wanggaowan.tools.actions.image
 
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -12,6 +12,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.TempFileUtils
+import com.wanggaowan.tools.utils.XUtils
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
@@ -20,11 +21,11 @@ import java.io.File
 
 
 /**
- * 复制多个相同名称但是在不同分辨率下的文件
+ * 复制多个相同名称但是在不同分辨率下的图片
  *
  * @author Created by wanggaowan on 2023/3/6 13:09
  */
-class CopyMultiSameNameFileAction : DumbAwareAction() {
+class CopyMultiSameNameImageAction : DumbAwareAction() {
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
@@ -48,22 +49,14 @@ class CopyMultiSameNameFileAction : DumbAwareAction() {
                 if (!it.isDirectory) {
                     if (copyFromFolders == null) {
                         copyFromFolders = mutableListOf()
-                        val parent = if (it.parent.name == "1.5x"
-                            || it.parent.name == "2.0x"
-                            || it.parent.name == "3.0x"
-                            || it.parent.name == "4.0x"
-                        ) {
+                        val parent = if (XUtils.isImageVariantsFolder(it.parent.name)) {
                             it.parent.parent
                         } else {
                             it.parent
                         }
 
                         parent?.children?.forEach { child ->
-                            if (child.name == "1.5x"
-                                || child.name == "2.0x"
-                                || child.name == "3.0x"
-                                || child.name == "4.0x"
-                            ) {
+                            if (XUtils.isImageVariantsFolder(child.name)) {
                                 copyFromFolders?.add(child.name)
                                 try {
                                     copyToFolders.add(copyCacheFolder.createChildDirectory(module, child.name))
@@ -103,11 +96,7 @@ class CopyMultiSameNameFileAction : DumbAwareAction() {
             return
         }
 
-        val parentPath = if (file.parent.name == "1.5x"
-            || file.parent.name == "2.0x"
-            || file.parent.name == "3.0x"
-            || file.parent.name == "4.0x"
-        ) {
+        val parentPath = if (XUtils.isImageVariantsFolder(file.parent.name)) {
             file.parent.parent.path
         } else {
             file.parent.path
