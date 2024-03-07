@@ -30,6 +30,7 @@
       <li>图片资源文件，右键Find Usages时，支持查找所有引用此图片的文件</li>
       <li>提供安全删除图片资源功能，删除图片时，如果图片被引用则给予安全提示</li>
       <li>删除不同分辨率下的相同图片时，支持安全删除</li>
+      <li>扩展DartServerRenameHandler，支持对文件的重命名，当文件名称变更时，同步更新所有引用处内容</li>
     </ul>
 
     <p>3.2</p>
@@ -372,6 +373,8 @@
         <!--    <descriptionDirectoryName>DartQuickAssistIntention</descriptionDirectoryName>-->
         <!--</intentionAction>-->
         <annotator language="Dart" implementationClass="com.wanggaowan.tools.extensions.annotator.FixImportAnnotator"/>
+
+        <renameHandler implementation="com.wanggaowan.tools.extensions.refactoring.ExtensionDartServerRenameHandler"/>
 
         <findUsagesHandlerFactory
             implementation="com.wanggaowan.tools.extensions.findusage.I18nFindUsagesHandlerFactory"/>
