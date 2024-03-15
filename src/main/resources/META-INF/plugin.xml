@@ -33,6 +33,7 @@
       <li>扩展DartServerRenameHandler，支持对文件的重命名，当文件名称变更时，同步更新所有引用处内容</li>
       <li>优化根据模版arb翻译其它语言arb文件功能，翻译模式改为翻译一条插入一条，而不是全部翻译成功后再插入</li>
       <li>增加一键删除未使用文件功能,可选中多个文件或目录，将对所有未被其它文件引用的文件或资源进行删除</li>
+      <li>代码中间接引用的颜色值在左侧代码行数栏展示对应颜色</li>
     </ul>
 
     <p>3.2</p>
@@ -357,6 +358,8 @@
 
         <codeInsight.lineMarkerProvider language="Dart"
                                         implementationClass="com.wanggaowan.tools.extensions.codeInsight.ImageLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="Dart"
+                                        implementationClass="com.wanggaowan.tools.extensions.codeInsight.ColorLineMarkerProvider"/>
 
         <lang.foldingBuilder language="Dart"
                              implementationClass="com.wanggaowan.tools.extensions.lang.I18nFoldingBuilder"/>
