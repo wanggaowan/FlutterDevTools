@@ -9,6 +9,7 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.JBColor
 import com.intellij.ui.ScrollPaneFactory
+import com.intellij.usages.Usage
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.wanggaowan.tools.utils.msg.Toast
@@ -27,7 +28,7 @@ import kotlin.collections.set
 class ImportImageFolderChooser(
     val project: Project,
     title: String,
-    private val initialFile: VirtualFile? = null,
+    initialFile: VirtualFile? = null,
     /**
      * 需要重命名的文件
      */
@@ -419,7 +420,7 @@ data class RenameEntity(
      */
     var oldName: String,
     /**
-     * 导入的原文件名称
+     * 导入的原文件
      */
     var oldFile: VirtualFile,
     /**
@@ -433,5 +434,7 @@ data class RenameEntity(
     /**
      * 如果存在同名文件，是否覆盖同名文件
      */
-    var coverExistFile: Boolean = false
+    var coverExistFile: Boolean = false,
+
+    val usages:MutableSet<Usage> = mutableSetOf()
 )

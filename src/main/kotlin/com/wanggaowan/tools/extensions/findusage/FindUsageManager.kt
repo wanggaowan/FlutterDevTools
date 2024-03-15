@@ -8,6 +8,7 @@ import com.intellij.navigation.NavigationItem
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressIndicator
@@ -16,7 +17,6 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.ThrowableComputable
 import com.intellij.psi.*
 import com.intellij.psi.search.*
@@ -31,6 +31,8 @@ import com.intellij.util.Processor
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Supplier
 
+private val LOG = Logger.getInstance(FindUsageManager::class.java)
+
 /**
  * 查找文件使用位置工具,代码基本参考[FindUsagesManager],[UsageViewManagerImpl],SearchForUsagesRunnable
  *
@@ -38,11 +40,149 @@ import java.util.function.Supplier
  */
 class FindUsageManager(val project: Project) {
 
+    /**
+     * 查找给定[psiElements]被使用的地方
+     *
+     * [searchScope]指定查找范围
+     *
+     * [onlyFindOneUse]表示只查找一处使用，找到就结束当前元素的查找，继续对下一个元素进行查找。
+     *
+     * [progressTitle]为进度标题，参数为null时表示总进度标题，不会null则为查找具体PsiElement时的进度标题
+     */
+    fun findUsages(
+        psiElements: Array<PsiElement>,
+        searchScope: SearchScope? = null,
+        onlyFindOneUse: Boolean = false,
+        findProgress: FindProgress,
+        progressTitle: ((psiElement: PsiElement?) -> String?)? = null
+    ) {
+
+        ProgressManager.getInstance()
+            .run(object : Task.Backgroundable(project, progressTitle?.invoke(null) ?: "Find usages", true) {
+                override fun run(indicator: ProgressIndicator) {
+                    val myUsageCount = AtomicInteger(0)
+                    val mySearchCount = AtomicInteger(-1)
+                    findProgress.start(indicator)
+                    val totalCount = psiElements.size
+                    doSearch(
+                        psiElements,
+                        totalCount,
+                        mySearchCount,
+                        myUsageCount,
+                        searchScope,
+                        onlyFindOneUse,
+                        findProgress,
+                        progressTitle,
+                        indicator
+                    )
+                    while (mySearchCount.get() < totalCount && !indicator.isCanceled) {
+                        try {
+                            Thread.sleep(50)
+                        } catch (e: Exception) {
+                            //
+                        }
+                    }
+
+                    if (indicator.isCanceled) {
+                        findProgress.cancel()
+                    } else {
+                        findProgress.end(indicator)
+                    }
+                }
+            })
+    }
+
+    private fun doSearch(
+        elements: Array<PsiElement>,
+        totalCount: Int,
+        mySearchCount: AtomicInteger,
+        myUsageCount: AtomicInteger,
+        searchScope: SearchScope?,
+        onlyFindOneUse: Boolean = false,
+        findProgress: FindProgress,
+        progressTitle: ((psiElement: PsiElement?) -> String?)?,
+        parentIndicator: ProgressIndicator
+    ) {
+        if (parentIndicator.isCanceled) {
+            return
+        }
+
+        val index = mySearchCount.incrementAndGet()
+        if (index < 0 || index >= totalCount) {
+            return
+        }
+
+        WriteCommandAction.runWriteCommandAction(project) {
+            val element = elements[index]
+            val searcher = createSearcher(element, searchScope, onlyFindOneUse, findProgress)
+            if (searcher == null) {
+                doSearch(
+                    elements,
+                    totalCount,
+                    mySearchCount,
+                    myUsageCount,
+                    searchScope,
+                    onlyFindOneUse,
+                    findProgress,
+                    progressTitle,
+                    parentIndicator
+                )
+                return@runWriteCommandAction
+            }
+
+            ProgressManager.getInstance()
+                .run(object : Task.Backgroundable(project, progressTitle?.invoke(element) ?: "Find usages", true) {
+                    override fun run(indicator: ProgressIndicator) {
+                        try {
+                            searcher.search(myUsageCount, parentIndicator)
+                        } catch (e: Exception) {
+                            // 搜索被取消
+                        }
+
+                        doSearch(
+                            elements,
+                            totalCount,
+                            mySearchCount,
+                            myUsageCount,
+                            searchScope,
+                            onlyFindOneUse,
+                            findProgress,
+                            progressTitle,
+                            parentIndicator
+                        )
+                    }
+                })
+        }
+    }
+
+    /**
+     * 查找给定[psiElement]被使用的地方
+     *
+     * [searchScope]指定查找范围
+     *
+     * [onlyFindOneUse]表示只查找一处使用，找到就结束当前元素的查找
+     */
     fun findUsages(
         psiElement: PsiElement,
         searchScope: SearchScope? = null,
+        onlyFindOneUse: Boolean = false,
         findProgress: FindProgress,
+        progressTitle: String? = null
     ) {
+        findUsages(arrayOf(psiElement), searchScope, onlyFindOneUse, findProgress) tag@{
+            return@tag progressTitle
+        }
+    }
+
+    /**
+     * 创建查找[psiElement]使用位置查找器
+     */
+    private fun createSearcher(
+        psiElement: PsiElement,
+        searchScope: SearchScope? = null,
+        onlyFindOneUse: Boolean,
+        findProgress: FindProgress,
+    ): Searcher? {
         ApplicationManager.getApplication().assertIsDispatchThread()
         val handler: FindUsagesHandler? = FindUsagesManager(psiElement.project).getFindUsagesHandler(
             psiElement,
@@ -50,35 +190,43 @@ class FindUsageManager(val project: Project) {
         )
 
         if (handler != null) {
-            val dialog = handler.getFindUsagesDialog(false, this.shouldOpenInNewTab(), this.mustOpenInNewTab())
-            dialog.close(DialogWrapper.OK_EXIT_CODE)
+            // 采用dialog获取查找配置，会触发短时间提交多个读取操作异常
 
-            val findUsagesOptions = dialog.calcFindUsagesOptions()
+            // val dialog = handler.getFindUsagesDialog(false, this.shouldOpenInNewTab(), this.mustOpenInNewTab())
+            // dialog.close(DialogWrapper.OK_EXIT_CODE)
+
+            val findUsagesOptions = FindUsagesOptions(project)
+            findUsagesOptions.isUsages = true
+            findUsagesOptions.isSearchForTextOccurrences = false
             if (searchScope != null) {
                 findUsagesOptions.searchScope = searchScope
             }
-            startFindUsages(findUsagesOptions, handler, findProgress)
+            return createSearcher(psiElement, findUsagesOptions, handler, onlyFindOneUse, findProgress)
         } else {
-            findProgress.cancel()
+            return null
         }
     }
 
-    private fun startFindUsages(
+    private fun createSearcher(
+        psiElement: PsiElement,
         findUsagesOptions: FindUsagesOptions,
         handler: FindUsagesHandler,
+        onlyFindOneUse: Boolean,
         findProgress: FindProgress,
-    ) {
+    ): Searcher {
         ApplicationManager.getApplication().assertIsDispatchThread()
         LOG.assertTrue(handler.psiElement.isValid)
         val primaryElements = handler.primaryElements
         checkNotNull(primaryElements, handler, "getPrimaryElements()")
         val secondaryElements = handler.secondaryElements
         checkNotNull(secondaryElements, handler, "getSecondaryElements()")
-        doFindUsages(
+        return createSearcher(
+            psiElement,
             primaryElements,
             secondaryElements,
             handler,
             findUsagesOptions,
+            onlyFindOneUse,
             findProgress
         )
     }
@@ -94,13 +242,15 @@ class FindUsageManager(val project: Project) {
         }
     }
 
-    private fun doFindUsages(
+    private fun createSearcher(
+        psiElement: PsiElement,
         primaryElements: Array<PsiElement>,
         secondaryElements: Array<PsiElement>,
         handler: FindUsagesHandlerBase,
         findUsagesOptions: FindUsagesOptions,
+        onlyFindOneUse: Boolean,
         findProgress: FindProgress,
-    ) {
+    ): Searcher {
         if (primaryElements.isEmpty()) {
             throw AssertionError("$handler $findUsagesOptions")
         } else {
@@ -109,44 +259,18 @@ class FindUsageManager(val project: Project) {
             val secondaryTargets =
                 convertToUsageTargets(secondaryElements, findUsagesOptions)
             val targets = ArrayUtil.mergeArrays(primaryTargets, secondaryTargets)
-            val searcher = createUsageSearcher(
+            val scopeSupplier = getMaxSearchScopeToWarnOfFallingOutOf(targets)
+            val searchScopeToWarnOfFallingOutOf = scopeSupplier.get()
+            return Searcher(
+                psiElement, targets,
                 primaryTargets,
                 secondaryTargets,
                 handler,
                 findUsagesOptions,
+                findProgress,
+                searchScopeToWarnOfFallingOutOf,
+                onlyFindOneUse
             )
-
-            val scopeSupplier = getMaxSearchScopeToWarnOfFallingOutOf(targets)
-            val searchScopeToWarnOfFallingOutOf = scopeSupplier.get()
-            ProgressManager.getInstance().run(object : Task.Backgroundable(project, "", true) {
-                private val myUsageCountWithoutDefinition = AtomicInteger(0)
-
-                override fun run(indicator: ProgressIndicator) {
-                    findProgress.start()
-                    try {
-                        searcher.generate {
-                            if (!UsageViewManagerImpl.isInScope(it, searchScopeToWarnOfFallingOutOf)) {
-                                return@generate true
-                            }
-
-                            if (UsageViewManager.isSelfUsage(it, targets)) {
-                                return@generate true
-                            }
-
-                            val count = myUsageCountWithoutDefinition.incrementAndGet()
-                            findProgress.find(it)
-                            if (count > 1000) {
-                                indicator.cancel()
-                            }
-                            return@generate true
-                        }
-                        findProgress.end(indicator)
-                    } catch (e: Exception) {
-                        // 搜索被取消
-                        findProgress.cancel()
-                    }
-                }
-            })
         }
     }
 
@@ -195,14 +319,56 @@ class FindUsageManager(val project: Project) {
             throw IllegalArgumentException("Wrong usage target: ${elementToSearch}; ${elementToSearch::class.java}")
         }
     }
+}
+
+class Searcher(
+    private val psiElement: PsiElement,
+    private val targets: Array<out UsageTarget>,
+    private val primaryTargets: Array<PsiElement2UsageTargetAdapter>,
+    private val secondaryTargets: Array<PsiElement2UsageTargetAdapter>,
+    private val handler: FindUsagesHandlerBase,
+    private val options: FindUsagesOptions,
+    private val findProgress: FindProgress,
+    private val searchScopeToWarnOfFallingOutOf: SearchScope,
+    private val onlyFindOneUse: Boolean
+) {
+
+    private var isStart = false
+    private var isCancel = false
+
+    fun search(usageCount: AtomicInteger, indicator: ProgressIndicator) {
+        if (isStart) {
+            return
+        }
+
+        isStart = true
+        findProgress.startFindElement(indicator, psiElement)
+        createUsageSearcher().generate {
+            if (!UsageViewManagerImpl.isInScope(it, searchScopeToWarnOfFallingOutOf)) {
+                return@generate true
+            }
+
+            if (UsageViewManager.isSelfUsage(it, targets)) {
+                return@generate true
+            }
+
+            val count = usageCount.incrementAndGet()
+            if (count > 1000) {
+                indicator.cancel()
+                return@generate false
+            }
+
+            findProgress.find(psiElement, it)
+            if (onlyFindOneUse) {
+                cancel()
+            }
+            return@generate true
+        }
+        findProgress.endFindElement(indicator, psiElement)
+    }
 
     @Throws(PsiInvalidElementAccessException::class)
-    private fun createUsageSearcher(
-        primaryTargets: Array<PsiElement2UsageTargetAdapter>,
-        secondaryTargets: Array<PsiElement2UsageTargetAdapter>,
-        handler: FindUsagesHandlerBase,
-        options: FindUsagesOptions,
-    ): UsageSearcher {
+    private fun createUsageSearcher(): UsageSearcher {
         ReadAction.run<RuntimeException> {
             primaryTargets.forEach {
                 val element = it.element
@@ -251,6 +417,7 @@ class FindUsageManager(val project: Project) {
                     })
                 processor.process(usage)
             }
+
             val elements = ArrayUtil.mergeArrays(
                 primaryElements,
                 secondaryElements,
@@ -265,12 +432,20 @@ class FindUsageManager(val project: Project) {
 
             try {
                 for (element in elements) {
+                    if (isCancel) {
+                        return@UsageSearcher
+                    }
+
                     if (!handler.processElementUsages(element, usageInfoProcessor, optionsClone)) {
                         return@UsageSearcher
                     }
 
                     val iterator: Iterator<CustomUsageSearcher> = CustomUsageSearcher.EP_NAME.extensionList.iterator()
                     while (iterator.hasNext()) {
+                        if (isCancel) {
+                            return@UsageSearcher
+                        }
+
                         val searcher = iterator.next()
                         try {
                             searcher.processElementUsages(element, processor, optionsClone)
@@ -289,6 +464,10 @@ class FindUsageManager(val project: Project) {
                 }
 
                 PsiSearchHelper.getInstance(project).processRequests(optionsClone.fastTrack) { ref: PsiReference ->
+                    if (isCancel) {
+                        return@processRequests false
+                    }
+
                     ProgressManager.checkCanceled()
                     val info = ReadAction.compute<UsageInfo?, RuntimeException> {
                         if (!ref.element.isValid) null else UsageInfo(ref)
@@ -312,8 +491,8 @@ class FindUsageManager(val project: Project) {
         }
     }
 
-    companion object {
-        private val LOG = Logger.getInstance(FindUsageManager::class.java)
+    private fun cancel() {
+        isCancel = true
     }
 }
 
@@ -322,19 +501,33 @@ class FindUsageManager(val project: Project) {
  */
 abstract class FindProgress {
     /**
-     * 开始查找
+     * 开始查找进程
      */
-    open fun start() {
+    open fun start(indicator: ProgressIndicator) {
 
     }
 
     /**
-     * 查找到内容
+     * 开始查找[target]元素
      */
-    abstract fun find(usage: Usage)
+    open fun startFindElement(indicator: ProgressIndicator, target: PsiElement) {
+
+    }
 
     /**
-     * 查找结束
+     * 查找到内容,[target]为当前查找的对象，[usage]为找到的用法
+     */
+    abstract fun find(target: PsiElement, usage: Usage)
+
+    /**
+     * [target]元素查找结束
+     */
+    open fun endFindElement(indicator: ProgressIndicator, target: PsiElement) {
+
+    }
+
+    /**
+     * 查找进程结束
      */
     open fun end(indicator: ProgressIndicator) {
 

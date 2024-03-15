@@ -21,7 +21,11 @@ object ProgressUtils {
             override fun run(p0: ProgressIndicator) {
                 run(p0)
                 while (!p0.isCanceled && p0.fraction < 1) {
-                    Thread.sleep(100)
+                    try {
+                        Thread.sleep(50)
+                    }catch (e:Exception) {
+                        //
+                    }
                 }
             }
         })

@@ -9,6 +9,9 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.usages.Usage
+import com.intellij.usages.UsageInfo2UsageAdapter
 import com.wanggaowan.tools.ui.ImagesRenameDialog
 import com.wanggaowan.tools.ui.RenameEntity
 import com.wanggaowan.tools.utils.NotificationUtils
@@ -34,36 +37,37 @@ class RenameMultiSameNameImageAction : DumbAwareAction() {
             return
         }
 
-        val distinctList = distinctFile(selectFiles)
-        val dialog = ImagesRenameDialog(project, distinctList)
+        RenameImageHandel(project).rename(selectFiles)
+    }
+}
+
+class RenameImageHandel(val project: Project) {
+
+    /**
+     * 对文件进行重命名
+     * [renameSameNameOtherFiles]表示是否重命名与当前文件名称相同但是在不同分辨率下的图片
+     */
+    fun rename(files: Array<VirtualFile>, renameSameNameOtherFiles: Boolean = true) {
+        // 基本不会有单个图片重命名的需求，因此始终修改所有分辨率图片
+
+        val dialog = ImagesRenameDialog(project, files, renameSameNameOtherFiles)
         dialog.setOkActionListener {
             val fileList = dialog.getRenameFileList()
-            rename(project, fileList)
+            rename(fileList)
         }
         dialog.isVisible = true
     }
 
-    /**
-     * 去除重复的数据
-     */
-    private fun distinctFile(array: Array<VirtualFile>): List<VirtualFile> {
-        val list = mutableListOf<VirtualFile>()
-        array.forEach {
-            if (!it.isDirectory) {
-                val exist = list.find { file -> file.name == it.name }
-                if (exist == null) {
-                    list.add(it)
-                }
-            }
-        }
-        return list
-    }
 
-    private fun rename(project: Project, data: List<RenameEntity>) {
-        ProgressUtils.runBackground(project,"images rename") {progressIndicator->
+    private fun rename(data: List<RenameEntity>) {
+        ProgressUtils.runBackground(project, "images rename") { progressIndicator ->
             progressIndicator.isIndeterminate = true
             WriteCommandAction.runWriteCommandAction(project) {
                 data.forEach {
+                    it.usages.forEach { usage ->
+                        renameReference(usage, it)
+                    }
+
                     if (it.oldName.isNotEmpty() && it.newName.isNotEmpty()
                         && it.oldName != it.newName
                         && (!it.existFile || it.coverExistFile)
@@ -103,5 +107,24 @@ class RenameMultiSameNameImageAction : DumbAwareAction() {
             progressIndicator.isIndeterminate = false
             progressIndicator.fraction = 1.0
         }
+    }
+
+    private fun renameReference(it: Usage, renameEntity: RenameEntity) {
+        if (it !is UsageInfo2UsageAdapter) {
+            return
+        }
+        val parent = renameEntity.oldFile.parent ?: return
+        val oldKey = XUtils.imageFileToImageKey(project, parent, renameEntity.oldName) ?: return
+        val newKey = XUtils.imageFileToImageKey(project, parent, renameEntity.newName) ?: return
+
+        val element = it.element ?: return
+        val file = element.containingFile ?: return
+        val manager = PsiDocumentManager.getInstance(project)
+        val document = manager.getDocument(file) ?: return
+        manager.commitDocument(document)
+        val textRange = element.textRange
+        val text = element.text.replace(oldKey, "{replace}").replace("{replace}", newKey)
+        document.replaceString(textRange.startOffset, textRange.endOffset, text)
+        manager.commitDocument(document)
     }
 }

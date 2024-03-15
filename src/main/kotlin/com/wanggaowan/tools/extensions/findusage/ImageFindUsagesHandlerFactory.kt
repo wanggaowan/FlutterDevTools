@@ -11,11 +11,8 @@ import com.intellij.psi.PsiFile
 import com.intellij.usageView.UsageInfo
 import com.intellij.util.Processor
 import com.jetbrains.lang.dart.ide.findUsages.DartServerFindUsagesHandler
-import com.jetbrains.lang.dart.psi.DartClass
-import com.jetbrains.lang.dart.psi.DartComponentName
-import com.jetbrains.lang.dart.psi.DartId
+import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.settings.PluginSettings
-import com.wanggaowan.tools.utils.StringUtils
 import com.wanggaowan.tools.utils.XUtils
 import io.flutter.pub.PubRoot
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
@@ -27,7 +24,7 @@ import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
  *
  * @author Created by wanggaowan on 2024/2/27 11:26
  */
-class ImageFindUsagesHandlerFactory(private val findDefined: Boolean = true) : FindUsagesHandlerFactory() {
+class ImageFindUsagesHandlerFactory : FindUsagesHandlerFactory() {
     override fun canFindUsages(element: PsiElement): Boolean {
         if (element !is PsiFile) {
             return false
@@ -44,14 +41,14 @@ class ImageFindUsagesHandlerFactory(private val findDefined: Boolean = true) : F
     }
 
     override fun createFindUsagesHandler(element: PsiElement, forHighlightUsages: Boolean): FindUsagesHandler {
-        return ImageUsagesHandler(element,findDefined)
+        return ImageUsagesHandler(element)
     }
 }
 
 /**
  * 查找图片
  */
-class ImageUsagesHandler(psiElement: PsiElement, private val findDefined: Boolean = true) :
+class ImageUsagesHandler(psiElement: PsiElement, private val findDefined: Boolean = false) :
     FindUsagesHandler(psiElement) {
     override fun processElementUsages(
         element: PsiElement,
@@ -65,33 +62,23 @@ class ImageUsagesHandler(psiElement: PsiElement, private val findDefined: Boolea
         ApplicationManager.getApplication().runReadAction {
             val file = element.virtualFile
             val pubRoot = PubRoot.forFile(file) ?: return@runReadAction
-            val parent = file.parent ?: return@runReadAction
-
-            val exampleImagesDir = PluginSettings.getExampleImagesFileDir(element.project)
-            val exampleDir = pubRoot.exampleDir
-            val isExample = exampleDir != null && file.path.startsWith("${exampleDir.path}/$exampleImagesDir")
-
-            val dartClass: DartClass = findImagesClass(pubRoot, isExample, exampleDir) ?: return@runReadAction
-
-            val endDirName = if (isExample) {
-                val splits = exampleImagesDir.split("/")
-                splits[splits.size - 1]
-            } else {
-                val imagesDir = PluginSettings.getImagesFileDir(element.project)
-                val splits = imagesDir.split("/")
-                splits[splits.size - 1]
+            var parent = file.parent ?: return@runReadAction
+            if (XUtils.isImageVariantsFolder(parent.name)) {
+                parent = parent.parent ?: return@runReadAction
             }
 
-            val parentName = parent.name
-            var fileRelativePath =
-                if (XUtils.isImageVariantsFolder(parentName)) {
-                    file.name
-                } else {
-                    "$parentName/${file.name}"
-                }
-            fileRelativePath = getFileRelativePath(fileRelativePath, parent, endDirName)
+            val exampleDir = pubRoot.exampleDir
+            val isExample = exampleDir != null && file.path.startsWith("${exampleDir.path}/")
+            val dartClass: DartClass = findImagesClass(pubRoot, isExample, exampleDir) ?: return@runReadAction
 
-            val member = dartClass.findMemberByName(getPropertyKey(fileRelativePath)) ?: return@runReadAction
+            val filePath = "${parent.path}/${file.name}"
+            val fileRelativePath = if (isExample) {
+                filePath.replace("${exampleDir!!.path}/", "")
+            } else {
+                filePath.replace("${pubRoot.root.path}/", "")
+            }
+
+            val member = findImageFileKey(dartClass, fileRelativePath) ?: return@runReadAction
             val child =
                 member.getChildOfType<DartComponentName>()?.getChildOfType<DartId>()?.firstChild ?: return@runReadAction
             if (findDefined) {
@@ -103,6 +90,17 @@ class ImageUsagesHandler(psiElement: PsiElement, private val findDefined: Boolea
             DartServerFindUsagesHandler(child).processElementUsages(child, processor, options)
         }
         return true
+    }
+
+    private fun findImageFileKey(dartClass: DartClass, fileRelativePath: String): PsiElement? {
+        dartClass.methods.forEach {
+            val text = it.getChildOfType<DartFunctionBody>()
+                ?.getChildOfType<DartStringLiteralExpression>()?.firstChild?.nextSibling?.text
+            if (text == fileRelativePath) {
+                return it
+            }
+        }
+        return null
     }
 
     private fun findImagesClass(pubRoot: PubRoot, isExample: Boolean, exampleDir: VirtualFile?): DartClass? {
@@ -139,23 +137,5 @@ class ImageUsagesHandler(psiElement: PsiElement, private val findDefined: Boolea
             }
         }
         return dartClazz
-    }
-
-    private fun getPropertyKey(value: String): String {
-        return StringUtils.lowerCamelCase(
-            value.substring(0, value.lastIndexOf("."))
-                .replace("/", "_")
-                .replace("-", "_")
-                .replace("@", ""), false
-        )
-    }
-
-    private fun getFileRelativePath(basePath: String, file: VirtualFile, endDirName: String): String {
-        val parent: VirtualFile = file.parent ?: return basePath
-        val parentName = parent.name
-        if (parentName == endDirName) {
-            return basePath
-        }
-        return getFileRelativePath("$parentName/$basePath", parent, endDirName)
     }
 }

@@ -42,7 +42,7 @@ class SafeDeleteImageFileProcessorDelegate : SafeDeleteProcessorDelegateBase() {
         usages: MutableList<UsageInfo>
     ): NonCodeUsageSearchInfo {
         if (element !is PsiBinaryFileDelegate || element.needFind) {
-            ImageUsagesHandler(element, false).processElementUsages(element, {
+            ImageUsagesHandler(element).processElementUsages(element, {
                 val usage = SafeDeleteReferenceSimpleDeleteUsageInfo(
                     it.element,
                     element,

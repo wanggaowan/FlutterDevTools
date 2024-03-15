@@ -77,14 +77,14 @@ object TranslateUtils {
             val jsonObject = Gson().fromJson(body, JsonObject::class.java)
             val code = jsonObject.getAsJsonPrimitive("Code").asString
             if (code != "200") {
-                LOG.error("阿里翻译失败：$body")
+                LOG.error("阿里翻译失败,响应结果：$body，翻译失败文本：$text")
                 return null
             }
 
             val data = jsonObject.getAsJsonObject("Data") ?: return null
             return data.getAsJsonPrimitive("Translated").asString
         } catch (e: Exception) {
-            LOG.error("阿里翻译失败：${e.message}")
+            LOG.error("阿里翻译失败,异常内容：${e.message}，翻译失败文本：$text")
             return null
         }
     }
@@ -142,7 +142,7 @@ object TranslateUtils {
         return try {
             URLEncoder.encode(content, StandardCharsets.UTF_8.name()).replace("+", "%20")
                 .replace("%7E", "~")
-                .replace("*","%2A")
+                .replace("*", "%2A")
         } catch (var2: UnsupportedEncodingException) {
             content
         }
@@ -207,14 +207,23 @@ object TranslateUtils {
     }
 
     /// 修复翻译错误，如占位符为大写，\n，%s翻译后被分开成 \ n,% s等错误
-    fun fixTranslateError(translate: String?, targetLanguage: String,useEscaping: Boolean = false, list: List<DartPsiCompositeElement>? = null): String? {
-        var translateStr = fixTranslatePlaceHolderStr(translate, useEscaping,list)
+    fun fixTranslateError(
+        translate: String?,
+        targetLanguage: String,
+        useEscaping: Boolean = false,
+        list: List<DartPsiCompositeElement>? = null
+    ): String? {
+        var translateStr = fixTranslatePlaceHolderStr(translate, useEscaping, list)
         translateStr = fixNewLineFormatError(translateStr)
         return translateStr
     }
 
     /// 修复因翻译，导致占位符被翻译为大写的问题
-    private fun fixTranslatePlaceHolderStr(translate: String?, useEscaping: Boolean = false, list: List<DartPsiCompositeElement>? = null): String? {
+    private fun fixTranslatePlaceHolderStr(
+        translate: String?,
+        useEscaping: Boolean = false,
+        list: List<DartPsiCompositeElement>? = null
+    ): String? {
         if (translate.isNullOrEmpty()) {
             return null
         }
@@ -260,7 +269,12 @@ object TranslateUtils {
         return fixFormatError(regex, text, "\\n")
     }
 
-    private tailrec fun fixFormatError(regex: Regex, text: String, placeHolder: String, oldRange: IntRange? = null): String {
+    private tailrec fun fixFormatError(
+        regex: Regex,
+        text: String,
+        placeHolder: String,
+        oldRange: IntRange? = null
+    ): String {
         if (text.isEmpty()) {
             return text
         }

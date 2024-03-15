@@ -34,14 +34,17 @@ class ImageLineMarkerProvider : LineMarkerProvider {
 
         // 查找Images.dart中定义的图片，比如：static String get fileOutlined => 'assets/images/file_outlined.png';
         // element为'assets/images/file_outlined.png'节点
-        if (element is DartStringLiteralExpression) {
-            val path = element.firstChild?.nextSibling?.text
-            if (!path.isNullOrEmpty() && element.parent is DartFunctionBody && element.parent.parent is DartGetterDeclaration) {
-                val isExample = element.containingFile?.virtualFile?.path?.startsWith("${module.basePath}/example/")
-                val fileList = ImagesGoToDeclarationHandler.findFile(module, path, isExample == true, true)
-                if (fileList.isNotEmpty()) {
-                    return createLineMarkerInfo(element, fileList[0])
-                }
+        if (element !is DartStringLiteralExpression) {
+            return null
+        }
+
+        val leafElement = element.firstChild?.nextSibling?:return null
+        val path = leafElement.text
+        if (!path.isNullOrEmpty() && element.parent is DartFunctionBody && element.parent.parent is DartGetterDeclaration) {
+            val isExample = element.containingFile?.virtualFile?.path?.startsWith("${module.basePath}/example/")
+            val fileList = ImagesGoToDeclarationHandler.findFile(module, path, isExample == true, true)
+            if (fileList.isNotEmpty()) {
+                return createLineMarkerInfo(leafElement, fileList[0])
             }
         }
 

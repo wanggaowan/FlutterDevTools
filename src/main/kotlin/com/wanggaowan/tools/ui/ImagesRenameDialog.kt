@@ -1,13 +1,28 @@
 package com.wanggaowan.tools.ui
 
+import com.intellij.find.findUsages.PsiElement2UsageTargetAdapter
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.wm.WindowManager
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiNamedElement
+import com.intellij.refactoring.RefactoringBundle
 import com.intellij.ui.JBColor
 import com.intellij.ui.ScrollPaneFactory
+import com.intellij.usages.Usage
+import com.intellij.usages.UsageViewManager
+import com.intellij.usages.UsageViewPresentation
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.jetbrains.lang.dart.DartBundle
+import com.wanggaowan.tools.extensions.findusage.FindProgress
+import com.wanggaowan.tools.extensions.findusage.FindUsageManager
+import com.wanggaowan.tools.utils.XUtils
+import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import java.awt.BorderLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
@@ -27,8 +42,10 @@ class ImagesRenameDialog(
     /**
      * 需要重命名的文件
      */
-    renameFiles: List<VirtualFile>? = null,
+    renameFiles: Array<VirtualFile>? = null,
+    private val renameSameNameOtherFiles: Boolean = false
 ) : JDialog() {
+    private lateinit var mBtnPreview: JButton
     private lateinit var mBtnOk: JButton
     private lateinit var mJRenamePanel: JPanel
 
@@ -64,7 +81,7 @@ class ImagesRenameDialog(
     /**
      * 构建重命名文件面板
      */
-    private fun createRenameFilePanel(files: List<VirtualFile>?): JComponent {
+    private fun createRenameFilePanel(files: Array<VirtualFile>?): JComponent {
         mRenameFileList.clear()
         files?.forEach {
             mRenameFileList.add(RenameEntity(it.name, it, it.name))
@@ -110,9 +127,9 @@ class ImagesRenameDialog(
 
             val existFile = isImageExist(it)
             val existFileImageView = ImageView(if (existFile != null) File(existFile.path) else null)
-            existFileImageView.preferredSize = JBUI.size(34,16)
-            existFileImageView.minimumSize = JBUI.size(34,16)
-            existFileImageView.maximumSize = JBUI.size(34,16)
+            existFileImageView.preferredSize = JBUI.size(34, 16)
+            existFileImageView.minimumSize = JBUI.size(34, 16)
+            existFileImageView.maximumSize = JBUI.size(34, 16)
             existFileImageView.border = BorderFactory.createEmptyBorder(0, 9, 0, 9)
             existFileImageView.isVisible = existFile != null
             box2.add(existFileImageView)
@@ -136,18 +153,21 @@ class ImagesRenameDialog(
                 override fun insertUpdate(p0: DocumentEvent?) {
                     val str = rename.text.trim()
                     it.newName = str.ifEmpty { it.oldName }
+                    checkBtnEnable()
                     refreshRenamePanel()
                 }
 
                 override fun removeUpdate(p0: DocumentEvent?) {
                     val str = rename.text.trim()
                     it.newName = str.ifEmpty { it.oldName }
+                    checkBtnEnable()
                     refreshRenamePanel()
                 }
 
                 override fun changedUpdate(p0: DocumentEvent?) {
                     val str = rename.text.trim()
                     it.newName = str.ifEmpty { it.oldName }
+                    checkBtnEnable()
                     refreshRenamePanel()
                 }
             })
@@ -157,6 +177,20 @@ class ImagesRenameDialog(
         cc.weighty = 1.0
         cc.gridy = depth++
         mJRenamePanel.add(placeHolder, cc)
+    }
+
+    private fun checkBtnEnable() {
+        var enable = false
+        mRenameFileList.forEach {
+            if (it.oldName != it.newName) {
+                if (!it.existFile || it.coverExistFile) {
+                    enable = true
+                    return@forEach
+                }
+            }
+        }
+        mBtnPreview.isEnabled = enable
+        mBtnOk.isEnabled = enable
     }
 
     private fun refreshRenamePanel() {
@@ -198,23 +232,33 @@ class ImagesRenameDialog(
         bottomPane.add(Box.createHorizontalGlue())
         val cancelBtn = JButton("cancel")
         bottomPane.add(cancelBtn)
-        mBtnOk = JButton("ok")
+
+        mBtnPreview = JButton("Preview")
+        mBtnPreview.isEnabled = false
+        bottomPane.add(mBtnPreview)
+
+        mBtnOk = JButton("Refactor")
+        mBtnOk.isEnabled = false
         bottomPane.add(mBtnOk)
 
         cancelBtn.addActionListener {
             isVisible = false
         }
 
+        mBtnPreview.addActionListener {
+            doOKAction(true)
+        }
+
         mBtnOk.addActionListener {
-            doOKAction()
+            doOKAction(false)
         }
 
         return bottomPane
     }
 
-    private fun doOKAction() {
+    private fun doOKAction(isPreview: Boolean) {
         isVisible = false
-        mOkActionListener?.invoke()
+        findUsages(isPreview)
     }
 
     /**
@@ -240,11 +284,7 @@ class ImagesRenameDialog(
         }
 
         var rootDir = entity.oldFile.parent.path
-        rootDir = if (rootDir == "1.5x"
-            || rootDir == "2.0x"
-            || rootDir == "3.0x"
-            || rootDir == "4.0x"
-        ) {
+        rootDir = if (XUtils.isImageVariantsFolder(rootDir)) {
             entity.oldFile.parent.parent.path
         } else {
             rootDir
@@ -276,6 +316,100 @@ class ImagesRenameDialog(
         }
 
         return null
+    }
+
+    private fun findUsages(isPreview: Boolean) {
+        FindUsageManager(project).findUsages(
+            mRenameFileList.mapNotNull {
+                if (it.existFile && !it.coverExistFile) {
+                    return@mapNotNull null
+                } else if (!renameSameNameOtherFiles) {
+                    if (XUtils.isImageVariantsFolder(it.oldFile.parent?.name)) {
+                        return@mapNotNull null
+                    }
+                }
+                it.oldFile.toPsiFile(project)
+            }.toTypedArray(),
+            progressTitle = {
+                when (it) {
+                    null -> {
+                        "Find rename files usages"
+                    }
+
+                    is PsiNamedElement -> {
+                        "Find rename file:${it.name} usages"
+                    }
+
+                    else -> {
+                        "Find usages"
+                    }
+                }
+            },
+            findProgress = object : FindProgress() {
+                override fun find(target: PsiElement, usage: Usage) {
+                    mRenameFileList.forEach {
+                        if (target is PsiFile && target.virtualFile == it.oldFile) {
+                            it.usages.add(usage)
+                            return@forEach
+                        }
+                    }
+                }
+
+                override fun end(indicator: ProgressIndicator) {
+                    if (isPreview) {
+                        ApplicationManager.getApplication().invokeLater {
+                            previewRefactoring()
+                        }
+                    } else {
+                        mOkActionListener?.invoke()
+                    }
+                }
+            })
+    }
+
+    private fun previewRefactoring() {
+        val presentation = UsageViewPresentation()
+        presentation.tabText = RefactoringBundle.message("usageView.tabText")
+        presentation.isShowCancelButton = true
+        if (mRenameFileList.size == 1) {
+            val entity = mRenameFileList[0]
+            presentation.targetsNodeText =
+                RefactoringBundle.message("0.to.be.renamed.to.1.2", entity.oldName, "", entity.newName)
+        } else {
+            presentation.targetsNodeText =
+                RefactoringBundle.message("renaming.command.name", "${mRenameFileList.size} files")
+        }
+        presentation.nonCodeUsagesString = DartBundle.message("usages.in.comments.to.rename")
+        presentation.codeUsagesString = DartBundle.message("usages.in.code.to.rename")
+        presentation.setDynamicUsagesString(DartBundle.message("dynamic.usages.to.rename"))
+        presentation.isUsageTypeFilteringAvailable = false
+
+        val targets = mRenameFileList.mapNotNull {
+            val psiFile = it.oldFile.toPsiFile(project)
+            if (psiFile == null) {
+                null
+            } else {
+                PsiElement2UsageTargetAdapter(psiFile, true)
+            }
+        }.toTypedArray()
+
+        val usageArray = mRenameFileList.fold(mutableSetOf<Usage>()) { acc, entity ->
+            acc.addAll(entity.usages)
+            return@fold acc
+        }.toTypedArray()
+        val usageView = UsageViewManager.getInstance(project).showUsages(targets, usageArray, presentation)
+        val message = if (mRenameFileList.size == 1) {
+            val entity = mRenameFileList[0]
+            "Rename File '${entity.oldName} to '${entity.newName}'"
+        } else {
+            "Rename ${mRenameFileList.size} Files"
+        }
+        usageView.addPerformOperationAction(
+            { mOkActionListener?.invoke() },
+            message,
+            DartBundle.message("rename.need.reRun"),
+            RefactoringBundle.message("usageView.doAction"), false
+        )
     }
 }
 

@@ -6,10 +6,8 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.project.DumbAwareAction
-import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.XUtils
-import com.wanggaowan.tools.utils.ex.basePath
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
@@ -43,35 +41,11 @@ class CopyImageRefKeyAction : DumbAwareAction() {
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        val module = e.getData(LangDataKeys.MODULE) ?: return
-        val basePath = module.basePath ?: return
+        val project = e.getData(LangDataKeys.PROJECT) ?: return
         val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
-        val isExampleModule = virtualFile.path.startsWith("$basePath/example/")
-
-        val project = module.project
-
-
-        // 图片资源在项目中的相对路径
-        val imagesRelDirPath: String
-        // 生成图片资源引用文件类名称
-        val imageRefClassName: String
-        if (isExampleModule) {
-            imagesRelDirPath = "example/" + PluginSettings.getExampleImagesFileDir(project)
-            imageRefClassName = PluginSettings.getExampleImagesRefClassName(project)
-        } else {
-            imagesRelDirPath = PluginSettings.getImagesFileDir(project)
-            imageRefClassName = PluginSettings.getImagesRefClassName(project)
-        }
-
-        val dirName = virtualFile.parent.name
-        var path = if (XUtils.isImageVariantsFolder(dirName)) {
-            virtualFile.path.replace("$dirName/", "")
-        } else {
-            virtualFile.path
-        }
-        path = path.replace("$basePath/$imagesRelDirPath/", "")
-        path = imageRefClassName + "." + XUtils.imagePathToDartKey(path)
-        Toolkit.getDefaultToolkit().systemClipboard.setContents(TextTransferable(path), null)
+        val parent = virtualFile.parent ?: return
+        val referenceKey = XUtils.imageFileToImageKey(project, parent, virtualFile.name, true) ?: return
+        Toolkit.getDefaultToolkit().systemClipboard.setContents(TextTransferable(referenceKey), null)
         NotificationUtils.showBalloonMsg(project, "已复制到剪切板", NotificationType.INFORMATION)
     }
 }

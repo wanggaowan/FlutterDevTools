@@ -144,9 +144,10 @@ class TranslateArbAction : DumbAwareAction() {
             return
         }
 
-        ProgressUtils.runBackground(project,"Translate",true) {progressIndicator->
+        ProgressUtils.runBackground(project, "Translate", true) { progressIndicator ->
             progressIndicator.isIndeterminate = false
             ApplicationManager.getApplication().runReadAction {
+                progressIndicator.text = "Count all strings that need to be translated"
                 val needTranslateMap = mutableMapOf<String, String?>()
                 tempJsonObject.propertyList.forEach {
                     val name = it.name
@@ -171,51 +172,58 @@ class TranslateArbAction : DumbAwareAction() {
                             return@launch2
                         }
 
+                        progressIndicator.text = "${count.toInt()} / $total Translating: $key"
+
+                        val time = System.currentTimeMillis()
                         var translateStr =
                             if (value.isNullOrEmpty()) value else TranslateUtils.translate(value, targetLanguage)
                         progressIndicator.fraction = count / total * 0.94 + 0.05
                         if (translateStr == null) {
                             existTranslateFailed = true
-                            needTranslateMap[key] = null
                         } else {
                             translateStr =
                                 TranslateUtils.fixTranslateError(translateStr, targetLanguage, useEscaping)
-                            needTranslateMap[key] = translateStr ?: ""
+                            if (translateStr != null) {
+                                writeResult(project, arbPsiFile, jsonObject, key, translateStr)
+                            } else {
+                                existTranslateFailed = true
+                            }
+                        }
+                        val useTime = System.currentTimeMillis() - time
+                        if (useTime < 400) {
+                            // 访问速度太快，触发阿里翻译的QPS限制，反而导致速度越来越慢，因此加一个限制
+                            try {
+                                Thread.sleep(400 - useTime)
+                            } catch (e: Exception) {
+                                //
+                            }
                         }
                         count++
                     }
-
-                    CoroutineScope(Dispatchers.Main).launch {
-                        WriteCommandAction.runWriteCommandAction(project) {
-                            if (progressIndicator.isCanceled) {
-                                return@runWriteCommandAction
-                            }
-
-                            val document = arbPsiFile.viewProvider.document
-                            if (document != null) {
-                                PsiDocumentManager.getInstance(project).commitDocument(document)
-                            }
-                            needTranslateMap.forEach { (key, value) ->
-                                if (value != null) {
-                                    insertElement(project, arbPsiFile, jsonObject, key, value)
-                                }
-                            }
-                            if (document != null) {
-                                PsiDocumentManager.getInstance(project).commitDocument(document)
-                            } else {
-                                PsiDocumentManager.getInstance(project).commitAllDocuments()
-                            }
-                            if (existTranslateFailed) {
-                                NotificationUtils.showBalloonMsg(
-                                    project,
-                                    "部分内容未翻译或插入成功，请重试",
-                                    NotificationType.WARNING
-                                )
-                            }
-                            progressIndicator.fraction = 1.0
-                        }
+                    progressIndicator.fraction = 1.0
+                    if (existTranslateFailed) {
+                        NotificationUtils.showBalloonMsg(
+                            project,
+                            "部分内容未翻译或插入成功，请重试",
+                            NotificationType.WARNING
+                        )
                     }
                 }
+            }
+        }
+    }
+
+    private fun writeResult(project: Project, arbPsiFile: PsiFile, jsonObject: JsonObject, key: String, value: String) {
+        WriteCommandAction.runWriteCommandAction(project) {
+            val document = arbPsiFile.viewProvider.document
+            if (document != null) {
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+            insertElement(project, arbPsiFile, jsonObject, key, value)
+            if (document != null) {
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            } else {
+                PsiDocumentManager.getInstance(project).commitAllDocuments()
             }
         }
     }

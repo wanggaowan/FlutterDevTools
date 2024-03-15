@@ -29,8 +29,10 @@
       <li>多语言文件arb，按住(ctrl/command)点击多语言key或右键Find Usages时，支持查找所有引用此key的文件</li>
       <li>图片资源文件，右键Find Usages时，支持查找所有引用此图片的文件</li>
       <li>提供安全删除图片资源功能，删除图片时，如果图片被引用则给予安全提示</li>
-      <li>删除不同分辨率下的相同图片时，支持安全删除</li>
+      <li>图片文件重命名时，支持同步更新所有引用处内容</li>
       <li>扩展DartServerRenameHandler，支持对文件的重命名，当文件名称变更时，同步更新所有引用处内容</li>
+      <li>优化根据模版arb翻译其它语言arb文件功能，翻译模式改为翻译一条插入一条，而不是全部翻译成功后再插入</li>
+      <li>增加一键删除未使用文件功能,可选中多个文件或目录，将对所有未被其它文件引用的文件或资源进行删除</li>
     </ul>
 
     <p>3.2</p>
@@ -257,10 +259,13 @@
                     class="com.wanggaowan.tools.actions.image.DeleteMultiSameNameImageAction"
                     text="删除不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
                     description="删除不同分辨率下的相同图片"/>
-            <action id="FlutterDevTools.RenameMultiSameNameFileAction"
-                    class="com.wanggaowan.tools.actions.image.RenameMultiSameNameImageAction"
-                    text="重命名不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
-                    description="重命名不同分辨率下的相同图片"/>
+
+            <!--实现了系统重命名action的自定义逻辑，因此不需要单独的action，只有执行图片的重命名，都会走到RenameMultiSameNameImageAction逻辑-->
+            <!--<action id="FlutterDevTools.RenameMultiSameNameFileAction"-->
+            <!--        class="com.wanggaowan.tools.actions.image.RenameMultiSameNameImageAction"-->
+            <!--        text="重命名不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"-->
+            <!--        description="重命名不同分辨率下的相同图片"/>-->
+
             <action id="FlutterDevTools.CopyImageRefKeyAction"
                     class="com.wanggaowan.tools.actions.image.CopyImageRefKeyAction"
                     text="复制图片引用" icon="FlutterIcons.Flutter_13"
@@ -289,8 +294,17 @@
 
         <action id="FlutterDevTools.TranslateArbAction"
                 class="com.wanggaowan.tools.actions.translate.TranslateArbAction"
+                icon="FlutterIcons.Flutter_13"
                 text="根据模版arb翻译"
                 description="根据模版arb对应内容，将当前文件不存在的内容进行翻译并插入">
+            <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
+        </action>
+
+        <action id="FlutterDevTools.DeleteUnusedFilesAction"
+                class="com.wanggaowan.tools.actions.DeleteUnusedFilesAction"
+                icon="FlutterIcons.Flutter_13"
+                text="删除未被使用的文件"
+                description="当前文件如果未被其它元素引用，则删除">
             <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
         </action>
     </actions>
@@ -353,7 +367,9 @@
                            order="first"/>
         <refactoring.moveHandler
             implementation="com.wanggaowan.tools.listener.ImportSameImageListener" order="first"/>
-        <refactoring.safeDeleteProcessor implementation="com.wanggaowan.tools.extensions.refactoring.SafeDeleteImageFileProcessorDelegate" order="first"/>
+        <refactoring.safeDeleteProcessor
+            implementation="com.wanggaowan.tools.extensions.refactoring.SafeDeleteImageFileProcessorDelegate"
+            order="first"/>
 
         <customPasteProvider
             implementation="com.wanggaowan.tools.extensions.AndroidStringPasteProvider"/>

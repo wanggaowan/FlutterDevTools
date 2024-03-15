@@ -10,6 +10,7 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Comparing
 import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.refactoring.RefactoringBundle
 import com.intellij.refactoring.ui.NameSuggestionsField
@@ -27,7 +28,7 @@ import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
 
-internal class DartRenameDialog(
+internal class DartFileRenameDialog(
     project: Project,
     private val mFile: PsiFile,
 ) :
@@ -133,21 +134,23 @@ internal class DartRenameDialog(
 
     private fun findUsages(isPreview: Boolean) {
         val usages = mutableSetOf<Usage>()
-        FindUsageManager(project).findUsages(mFile, findProgress = object : FindProgress() {
-            override fun find(usage: Usage) {
-                usages.add(usage)
-            }
-
-            override fun end(indicator: ProgressIndicator) {
-                if (isPreview) {
-                    ApplicationManager.getApplication().invokeLater {
-                        previewRefactoring(usages)
-                    }
-                } else {
-                    doRename(usages, indicator)
+        FindUsageManager(project).findUsages(mFile,
+            progressTitle = "Find rename file usages",
+            findProgress = object : FindProgress() {
+                override fun find(target: PsiElement, usage: Usage) {
+                    usages.add(usage)
                 }
-            }
-        })
+
+                override fun end(indicator: ProgressIndicator) {
+                    if (isPreview) {
+                        ApplicationManager.getApplication().invokeLater {
+                            previewRefactoring(usages)
+                        }
+                    } else {
+                        doRename(usages, indicator)
+                    }
+                }
+            })
     }
 
     private fun previewRefactoring(usages: Set<Usage>) {
