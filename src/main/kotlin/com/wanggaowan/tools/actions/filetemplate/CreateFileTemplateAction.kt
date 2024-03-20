@@ -86,19 +86,19 @@ class CreateFileTemplateAction : DumbAwareAction() {
 
                 dialog.placeholderMap.keys.forEach {
                     when (it) {
-                        "${'$'}DATE${'$'}" -> {
+                        "#DATE#" -> {
                             dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd").format(Date())
                         }
 
-                        "${'$'}TIME${'$'}" -> {
+                        "#TIME#" -> {
                             dialog.placeholderMap[it] = SimpleDateFormat("HH:mm").format(Date())
                         }
 
-                        "${'$'}DATETIME${'$'}" -> {
+                        "#DATETIME#" -> {
                             dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())
                         }
 
-                        "${'$'}USER${'$'}" -> {
+                        "#USER#" -> {
                             dialog.placeholderMap[it] = System.getenv("USER") ?: ""
                         }
                     }
@@ -113,7 +113,7 @@ class CreateFileTemplateAction : DumbAwareAction() {
                         }
                     }
 
-                    createFile(parent, children, dialog.placeholderMap)
+                    createFile(parent, children, dialog.placeholderMap, dialog.createFileCopy)
                     virtualFile.refresh(false, false)
                 } catch (e: Exception) {
                     NotificationUtils.showBalloonMsg(project, e.message ?: "文件创建失败", NotificationType.ERROR)
@@ -124,14 +124,19 @@ class CreateFileTemplateAction : DumbAwareAction() {
         }
     }
 
-    private fun createFile(parent: File, children: List<TemplateChildEntity>?, placeholderMap: Map<String, String>) {
+    private fun createFile(
+        parent: File,
+        children: List<TemplateChildEntity>?,
+        placeholderMap: Map<String, String>,
+        createFileCopy: Boolean
+    ) {
         children?.forEach {
             if (it.isFolder) {
                 val file = File(parent, it.name!!)
                 if (!file.exists()) {
                     file.createDirectory()
                 }
-                createFile(file, it.children, placeholderMap)
+                createFile(file, it.children, placeholderMap, createFileCopy)
             } else {
                 var content = it.tempContent ?: it.content ?: ""
                 if (content.isNotEmpty()) {
@@ -140,16 +145,17 @@ class CreateFileTemplateAction : DumbAwareAction() {
                     }
                 }
 
-                val file = File(parent, it.name!!)
-                if (!file.exists()) {
-                    file.createNewFile()
-                    val fw = FileWriter(file.absoluteFile, Charset.forName("UTF-8"))
-                    val bw = BufferedWriter(fw)
-                    bw.write(content)
-                    bw.close()
+                var name = it.name!!
+                val index = name.lastIndexOf(".")
+                val suffix: String
+                name = if (index != -1) {
+                    suffix = name.substring(index)
+                    name.substring(0, index)
                 } else {
-                    throw RuntimeException("${file.path} already exist")
+                    suffix = ""
+                    name
                 }
+                createFile(parent, name, suffix, content, createFileCopy)
             }
 
             // 采用以下方式创建，创建的文件dart语法解析不会主动触发，不明白缘由
@@ -159,6 +165,42 @@ class CreateFileTemplateAction : DumbAwareAction() {
             //     psiParent.add(child)
             // }
         }
+    }
+
+    private tailrec fun createFile(
+        parent: File,
+        name: String,
+        suffix: String,
+        content: String,
+        createFileCopy: Boolean,
+        tryCount: Int = 0
+    ) {
+
+        val fileName = if (tryCount == 0) {
+            "$name$suffix"
+        } else {
+            "${name}_$tryCount$suffix"
+        }
+
+        val file = File(parent, fileName)
+        if (!file.exists()) {
+            file.createNewFile()
+            val fw = FileWriter(file.absoluteFile, Charset.forName("UTF-8"))
+            val bw = BufferedWriter(fw)
+            bw.write(content)
+            bw.close()
+            return
+        }
+
+        if (!createFileCopy) {
+            throw RuntimeException("${file.path} already exist")
+        }
+
+        if (tryCount > 20) {
+            throw RuntimeException("${file.path} already exist")
+        }
+
+        createFile(parent, name, suffix, content, true, tryCount + 1)
     }
 
     private fun justSaveTemplateChange(project: Project, dialog: CreateFileTemplateDialog) {

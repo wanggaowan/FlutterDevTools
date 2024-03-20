@@ -81,8 +81,28 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
     var placeholderMap = mutableMapOf<String, String>()
         private set
 
+    var createFileCopy: Boolean = false
+        private set
+
     init {
         mRootPanel = initPanel()
+        val doNotAskOption: com.intellij.openapi.ui.DoNotAskOption =
+            object : com.intellij.openapi.ui.DoNotAskOption.Adapter() {
+                override fun getDoNotShowMessage(): String {
+                    return "当创建文件已存在时，是否创建副本"
+                }
+
+                override fun shouldSaveOptionsOnCancel(): Boolean {
+                    return true
+                }
+
+                override fun rememberChoice(isSelected: Boolean, exitCode: Int) {
+                    if (exitCode == 0 && isSelected) {
+                        createFileCopy = true
+                    }
+                }
+            }
+        setDoNotAskOption(doNotAskOption)
         init()
         templateList.selectedIndex = 0
     }
@@ -407,8 +427,12 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         }
         children.add(entity)
 
-        val node = MyMutableTreeNode(entity)
-        parentNode.add(node)
+        if (parentNode.childCount < children.size) {
+            // MyMutableTreeNode的childCount第一次执行会执行插入操作，因此只有数量小于children时才执行插入操作
+            // 否则由于children.add(entity)及parentNode.childCount执行的插入操作，会导致重复插入
+            val node = MyMutableTreeNode(entity)
+            parentNode.add(node)
+        }
 
         val treeModel = (templateChildrenTree.model as DefaultTreeModel)
         val selectionPath = templateChildrenTree.selectionModel.selectionPath
@@ -975,11 +999,7 @@ class InputPlaceHolderDialog(val project: Project, placeHolders: Set<String>) : 
         val builder = FormBuilder.createFormBuilder()
         builder.addComponent(JLabel("输入占位符内容："))
         for (key in placeholderMap.keys) {
-            if (key == "${'$'}DATE${'$'}"
-                || key == "${'$'}TIME${'$'}"
-                || key == "${'$'}DATETIME${'$'}"
-                || key == "${'$'}USER${'$'}"
-            ) {
+            if (key == "#DATE#" || key == "#TIME#" || key == "#DATETIME#" || key == "#USER#") {
                 continue
             }
 
@@ -1018,10 +1038,10 @@ class SpecialPlaceHolderDescDialog(val project: Project) : DialogWrapper(project
 
     init {
         val desc = """
-            ${'$'}DATE${'$'}：     当前日期,格式：yyyy-MM-dd
-            ${'$'}TIME${'$'}：     当前时间,格式：HH-mm
-            ${'$'}DATETIME${'$'}： 当前日期时间,格式：yyyy-MM-dd HH-mm
-            ${'$'}USER${'$'}：     当前系统登录的用户
+            #DATE#：     当前日期,格式：yyyy-MM-dd
+            #TIME#：     当前时间,格式：HH-mm
+            #DATETIME#： 当前日期时间,格式：yyyy-MM-dd HH-mm
+            #USER#：     当前系统登录的用户
         """.trimIndent()
 
         rootPanel = JTextArea(desc)

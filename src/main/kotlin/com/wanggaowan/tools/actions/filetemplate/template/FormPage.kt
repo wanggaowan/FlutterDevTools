@@ -33,27 +33,27 @@ object FormPage {
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:kq_flutter_widgets/extentions/kq_extentions.dart';
-import 'package:kq_flutter_widgets/getx/kq_get_builder.dart';
+import 'package:kq_flutter_core_widget/extentions/kq_extentions.dart';
+import 'package:kq_flutter_core_widget/getx/kq_get_builder.dart';
+import 'package:kq_flutter_core_widget/utils/kq_screen_util.dart';
 import 'package:kq_flutter_widgets/utils/kq_form_util.dart';
 import 'package:kq_flutter_widgets/widgets/button/kq_bottom_button.dart';
 import 'package:kq_flutter_widgets/widgets/titleBar/kq_title_bar.dart';
 
 import 'controller.dart';
 
-/// ${'$'}desc${'$'}
-/// create by ${'$'}USER${'$'} ${'$'}DATETIME${'$'}
-class ${'$'}pageName${'$'}Page extends StatefulWidget {
+/// #desc#
+/// create by #USER# #DATETIME#
+class #pageName#Page extends StatefulWidget {
   const TestPage({super.key});
 
   @override
-  State<${'$'}pageName${'$'}Page> createState() => _${'$'}pageName${'$'}PageState();
+  State<#pageName#Page> createState() => _#pageName#PageState();
 }
 
-class _${'$'}pageName${'$'}PageState extends State<${'$'}pageName${'$'}Page> {
-  final _controller = ${'$'}pageName${'$'}Controller();
+class _#pageName#PageState extends State<#pageName#Page> {
+  final _controller = #pageName#Controller();
 
   @override
   Widget build(BuildContext context) {
@@ -103,14 +103,14 @@ class _${'$'}pageName${'$'}PageState extends State<${'$'}pageName${'$'}Page> {
 
     private val controllerContent = """
 import 'package:get/get.dart';
-import 'package:kq_flutter_widgets/getx/kq_get_builder.dart';
-import 'package:kq_flutter_widgets/network/response.dart';
+import 'package:kq_flutter_core_widget/getx/kq_get_builder.dart';
+import 'package:kq_flutter_core_widget/network/response.dart';
 import 'package:kq_flutter_widgets/utils/kq_form_util.dart';
 
 import 'state.dart';
 
-class ${'$'}pageName${'$'}Controller extends KqGetXController {
-  final ${'$'}pageName${'$'}State state = ${'$'}pageName${'$'}State();
+class #pageName#Controller extends KqGetXController {
+  final #pageName#State state = #pageName#State();
 
   @override
   void onInit() {
@@ -131,7 +131,7 @@ class ${'$'}pageName${'$'}Controller extends KqGetXController {
     // 表单数据
     var params = KqFormUtil.getFormSubmitJson(state.formData);
     // 请求接口
-    ${'$'}apiName${'$'}Api.${'$'}methodName${'$'}(
+    #apiName#Api.#methodName#(
       params,
       cancelToken: createCancelToken(),
       callback: (response) {
@@ -148,8 +148,8 @@ class ${'$'}pageName${'$'}Controller extends KqGetXController {
     private val stateContent = """
 import 'package:kq_flutter_widgets/widgets/formItem/entity/kq_form_entity.dart';
 
-class ${'$'}pageName${'$'}State {
-  ${'$'}pageName${'$'}State() {
+class #pageName#State {
+  #pageName#State() {
     ///Initialize variables
   }
 

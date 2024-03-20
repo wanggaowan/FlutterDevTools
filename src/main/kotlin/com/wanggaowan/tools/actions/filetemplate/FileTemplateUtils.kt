@@ -132,7 +132,7 @@ object FileTemplateUtils {
         }
 
         /// 匹配已$开始，中间任意[A-Za-z0-9_]组合字符，$结束的任意字符
-        val regex = Regex("\\\$[A-Za-z0-9_]*\\\$")
+        val regex = Regex("#[A-Za-z0-9_]*#")
         val result = regex.findAll(content)
         result.forEach { set.add(it.value) }
         return set

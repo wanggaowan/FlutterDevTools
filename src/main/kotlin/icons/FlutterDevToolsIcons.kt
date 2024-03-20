@@ -55,7 +55,7 @@ object FlutterDevToolsIcons {
     val delete: Icon = IconLoader.getIcon("/icons/delete.svg", FlutterDevToolsIcons::class.java)
 
     @JvmField
-    val arbFile: Icon = IconLoader.getIcon("/icons/arb_file.svg", FlutterDevToolsIcons::class.java)
+    val arbFile: Icon = IconLoader.getIcon("/icons/arb_file2.svg", FlutterDevToolsIcons::class.java)
 
     @JvmField
     val fileTemplate: Icon = IconLoader.getIcon("/icons/file_template.svg", FlutterIcons::class.java)

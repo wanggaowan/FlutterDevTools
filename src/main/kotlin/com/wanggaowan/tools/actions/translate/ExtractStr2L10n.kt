@@ -294,7 +294,7 @@ class ExtractStr2L10n : DumbAwareAction() {
                                 TranslateUtils.translate(originalText, file.targetLanguage),
                                 file.targetLanguage,
                                 useEscaping,
-                                dartTemplateEntryList,
+                                dartTemplateEntryList.size,
                             )
                             file.translate = translate2
                         }

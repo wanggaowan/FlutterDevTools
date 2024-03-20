@@ -11,6 +11,7 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
 import com.wanggaowan.tools.utils.ex.basePath
@@ -82,7 +83,7 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         /**
          * 查找多语言引用的字段翻译文件对象
          */
-        internal fun getTranslateFile(module: Module, isExample: Boolean = false): PsiElement? {
+        internal fun getTranslateFile(module: Module, isExample: Boolean = false): PsiFile? {
             val basePath = module.basePath ?: return null
             val l10nFile = if (isExample) {
                 module.findChild("example")?.findChild("l10n.yaml")?.toPsiFile(module.project)

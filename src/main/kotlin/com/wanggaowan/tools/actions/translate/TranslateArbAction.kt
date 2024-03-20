@@ -181,8 +181,14 @@ class TranslateArbAction : DumbAwareAction() {
                         if (translateStr == null) {
                             existTranslateFailed = true
                         } else {
+                            val placeHolderCount = if (translateStr.indexOf("{param") != -1) 10 else 0
                             translateStr =
-                                TranslateUtils.fixTranslateError(translateStr, targetLanguage, useEscaping)
+                                TranslateUtils.fixTranslateError(
+                                    translateStr,
+                                    targetLanguage,
+                                    useEscaping,
+                                    placeHolderCount
+                                )
                             if (translateStr != null) {
                                 writeResult(project, arbPsiFile, jsonObject, key, translateStr)
                             } else {

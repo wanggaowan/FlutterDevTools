@@ -1,9 +1,9 @@
 package com.wanggaowan.tools.extensions.gotohandler
 
 import com.intellij.json.psi.JsonObject
-import com.intellij.json.psi.JsonProperty
 import com.intellij.openapi.module.Module
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.jetbrains.lang.dart.psi.DartId
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
@@ -58,16 +58,33 @@ object I18nGoToDeclarationHandler {
         }
 
         val file = I18nFoldingBuilder.getTranslateFile(module, isExample) ?: return null
-        val jsonObject = file.getChildOfType<JsonObject>() ?: return arrayOf(file)
+        val allFiles = mutableListOf(file)
+        file.parent?.children?.forEach {
+            if (it !is PsiFile) {
+                return@forEach
+            }
 
-        for (child in jsonObject.children) {
-            if (child is JsonProperty) {
-                if (sourceText == child.name) {
-                    return arrayOf(child)
-                }
+            val name = it.name
+            if (name == file.name) {
+                return@forEach
+            }
+
+            if (name.lowercase().endsWith(".arb")) {
+                allFiles.add(it)
             }
         }
 
-        return arrayOf(file)
+        val findElements = mutableListOf<PsiElement>()
+        allFiles.forEach {
+            it.getChildOfType<JsonObject>()?.findProperty(sourceText)?.also { jsonProperty ->
+                findElements.add(jsonProperty)
+            }
+        }
+
+        if (findElements.isEmpty()) {
+            return arrayOf(file)
+        }
+
+        return findElements.toTypedArray()
     }
 }

@@ -5,7 +5,6 @@ import ai.grazie.text.replace
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.diagnostic.logger
-import com.jetbrains.lang.dart.psi.DartPsiCompositeElement
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
@@ -211,9 +210,9 @@ object TranslateUtils {
         translate: String?,
         targetLanguage: String,
         useEscaping: Boolean = false,
-        list: List<DartPsiCompositeElement>? = null
+        placeHolderCount: Int? = null
     ): String? {
-        var translateStr = fixTranslatePlaceHolderStr(translate, useEscaping, list)
+        var translateStr = fixTranslatePlaceHolderStr(translate, useEscaping, placeHolderCount)
         translateStr = fixNewLineFormatError(translateStr)
         return translateStr
     }
@@ -222,19 +221,19 @@ object TranslateUtils {
     private fun fixTranslatePlaceHolderStr(
         translate: String?,
         useEscaping: Boolean = false,
-        list: List<DartPsiCompositeElement>? = null
+        placeHolderCount: Int? = null
     ): String? {
         if (translate.isNullOrEmpty()) {
             return null
         }
 
-        if (list.isNullOrEmpty()) {
+        if (placeHolderCount == null || placeHolderCount <= 0) {
             return translate
         }
 
         var start = 0
         var newValue = translate
-        for (i in list.indices) {
+        for (i in 0 until placeHolderCount) {
             val param = "{Param$i}"
             val index = translate.indexOf(param, start)
             if (index != -1) {
