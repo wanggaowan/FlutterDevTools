@@ -174,14 +174,17 @@ class TranslateArbAction : DumbAwareAction() {
 
                         progressIndicator.text = "${count.toInt()} / $total Translating: $key"
 
-                        val time = System.currentTimeMillis()
+                        // 目前发现IDE连续翻译大概300条内容后，速度会越来越慢，而Android Studio基本没有此问题
+                        // 目前不知道为何。此处暂时记录，以后 看看能不能优化。
+                        // 如果是翻译API有QPS等限制，那应该不管什么平台都会变慢。但是Android Studio基本不会变慢。
+                        // 但是如果我只是模拟翻译接口，不去实际调用接口，IDE也不会变慢，从这又感觉是翻译API的限制
                         var translateStr =
                             if (value.isNullOrEmpty()) value else TranslateUtils.translate(value, targetLanguage)
                         progressIndicator.fraction = count / total * 0.94 + 0.05
                         if (translateStr == null) {
                             existTranslateFailed = true
                         } else {
-                            val placeHolderCount = if (translateStr.indexOf("{param") != -1) 10 else 0
+                            val placeHolderCount = if (translateStr.indexOf("{Param") != -1) 5 else 0
                             translateStr =
                                 TranslateUtils.fixTranslateError(
                                     translateStr,
@@ -193,15 +196,6 @@ class TranslateArbAction : DumbAwareAction() {
                                 writeResult(project, arbPsiFile, jsonObject, key, translateStr)
                             } else {
                                 existTranslateFailed = true
-                            }
-                        }
-                        val useTime = System.currentTimeMillis() - time
-                        if (useTime < 400) {
-                            // 访问速度太快，触发阿里翻译的QPS限制，反而导致速度越来越慢，因此加一个限制
-                            try {
-                                Thread.sleep(400 - useTime)
-                            } catch (e: Exception) {
-                                //
                             }
                         }
                         count++

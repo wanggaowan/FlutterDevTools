@@ -112,12 +112,11 @@ object TranslateUtils {
             return ""
         }
 
-        val sb = StringBuilder()
         Arrays.sort(keys)
-
 
         var key: String?
         var value: String?
+        val sb = StringBuilder()
         for (i in keys.indices) {
             key = keys[i]
             sb.append(encodeURI(key))
