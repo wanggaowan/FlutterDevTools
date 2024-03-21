@@ -42,7 +42,7 @@ class PlainTextLanguageTextField(project: Project) :
 
         val settings: EditorSettings = editorEx.settings
         settings.isLineNumbersShown = true
-        settings.isUseSoftWraps = true
+        settings.isUseSoftWraps = false
         settings.additionalLinesCount = 5
         return editorEx
     }

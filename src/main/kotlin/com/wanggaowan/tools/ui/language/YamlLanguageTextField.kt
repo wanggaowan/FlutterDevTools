@@ -41,7 +41,7 @@ class YamlLanguageTextField(project: Project) :
 
         val settings: EditorSettings = editorEx.settings
         settings.isLineNumbersShown = true
-        settings.isUseSoftWraps = true
+        settings.isUseSoftWraps = false
         settings.isAutoCodeFoldingEnabled = true
         settings.isFoldingOutlineShown = true
         settings.isAllowSingleLogicalLineFolding = true
