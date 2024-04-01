@@ -13,7 +13,7 @@
       <li>复制/删除/重命名不同分辨率下的相同图片</li>
       <li>自动/手动生成图片资源引用文件并配置assets节点</li>
       <li>实时显示多语言翻译后文本</li>
-      <li>常用命令提供快捷方式</li>
+      <li>常用Flutter/Dart命令提供快捷方式</li>
       <li>文件导航</li>
       <li>页面路由配置</li>
       <li>Android &lt;string/&gt;转化arb文件格式</li>
@@ -25,6 +25,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>3.4</p>
+    <ul>
+      <li>增加一键在所有arb文件中删除指定多语言项功能</li>
+    </ul>
+
     <p>3.3</p>
     <ul>
       <li>多语言文件arb，按住(ctrl/command)点击多语言key或右键Find Usages时，支持查找所有引用此key的文件</li>
@@ -290,6 +295,10 @@
                 id="FlutterDevTools.ExtractStr2L10n"
                 class="com.wanggaowan.tools.actions.translate.ExtractStr2L10n"
                 text="提取为多语言"/>
+            <action
+                id="FlutterDevTools.DeleteArbSameKeyElementAction"
+                class="com.wanggaowan.tools.actions.DeleteArbSameKeyElementAction"
+                text="在所有arb文件中删除此项"/>
             <separator/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
         </group>

@@ -21,7 +21,7 @@ import java.awt.Color
  */
 class ColorLineMarkerProvider : LineMarkerProvider {
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
-        if (element.node.elementType !== DartTokenTypes.IDENTIFIER) {
+        if (element.node.elementType != DartTokenTypes.IDENTIFIER) {
             return null
         }
 

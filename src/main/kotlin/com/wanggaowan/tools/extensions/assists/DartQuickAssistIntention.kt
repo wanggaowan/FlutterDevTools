@@ -64,6 +64,11 @@ open class DartQuickAssistIntention : IntentionAction {
             return false
         }
 
+        val service = CodeAnalysisService.getInstance(project)
+        if (!service.isAvailable) {
+            return false
+        }
+
         val module = file.module ?: return false
         if (!module.isFlutterProject) {
             return false
@@ -80,8 +85,7 @@ open class DartQuickAssistIntention : IntentionAction {
             text = text.substring(0, index).trim()
         }
 
-
-        val suggestion = CodeAnalysisService.getInstance(project).getSuggestions(module)?.find { it.name == text }
+        val suggestion = service.getSuggestions(module)?.find { it.name == text }
         if (suggestion == null || suggestion.libraryUriToImport.isNullOrEmpty()) {
             return false
         }

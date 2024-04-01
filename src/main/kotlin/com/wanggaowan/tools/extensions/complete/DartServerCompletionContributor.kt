@@ -230,7 +230,7 @@ class DartServerCompletionContributor : CompletionContributor() {
             if (reference is DartReferenceExpression) {
                 val firstChild = reference.firstChild
                 val lastChild = reference.lastChild
-                if (firstChild !== lastChild &&
+                if (firstChild != lastChild &&
                     lastChild is PsiErrorElement && context.startOffset <= firstChild.textRange.endOffset
                 ) {
                     context.replacementOffset = firstChild.textRange.endOffset

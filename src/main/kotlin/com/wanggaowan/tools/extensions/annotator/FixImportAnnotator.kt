@@ -81,8 +81,9 @@ class FixImportAnnotator : Annotator {
             }
         }
 
-        val parseDev = PluginSettings.getCodeCompleteTypeDirectDev(element.project)
-        val parseTransitive = PluginSettings.getCodeCompleteTypeTransitive(element.project)
+        val project = element.project
+        val parseDev = PluginSettings.getCodeCompleteTypeDirectDev(project)
+        val parseTransitive = PluginSettings.getCodeCompleteTypeTransitive(project)
         processDartRegionsInRange(notYetAppliedErrors, element.textRange,
             Consumer { err: DartError ->
                 if (AnalysisErrorSeverity.ERROR != err.severity) {
