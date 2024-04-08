@@ -5,6 +5,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
+import com.wanggaowan.tools.utils.dart.NameWrapperPsiElement
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
@@ -120,7 +121,9 @@ object RouterGoToDeclarationHandler {
             val content = children[0].getChildOfType<DartStringLiteralExpression>()?.text?.replace("\"", "")
                 ?.replace("\'", "")?.trim()
             if (content == text) {
-                elements.add(child)
+                elements.add(NameWrapperPsiElement(child) {
+                    return@NameWrapperPsiElement it.text.replace("  ", "")
+                })
                 break
             }
         }

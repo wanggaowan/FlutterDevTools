@@ -1,6 +1,7 @@
 package com.wanggaowan.tools.extensions.gotohandler
 
 import com.intellij.json.psi.JsonObject
+import com.intellij.json.psi.JsonProperty
 import com.intellij.openapi.module.Module
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -8,6 +9,7 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.jetbrains.lang.dart.psi.DartId
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
 import com.wanggaowan.tools.extensions.lang.I18nFoldingBuilder
+import com.wanggaowan.tools.utils.dart.NameWrapperPsiElement
 import com.wanggaowan.tools.utils.ex.basePath
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 
@@ -77,7 +79,13 @@ object I18nGoToDeclarationHandler {
         val findElements = mutableListOf<PsiElement>()
         allFiles.forEach {
             it.getChildOfType<JsonObject>()?.findProperty(sourceText)?.also { jsonProperty ->
-                findElements.add(jsonProperty)
+                findElements.add(NameWrapperPsiElement(jsonProperty) { node ->
+                    var text2 = (node as JsonProperty).value?.text ?: ""
+                    if (text2.length > 50) {
+                        text2 = "${text2.substring(0, 50)}\" Click show details"
+                    }
+                    return@NameWrapperPsiElement "${it.name}: $text2"
+                })
             }
         }
 
