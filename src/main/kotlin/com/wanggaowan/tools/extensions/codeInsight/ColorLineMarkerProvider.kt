@@ -13,6 +13,7 @@ import com.jetbrains.lang.dart.psi.*
 import io.flutter.editor.FlutterColorProvider
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import java.awt.Color
+import java.awt.event.MouseEvent
 
 /**
  * 在代码行数栏展示当前行包含的图片文件
@@ -58,7 +59,11 @@ class ColorLineMarkerProvider : LineMarkerProvider {
         val callExpression = parent.getChildOfType<DartVarInit>()?.getChildOfType<DartCallExpression>() ?: return null
         val colorElement =
             callExpression.getChildOfType<DartReferenceExpression>()?.firstChild?.firstChild ?: return null
-        val color = FlutterColorProvider().getColorFrom(colorElement) ?: return null
+        val color = try {
+            FlutterColorProvider().getColorFrom(colorElement)
+        } catch (e: Exception) {
+            null
+        } ?: return null
         return createLineMarkerInfo(element, color)
     }
 
@@ -67,13 +72,18 @@ class ColorLineMarkerProvider : LineMarkerProvider {
         val icon = ColorIcon(size, color)
         return LineMarkerInfo(
             element, element.textRange, icon, null,
-            { e, _ ->
-                val relativePoint = RelativePoint(e.component, e.point)
-                ColorPicker.showColorPickerPopup(element.project, color, { _, _ ->
-
-                }, relativePoint, true)
-
-            }, GutterIconRenderer.Alignment.LEFT
+            { e, _ -> navigate(e, element, color) }, GutterIconRenderer.Alignment.LEFT
         ) { "" }
+    }
+
+    private fun navigate(e: MouseEvent, element: PsiElement, color: Color) {
+        try {
+            val relativePoint = RelativePoint(e.component, e.point)
+            ColorPicker.showColorPickerPopup(element.project, color, { _, _ ->
+
+            }, relativePoint, true)
+        } catch (e: Exception) {
+            //
+        }
     }
 }
