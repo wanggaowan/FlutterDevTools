@@ -2,6 +2,7 @@ package com.wanggaowan.tools.extensions.codeInsight
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
+import com.intellij.openapi.editor.ElementColorProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
 import com.intellij.ui.ColorPicker
@@ -10,7 +11,6 @@ import com.intellij.util.ui.ColorIcon
 import com.intellij.util.ui.JBUI
 import com.jetbrains.lang.dart.DartTokenTypes
 import com.jetbrains.lang.dart.psi.*
-import io.flutter.editor.FlutterColorProvider
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import java.awt.Color
 import java.awt.event.MouseEvent
@@ -59,12 +59,19 @@ class ColorLineMarkerProvider : LineMarkerProvider {
         val callExpression = parent.getChildOfType<DartVarInit>()?.getChildOfType<DartCallExpression>() ?: return null
         val colorElement =
             callExpression.getChildOfType<DartReferenceExpression>()?.firstChild?.firstChild ?: return null
-        val color = try {
-            FlutterColorProvider().getColorFrom(colorElement)
-        } catch (e: Exception) {
-            null
-        } ?: return null
-        return createLineMarkerInfo(element, color)
+        var color:Color? = null
+        ElementColorProvider.EP_NAME.extensions.forEach {
+            color = it.getColorFrom(colorElement)
+            if (color != null) {
+                return@forEach
+            }
+        }
+
+        if (color == null) {
+            return null
+        }
+
+        return createLineMarkerInfo(element, color!!)
     }
 
     private fun createLineMarkerInfo(element: PsiElement, color: Color): LineMarkerInfo<*> {

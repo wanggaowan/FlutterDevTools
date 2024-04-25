@@ -41,11 +41,12 @@ object ImagesGoToDeclarationHandler {
         }
 
         val text = parent.text ?: return null
-        val splits: List<String> = text.split(".")
+        var splits: List<String> = text.split(".")
         if (splits.size < 2) {
             return null
         }
 
+        splits = splits.map { it.replace("\n", "").replace(" ", "") }
         if (splits[0] != PluginSettings.getImagesRefClassName(module.project) || splits[1] != sourceElement.text) {
             return null
         }

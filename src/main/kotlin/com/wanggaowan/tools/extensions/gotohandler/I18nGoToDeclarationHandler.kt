@@ -40,11 +40,12 @@ object I18nGoToDeclarationHandler {
         }
 
         val text = parent.text ?: return null
-        val splits: List<String> = text.split(".")
+        var splits: List<String> = text.split(".")
         if (splits.size < 3) {
             return null
         }
 
+        splits = splits.map { it.replace("\n", "").replace(" ", "") }
         val sourceText = sourceElement.text
         // 一般多语言调用格式为S.of(context).txt或S.current.txt
         if (splits[2] != sourceText || splits[0] != "S" || (splits[1] != "current" && !splits[1].startsWith("of("))) {

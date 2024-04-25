@@ -1,7 +1,6 @@
 package com.wanggaowan.tools.extensions.lang
 
-import com.google.gson.Gson
-import com.google.gson.JsonObject
+import com.intellij.json.psi.JsonObject
 import com.intellij.lang.ASTNode
 import com.intellij.lang.folding.FoldingBuilderEx
 import com.intellij.lang.folding.FoldingDescriptor
@@ -13,13 +12,18 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
+import com.jetbrains.lang.dart.psi.DartArgumentList
+import com.jetbrains.lang.dart.psi.DartCallExpression
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
+import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
 import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.findChild
 import com.wanggaowan.tools.utils.ex.findModule
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.idea.util.projectStructure.module
+import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
+import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
 import org.jetbrains.yaml.psi.YAMLKeyValue
 
 /**
@@ -39,9 +43,14 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         if (root.module.isFlutterProject) {
             PsiTreeUtil.collectElementsOfType(root, DartReferenceExpression::class.java).forEach {
                 if (it is DartReferenceExpression) {
-                    val text = it.text
+                    val text = it.text.replace("\n", "").replace(" ", "")
                     if (text.startsWith("S.of(") || text.startsWith("S.current.")) {
-                        descriptors.add(FoldingDescriptor(it.node, it.textRange, group))
+                        val parent = it.parent
+                        if (parent is DartCallExpression) {
+                            descriptors.add(FoldingDescriptor(parent.node, parent.textRange, group))
+                        } else {
+                            descriptors.add(FoldingDescriptor(it.node, it.textRange, group))
+                        }
                     }
                 }
             }
@@ -64,15 +73,55 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
 
         val translateFile = getTranslateFile(module, isExample) ?: return null
         try {
-            val jsonObject = Gson().fromJson(translateFile.text, JsonObject::class.java)
-            val jsonElement = jsonObject.get(element.children[1].text)
-            if (jsonElement != null && jsonElement.isJsonPrimitive) {
-                return jsonElement.toString()
+            val args: Array<PsiElement>?
+            val key: String = if (element is DartCallExpression) {
+                val children = element.children
+                args = children[1].getChildOfType<DartArgumentList>()?.children
+                children[0].children[1].text
+            } else {
+                args = null
+                element.children[1].text
+            }
+
+            val jsonProperty = translateFile.getChildOfType<JsonObject>()?.findProperty(key)
+            if (jsonProperty != null) {
+                var text = jsonProperty.value?.text
+                if (!text.isNullOrEmpty() && !args.isNullOrEmpty()) {
+                    text = appendArgs(text, args)
+                }
+                return text
             }
             return null
         } catch (e: Exception) {
             return null
         }
+    }
+
+    private fun appendArgs(text: String, args: Array<PsiElement>): String {
+        val regex = Regex("\\{[^{}]*}")
+        val results = regex.findAll(text).iterator()
+        var index = 0
+        val argSize = args.size
+        var newStr = text
+        results.forEach {
+            if (index > argSize) {
+                return@forEach
+            }
+            val arg = args[index]
+            newStr = if (arg is DartReferenceExpression) {
+                if (arg.getChildrenOfType<DartReferenceExpression>().isNotEmpty()) {
+                    newStr.replace(it.value, "\${${args[index].text}}")
+                } else {
+                    newStr.replace(it.value, "\$${args[index].text}")
+                }
+            } else if (arg is DartStringLiteralExpression) {
+                newStr.replace(it.value, arg.firstChild?.nextSibling?.text ?: arg.text)
+            } else {
+                newStr.replace(it.value, arg.text ?: "")
+            }
+            index++
+        }
+        return newStr
     }
 
     override fun isCollapsedByDefault(node: ASTNode): Boolean {
