@@ -2,7 +2,6 @@ package com.wanggaowan.tools.extensions.codeInsight
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
-import com.intellij.openapi.editor.ElementColorProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
 import com.intellij.ui.ColorPicker
@@ -36,7 +35,7 @@ class ColorLineMarkerProvider : LineMarkerProvider {
         }
 
         val callName = parent.parent.firstChild.text
-        if (callName == "Colors" || callName == "CupertinoColors") {
+        if (callName == "Colors" || callName == "CupertinoColors" || callName == "Color") {
             // Flutter插件已支持此格式
             return null
         }
@@ -59,19 +58,8 @@ class ColorLineMarkerProvider : LineMarkerProvider {
         val callExpression = parent.getChildOfType<DartVarInit>()?.getChildOfType<DartCallExpression>() ?: return null
         val colorElement =
             callExpression.getChildOfType<DartReferenceExpression>()?.firstChild?.firstChild ?: return null
-        var color:Color? = null
-        ElementColorProvider.EP_NAME.extensions.forEach {
-            color = it.getColorFrom(colorElement)
-            if (color != null) {
-                return@forEach
-            }
-        }
-
-        if (color == null) {
-            return null
-        }
-
-        return createLineMarkerInfo(element, color!!)
+        val color: Color = FlutterColorProvider().getColorFrom(colorElement) ?: return null
+        return createLineMarkerInfo(element, color)
     }
 
     private fun createLineMarkerInfo(element: PsiElement, color: Color): LineMarkerInfo<*> {
