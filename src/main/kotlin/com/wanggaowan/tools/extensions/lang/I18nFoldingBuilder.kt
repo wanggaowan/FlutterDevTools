@@ -42,16 +42,29 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
 
         if (root.module.isFlutterProject) {
             PsiTreeUtil.collectElementsOfType(root, DartReferenceExpression::class.java).forEach {
-                if (it is DartReferenceExpression) {
-                    val text = it.text.replace("\n", "").replace(" ", "")
-                    if (text.startsWith("S.of(") || text.startsWith("S.current.")) {
-                        val parent = it.parent
-                        if (parent is DartCallExpression) {
-                            descriptors.add(FoldingDescriptor(parent.node, parent.textRange, group))
-                        } else {
-                            descriptors.add(FoldingDescriptor(it.node, it.textRange, group))
-                        }
-                    }
+                if (it !is DartReferenceExpression) {
+                    return@forEach
+                }
+
+                val text = it.text.replace("\n", "").replace(" ", "")
+                val splits = text.split('.')
+                if (splits.size != 3) {
+                    return@forEach
+                }
+
+                if (splits[0] != "S") {
+                    return@forEach
+                }
+
+                if (splits[1] != "current" && !splits[1].startsWith("of(")) {
+                    return@forEach
+                }
+
+                val parent = it.parent
+                if (parent is DartCallExpression) {
+                    descriptors.add(FoldingDescriptor(parent.node, parent.textRange, group))
+                } else {
+                    descriptors.add(FoldingDescriptor(it.node, it.textRange, group))
                 }
             }
         }
@@ -102,7 +115,7 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         val results = regex.findAll(text).iterator()
         var index = 0
         val argSize = args.size
-        var newStr = text
+        var newStr = text.substring(1, text.length - 1)
         results.forEach {
             if (index > argSize) {
                 return@forEach
