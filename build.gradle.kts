@@ -9,6 +9,7 @@ group = "com.wanggaowan"
 version = "3.4"
 
 repositories {
+    maven { setUrl("https://maven.aliyun.com/repository/central") }
     mavenCentral()
 }
 
@@ -28,7 +29,8 @@ intellij {
             "Kotlin",
             "Dart:223.8950",
             "io.flutter:74.0.3",
-            "yaml"
+            "yaml",
+            "Git4Idea"
         )
     )
 
@@ -52,7 +54,7 @@ tasks {
         kotlinOptions.jvmTarget = "17"
     }
 
-    buildSearchableOptions{
+    buildSearchableOptions {
         enabled = false
     }
 
