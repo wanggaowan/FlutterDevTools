@@ -10,6 +10,7 @@ import com.intellij.util.ui.ColorIcon
 import com.intellij.util.ui.JBUI
 import com.jetbrains.lang.dart.DartTokenTypes
 import com.jetbrains.lang.dart.psi.*
+import io.flutter.editor.FlutterColorProvider
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import java.awt.Color
 import java.awt.event.MouseEvent

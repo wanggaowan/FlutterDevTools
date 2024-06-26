@@ -1,6 +1,7 @@
 package com.wanggaowan.tools.extensions.complete
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModuleRootManager
@@ -30,6 +31,7 @@ import kotlin.collections.set
  *
  * @author Created by wanggaowan on 2023/12/29 11:22
  */
+@Service(Service.Level.PROJECT)
 class CodeAnalysisService(val project: Project) {
     private val parsedLib = mutableMapOf<String, MutableList<String>>()
     private val topElement = mutableMapOf<String, MutableSet<Suggestion>>()

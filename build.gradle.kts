@@ -6,7 +6,7 @@ plugins {
 
 group = "com.wanggaowan"
 // version = "1.0-SNAPSHOT"
-version = "3.4"
+version = "3.5"
 
 repositories {
     maven { setUrl("https://maven.aliyun.com/repository/central") }
@@ -30,7 +30,6 @@ intellij {
             "Dart:223.8950",
             "io.flutter:74.0.3",
             "yaml",
-            "Git4Idea"
         )
     )
 

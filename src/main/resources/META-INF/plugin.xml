@@ -1,194 +1,9 @@
-<idea-plugin>
+<idea-plugin xmlns:xi="http://www.w3.org/2001/XInclude">
     <id>com.wanggaowan.tools</id>
     <name>FlutterDevTools</name>
     <vendor email="wanggaowan@163.com" url="https://github.com/wanggaowan/FlutterDevTools.git"/>
 
-    <description><![CDATA[
-    <h2>提供Flutter开发所需工具</h2>
-    <ol>
-      <li>项目结构增加Flutter项目专属分类</li>
-      <li>图片资源管理窗口</li>
-      <li>json转dart</li>
-      <li>一键导入android图片</li>
-      <li>复制/删除/重命名不同分辨率下的相同图片</li>
-      <li>自动/手动生成图片资源引用文件并配置assets节点</li>
-      <li>实时显示多语言翻译后文本</li>
-      <li>常用Flutter/Dart命令提供快捷方式</li>
-      <li>文件导航</li>
-      <li>页面路由配置</li>
-      <li>Android &lt;string/&gt;转化arb文件格式</li>
-      <li>创建Dart文件模版，支持多级目录</li>
-      <li>提取中文为多语言</li>
-      <li>根据模版arb翻译其它语言arb文件功能</li>
-      <li>一键删除未使用文件/资源功能</li>
-    </ol>
-    ]]></description>
-
-    <change-notes><![CDATA[
-    <p>3.4</p>
-    <ul>
-      <li>增加一键在所有arb文件中删除指定多语言项功能</li>
-    </ul>
-
-    <p>3.3</p>
-    <ul>
-      <li>多语言文件arb，按住(ctrl/command)点击多语言key或右键Find Usages时，支持查找所有引用此key的文件</li>
-      <li>图片资源文件，右键Find Usages时，支持查找所有引用此图片的文件</li>
-      <li>提供安全删除图片资源功能，删除图片时，如果图片被引用则给予安全提示</li>
-      <li>图片文件重命名时，支持同步更新所有引用处内容</li>
-      <li>扩展DartServerRenameHandler，支持对文件的重命名，当文件名称变更时，同步更新所有引用处内容</li>
-      <li>优化根据模版arb翻译其它语言arb文件功能，翻译模式改为翻译一条插入一条，而不是全部翻译成功后再插入</li>
-      <li>增加一键删除未使用文件功能,可选中多个文件或目录，将对所有未被其它文件引用的文件或资源进行删除</li>
-      <li>代码中间接引用的颜色值在左侧代码行数栏展示对应颜色</li>
-    </ul>
-
-    <p>3.2</p>
-    <ul>
-      <li>创建Dart文件模版，支持多级目录结构</li>
-    </ul>
-
-    <p>3.1</p>
-    <ul>
-      <li>自动补全和快速修复支持扩展方法</li>
-      <li>修复Json to Dart功能报错Bug</li>
-    </ul>
-
-    <p>3.0</p>
-    <ul>
-      <li>增加根据模版arb翻译其它语言arb文件功能</li>
-    </ul>
-
-    <p>2.9</p>
-    <ul>
-       <li>自动补全支持dev_dependencies和间接依赖的库，可在设置界面启用，默认不启用。</li>
-       <li>支持dev_dependencies和间接依赖的库import导入快速修复，采用自动补全的配置项</li>
-    </ul>
-
-    <p>2.8</p>
-    <ul>
-       <li>提取多语言支持翻译模版文本为其它语言并插入到对应arb文件</li>
-       <li>插件设置界面提取多语言增加是否'翻译成其它语言'配置</li>
-       <li>修复部分插件设置更改后，退出设置界面再进入时，显示状态未展示更新后的值Bug</li>
-    </ul>
-
-    <p>2.7</p>
-    <ul>
-       <li>图片导入支持压缩包</li>
-       <li>拖拽/粘贴/移动图片到Flutter项目判定规则更加严格，仅导入的目录是插件配置的图片资源路径才响应</li>
-       <li>修复生成模版文件时，时间占位符格式化时，格式错误Bug</li>
-       <li>修复中文调用阿里翻译时，部分特殊符号URI编码规则与阿里要求不一致导致翻译失败Bug</li>
-    </ul>
-
-    <p>2.6</p>
-    <ul>
-       <li>增加提取中文为多语言功能</li>
-       <li>增加复制图片引用功能</li>
-    </ul>
-
-    <p>2.5</p>
-    <ul>
-       <li>GenerateGroup分组增加执行pub get指令action</li>
-       <li>新增创建Dart文件模版功能，支持一组文件同时创建</li>
-    </ul>
-
-    <p>2.4</p>
-    <ul>
-       <li>修复执行'生成类序列化方法'命令时，创建构造函数，未将static、const和已经有初始值的final字段排除Bug</li>
-       <li>图片多分辨率操作增加到编辑器tab页右键操作中</li>
-    </ul>
-
-    <p>2.3</p>
-    <ul>
-       <li>粘贴android <string/>文本转化为flutter多语言文本，占位符转化支持简单模式</li>
-       <li>优化图片资源管理窗口，解决图片数量巨大的情况下使用卡顿问题</li>
-    </ul>
-
-    <p>2.2</p>
-    <ul>
-       <li>增加android屏幕尺寸px，dp转换文档说明</li>
-    </ul>
-
-    <p>2.1</p>
-    <ul>
-       <li>插件最低支持IDE版本升级到223</li>
-       <li>增加arb文件类型解析规则</li>
-    </ul>
-
-    <p>2.0</p>
-    <ul>
-      <li>页面路由配置：增加返回参数，路由根据光标位置智能插入到相邻路由之下，而不是总是插入到尾部</li>
-      <li>增加粘贴Android &lt;string/&gt; 文本到arb文件时，自动转化为arb文本格式</li>
-      <li>根据路由地址跳转，可选择跳转到定义处还是路由界面</li>
-    </ul>
-
-    <p>1.9</p>
-    <ul>
-      <li>增加配置页面路由功能</li>
-      <li>增加重命名不同分辨率下的相同图片功能</li>
-      <li>路由配置界面，可点击路由地址跳转对应的界面</li>
-    </ul>
-
-    <p>1.8</p>
-    <ul>
-      <li>修复生成图片引用资源并配置yaml assets节点数据时，assets会多追加换行，导致assets节点下出现大量空白行Bug</li>
-      <li>修复图片资源预览未去重不同分辨率下相同图片Bug</li>
-      <li>增加Flutter Intl插件依赖，方便l10n多语言引用跳转到对应的定义位置</li>
-    </ul>
-
-    <p>1.7</p>
-    <ul>
-      <li>修复json to dart Bug</li>
-      <li>json to dart 配置converts选项默认选中，converts值默认为nullFieldConvertList</li>
-    </ul>
-
-    <p>1.6</p>
-    <ul>
-      <li>修复一些已知缺陷</li>
-    </ul>
-
-    <p>1.5</p>
-    <ul>
-      <li>支持一个项目多个Flutter模块工程模式</li>
-    </ul>
-
-    <p>1.4</p>
-    <ul>
-      <li>增加一键删除相同名称但不同分辨率文件夹下多张图片功能</li>
-      <li>自定义图片资源文档注释</li>
-      <li>图片引用资源文件在序号栏展示对应图片Icon</li>
-    </ul>
-
-    <p>1.3</p>
-    <ul>
-      <li>支持开发Flutter插件项目时多项目结构(插件根目录下存在example项目)，gen-l10n命令，生成资源引用文件命令等会根据不同项目执行在不同上下文中</li>
-      <li>拖拽或粘贴导入图片支持drawable，mipmap目录在第一级，无需将其包裹在一个父级目录下</li>
-    </ul>
-
-    <p>1.2</p>
-    <ul>
-      <li>支持拖拽或粘贴文件方式导入图片</li>
-      <li>自动监测多语言变更，自动执行gen-l10n命令</li>
-      <li>自动监测图片资源变更，自动生成图片资源引用和配置assets节点</li>
-      <li>增加复制不同分辨率下的相同图片功能</li>
-    </ul>
-
-    <p>1.1</p>
-    <ul>
-      <li>增加生成图片资源引用文件并配置assets节点功能</li>
-      <li>增加实时显示多语言翻译后文本功能</li>
-      <li>增加执行gen-l10n快捷方式</li>
-    </ul>
-
-    <p>1.0</p>
-    <ul>
-      <li>项目结构增加Flutter项目专属分类，仅展示Flutter开发重点关注文件</li>
-      <li>提供json转dart并支持序列化</li>
-      <li>提供一键执行dart序列化/开启序列化观察者命令</li>
-      <li>提供一键导入android图片目录结构文件到Flutter</li>
-      <li>提供flutter图片资源管理ToolWindow</li>
-    </ul>
-    ]]>
-    </change-notes>
+    <xi:include href="plugin_desc.xml"/>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
@@ -290,7 +105,7 @@
             <add-to-group group-id="NewGroup" relative-to-action="NewFile" anchor="before"/>
         </action>
 
-        <group>
+        <group id="FlutterDevTools.l10n">
             <action
                 id="FlutterDevTools.ExtractStr2L10n"
                 class="com.wanggaowan.tools.actions.translate.ExtractStr2L10n"
@@ -390,8 +205,6 @@
         <fileType name="ARB" extensions="arb" language="JSON"
                   implementationClass="com.wanggaowan.tools.extensions.filetype.ArbFileType"/>
 
-        <projectService serviceInterface="com.wanggaowan.tools.extensions.complete.CodeAnalysisService"
-                        serviceImplementation="com.wanggaowan.tools.extensions.complete.CodeAnalysisService"/>
         <!--自动提示-->
         <completion.contributor language="Dart"
                                 implementationClass="com.wanggaowan.tools.extensions.complete.CodeCompletionContributor"/>
