@@ -16,7 +16,8 @@ import com.intellij.ui.LanguageTextField
  *
  * @author Created by wanggaowan on 2024/2/21 13:57
  */
-class PlainTextLanguageTextField(project: Project) :
+class PlainTextLanguageTextField(project: Project,
+                                 private val isUseSoftWraps: Boolean = false) :
     LanguageTextField(PlainTextLanguage.INSTANCE, project, "", false) {
 
     override fun createEditor(): EditorEx {
@@ -42,7 +43,7 @@ class PlainTextLanguageTextField(project: Project) :
 
         val settings: EditorSettings = editorEx.settings
         settings.isLineNumbersShown = true
-        settings.isUseSoftWraps = false
+        settings.isUseSoftWraps = isUseSoftWraps
         settings.additionalLinesCount = 5
         return editorEx
     }

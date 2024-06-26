@@ -10,6 +10,7 @@
     <depends>Dart</depends>
     <depends>io.flutter</depends>
     <depends>org.jetbrains.plugins.yaml</depends>
+    <depends>Git4Idea</depends>
 
     <actions>
         <group id="FlutterDevTools.GenerateGroup">
@@ -101,7 +102,7 @@
         <action
             id="FlutterDevTools.CreateFileTemplateAction"
             class="com.wanggaowan.tools.actions.filetemplate.CreateFileTemplateAction" text="创建Flutter模版文件"
-            icon="/icons/file_template.svg">
+            icon="FlutterDevToolsIcons.fileTemplate">
             <add-to-group group-id="NewGroup" relative-to-action="NewFile" anchor="before"/>
         </action>
 
@@ -132,6 +133,16 @@
                 text="删除未被使用的文件"
                 description="当前文件如果未被其它元素引用，则删除">
             <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
+        </action>
+
+        <action id="FlutterDevTools.save.log" class="com.wanggaowan.tools.actions.log.SaveGitCommitLogAction"
+                text="记录日志" icon="FlutterDevToolsIcons.addLog" description="将当前提交记录到每日工作日志">
+            <add-to-group group-id="Vcs.MessageActionGroup"/>
+        </action>
+
+        <action id="FlutterDevTools.show.log" class="com.wanggaowan.tools.actions.log.ShowGitCommitLogAction"
+                text="展示日志" icon="FlutterDevToolsIcons.log" description="展示每日工作日志">
+            <add-to-group group-id="Vcs.MessageActionGroup"/>
         </action>
     </actions>
 

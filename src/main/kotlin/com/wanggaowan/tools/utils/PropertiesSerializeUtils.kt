@@ -25,7 +25,7 @@ object PropertiesSerializeUtils {
         return PropertiesComponent.getInstance().getValue(name, defaultValue)
     }
 
-    fun putString(name: String, value: String) {
+    fun putString(name: String, value: String?) {
         PropertiesComponent.getInstance().setValue(name, value)
     }
 
@@ -36,6 +36,15 @@ object PropertiesSerializeUtils {
 
     fun putInt(name: String, value: Int) {
         PropertiesComponent.getInstance().setValue(name, value, 0)
+    }
+
+    @JvmOverloads
+    fun getList(name: String): List<String>? {
+        return PropertiesComponent.getInstance().getList(name)
+    }
+
+    fun putList(name: String, value: List<String>?) {
+        PropertiesComponent.getInstance().setList(name, value)
     }
     // </editor-fold>
 
