@@ -54,7 +54,7 @@ class GitCommitLogDialog(val project: Project) : DialogWrapper(project, false) {
 
     init {
         LogUtils.getLogKeys()?.also {
-            templateData.addAll(it)
+            templateData.addAll(it.reversed())
         }
         mRootPanel = initPanel()
         init()
