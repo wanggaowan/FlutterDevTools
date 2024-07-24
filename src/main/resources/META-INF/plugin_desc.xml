@@ -21,6 +21,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>3.7</p>
+    <ul>
+      <li>修复多语言翻译时，如果翻译内容含有双引号，则会导致插入arb文件失败或内容缺失Bug</li>
+      <li>提取多语言原action改为仅提取不翻译，增加提取并翻译action</li>
+    </ul>
+
     <p>3.6</p>
     <ul>
       <li>增加记录git commit记录和按天展示git commit记录功能</li>

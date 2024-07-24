@@ -213,6 +213,7 @@ object TranslateUtils {
     ): String? {
         var translateStr = fixTranslatePlaceHolderStr(translate, useEscaping, placeHolderCount)
         translateStr = fixNewLineFormatError(translateStr)
+        translateStr = translateStr?.replace("\"","\\\"")
         return translateStr
     }
 

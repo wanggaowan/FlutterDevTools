@@ -112,6 +112,10 @@
                 class="com.wanggaowan.tools.actions.translate.ExtractStr2L10n"
                 text="提取为多语言"/>
             <action
+                id="FlutterDevTools.ExtractStr2L10nAndTranslate"
+                class="com.wanggaowan.tools.actions.translate.ExtractStr2L10nAndTranslate"
+                text="提取为多语言并翻译"/>
+            <action
                 id="FlutterDevTools.DeleteArbSameKeyElementAction"
                 class="com.wanggaowan.tools.actions.DeleteArbSameKeyElementAction"
                 text="在所有arb文件中删除此项"/>

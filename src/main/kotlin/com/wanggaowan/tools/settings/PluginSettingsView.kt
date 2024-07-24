@@ -57,8 +57,8 @@ class PluginSettingsView(pubRoot: PubRoot?) {
         builder = builder.addComponent(createCategoryTitle("提取多语言设置", marginTop = 10), 1)
         extractStr2L10nShowRenameDialog.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
         builder = builder.addComponent(extractStr2L10nShowRenameDialog, 1)
-        extractStr2L10nTranslateOther.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
-        builder = builder.addComponent(extractStr2L10nTranslateOther, 1)
+        // extractStr2L10nTranslateOther.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
+        // builder = builder.addComponent(extractStr2L10nTranslateOther, 1)
 
         builder = builder.addComponent(createCategoryTitle("代码自动补全", marginTop = 10), 1)
         codeCompleteTypeDirectDev.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
