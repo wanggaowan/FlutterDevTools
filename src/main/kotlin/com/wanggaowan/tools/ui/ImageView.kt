@@ -3,10 +3,9 @@ package com.wanggaowan.tools.ui
 import com.intellij.ui.Gray
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
+import icons.FlutterDevToolsIcons
 import java.awt.*
 import java.io.File
-import java.io.FileInputStream
-import javax.imageio.ImageIO
 import javax.swing.JComponent
 
 
@@ -28,7 +27,7 @@ class ImageView(image: File? = null) : JComponent() {
 
     fun setImage(file: File) {
         try { // 该方法会将图像加载到内存，从而拿到图像的详细信息。
-            image = ImageIO.read(FileInputStream(file))
+            image = FlutterDevToolsIcons.getImage(file.path)
             imgWidth = image?.getWidth(null) ?: 0
             imgHeight = image?.getHeight(null) ?: 0
         } catch (e: Exception) {

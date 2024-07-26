@@ -30,6 +30,8 @@ object XUtils {
             || lower.endsWith("webp")
             || lower.endsWith("gif")
             || lower.endsWith("svg")
+            || lower.endsWith("webm")
+            || lower.endsWith("bmp")
     }
 
     /**

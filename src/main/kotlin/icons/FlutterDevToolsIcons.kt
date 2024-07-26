@@ -1,7 +1,14 @@
 package icons
 
 import com.intellij.openapi.util.IconLoader
+import com.intellij.util.SVGLoader
+import java.awt.Image
+import java.io.File
+import java.io.FileInputStream
+import javax.imageio.ImageIO
 import javax.swing.Icon
+import javax.swing.ImageIcon
+
 
 /**
  * 图片ICON资源加载
@@ -65,4 +72,27 @@ object FlutterDevToolsIcons {
 
     @JvmField
     val addLog: Icon = IconLoader.getIcon("/icons/edit_log.svg", FlutterDevToolsIcons::class.java)
+
+    fun getIcon(path: String, width: Int, height: Int): Icon? {
+        val image: Image? = getImage(path)
+        return if (image != null) {
+            ImageIcon(image.getScaledInstance(width, height, Image.SCALE_FAST))
+        } else {
+            null
+        }
+    }
+
+    fun getImage(path: String): Image? {
+        var image: Image? = null
+        try {
+            image = if (path.endsWith(".svg")) {
+                SVGLoader.load(FileInputStream(path), 1f)
+            } else {
+                ImageIO.read(File(path))
+            }
+        } catch (e: Exception) {
+            //
+        }
+        return image
+    }
 }

@@ -18,7 +18,6 @@ import java.io.File
 import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
-import kotlin.collections.set
 
 /**
  * 导入图片资源后选择导入的目标文件夹弹窗，兼带重命名导入文件名称功能
@@ -119,18 +118,16 @@ class ImportImageFolderChooser(
             else if (it.path.contains("mipmap")) {
                 "Mipmap"
             } else {
-                null
+                ""
             }
 
-            if (parentName != null) {
-                var list = mRenameFileMap[parentName]
-                if (list == null) {
-                    list = mutableListOf()
-                    mRenameFileMap[parentName] = list
-                }
-
-                list.add(RenameEntity(it.name, it, it.name))
+            var list = mRenameFileMap[parentName]
+            if (list == null) {
+                list = mutableListOf()
+                mRenameFileMap[parentName] = list
             }
+
+            list.add(RenameEntity(it.name, it, it.name))
         }
 
         mJRenamePanel = JPanel(GridBagLayout())
@@ -148,7 +145,7 @@ class ImportImageFolderChooser(
         c.weightx = 1.0
 
         mRenameFileMap.forEach {
-            val type = JLabel(it.key + "：")
+            val type = JLabel((it.key.ifEmpty { "Other" }) + "：")
             type.border = BorderFactory.createEmptyBorder(if (depth > 0) 10 else 0, 5, 5, 5)
             val fontSize = (UIUtil.getFontSize(UIUtil.FontSize.NORMAL) + 2).toInt()
             type.font = Font(type.font.name, Font.BOLD, fontSize)
@@ -186,9 +183,9 @@ class ImportImageFolderChooser(
 
                 val (existFile, isInMap) = isImageExist(it2)
                 val existFileImageView = ImageView(if (existFile != null) File(existFile.path) else null)
-                existFileImageView.preferredSize = JBUI.size(34,16)
-                existFileImageView.minimumSize = JBUI.size(34,16)
-                existFileImageView.maximumSize = JBUI.size(34,16)
+                existFileImageView.preferredSize = JBUI.size(34, 16)
+                existFileImageView.minimumSize = JBUI.size(34, 16)
+                existFileImageView.maximumSize = JBUI.size(34, 16)
                 existFileImageView.border = BorderFactory.createEmptyBorder(0, 9, 0, 9)
                 existFileImageView.isVisible = existFile != null
                 box2.add(existFileImageView)
@@ -436,5 +433,5 @@ data class RenameEntity(
      */
     var coverExistFile: Boolean = false,
 
-    val usages:MutableSet<Usage> = mutableSetOf()
+    val usages: MutableSet<Usage> = mutableSetOf()
 )

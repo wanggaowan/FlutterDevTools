@@ -13,11 +13,8 @@ import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
 import com.wanggaowan.tools.extensions.gotohandler.ImagesGoToDeclarationHandler
 import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.findModule
-import java.awt.Image
+import icons.FlutterDevToolsIcons
 import java.awt.event.MouseEvent
-import java.io.File
-import javax.imageio.ImageIO
-import javax.swing.ImageIcon
 
 /**
  * 在代码行数栏展示当前行包含的图片文件
@@ -38,7 +35,7 @@ class ImageLineMarkerProvider : LineMarkerProvider {
             return null
         }
 
-        val leafElement = element.firstChild?.nextSibling?:return null
+        val leafElement = element.firstChild?.nextSibling ?: return null
         val path = leafElement.text
         if (!path.isNullOrEmpty() && element.parent is DartFunctionBody && element.parent.parent is DartGetterDeclaration) {
             val isExample = element.containingFile?.virtualFile?.path?.startsWith("${module.basePath}/example/")
@@ -56,14 +53,8 @@ class ImageLineMarkerProvider : LineMarkerProvider {
             return null
         }
 
-        val read = try {
-            ImageIO.read(File(file.virtualFile.path).inputStream())
-        } catch (e: Exception) {
-            return null
-        } ?: return null
-
         val size = JBUI.scale(15)
-        val icon = ImageIcon(read.getScaledInstance(size, size, Image.SCALE_FAST))
+        val icon = FlutterDevToolsIcons.getIcon(file.virtualFile.path, size, size) ?: return null
         return LineMarkerInfo(
             element, element.textRange, icon, null,
             { e, _ -> clickIcon(e, file) }, GutterIconRenderer.Alignment.LEFT

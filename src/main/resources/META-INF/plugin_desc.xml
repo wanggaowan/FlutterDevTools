@@ -21,6 +21,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>3.8</p>
+    <ul>
+      <li>图片预览支持svg</li>
+      <li>导入图片时，支持顶层目录下的图片文件，不再仅限于Drawable/Mipmap目录下文件</li>
+    </ul>
+
     <p>3.7</p>
     <ul>
       <li>修复多语言翻译时，如果翻译内容含有双引号，则会导致插入arb文件失败或内容缺失Bug</li>

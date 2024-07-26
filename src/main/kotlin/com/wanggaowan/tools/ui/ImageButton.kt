@@ -2,7 +2,10 @@ package com.wanggaowan.tools.ui
 
 import com.intellij.ui.scale.JBUIScale.scale
 import com.intellij.util.ui.GraphicsUtil
-import java.awt.*
+import java.awt.Color
+import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
 import javax.swing.Icon
 import javax.swing.JButton
 
@@ -22,7 +25,6 @@ class ImageButton(icon: Icon? = null, arcSize: Int? = null) :
 
     init {
         super.setOpaque(false)
-        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         if (arcSize != null) {
             mArcSize = arcSize
         }

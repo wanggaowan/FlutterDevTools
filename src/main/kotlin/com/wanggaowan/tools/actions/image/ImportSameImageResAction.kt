@@ -215,13 +215,7 @@ object ImportSameImageResUtils {
             return false
         }
 
-        if (!XUtils.isImage(name)) {
-            return false
-        }
-
-        val parent = file.parent ?: return false
-        val parentName = parent.name
-        return parentName.startsWith("drawable") || parentName.startsWith("mipmap")
+        return XUtils.isImage(name)
     }
 
 
@@ -232,22 +226,34 @@ object ImportSameImageResUtils {
         val allFiles = mutableMapOf<String, MutableList<VirtualFile>>()
         // 获取不同分辨率下相同文件名称的图片
         selectedFiles.forEach {
-            it.parent.parent.children?.forEach { child ->
-                if ((child.name.contains("drawable") && it.path.contains("drawable"))
-                    || child.name.contains("mipmap") && it.path.contains("mipmap")
-                ) {
-                    child.findChild(it.name)?.let { file ->
-                        val mapFolder = ANDROID_DIR_MAP_FLUTTER_DIR[child.name]
-                        if (mapFolder != null) {
-                            var list = allFiles[mapFolder]
-                            if (list == null) {
-                                list = mutableListOf()
-                                allFiles[mapFolder] = list
+            val parent = it.parent
+            val name = parent.name
+            if (name.contains("drawable") || name.contains("mipmap")) {
+                parent.parent.children?.forEach { child ->
+                    if ((child.name.contains("drawable") && it.path.contains("drawable"))
+                        || child.name.contains("mipmap") && it.path.contains("mipmap")
+                    ) {
+                        child.findChild(it.name)?.let { file ->
+                            val mapFolder = ANDROID_DIR_MAP_FLUTTER_DIR[child.name]
+                            if (mapFolder != null) {
+                                var list = allFiles[mapFolder]
+                                if (list == null) {
+                                    list = mutableListOf()
+                                    allFiles[mapFolder] = list
+                                }
+                                list.add(file)
                             }
-                            list.add(file)
                         }
                     }
                 }
+            } else {
+                val mapFolder = "1.0x"
+                var list2 = allFiles[mapFolder]
+                if (list2 == null) {
+                    list2 = mutableListOf()
+                    allFiles[mapFolder] = list2
+                }
+                list2.add(it)
             }
         }
         return allFiles
@@ -307,7 +313,7 @@ object ImportSameImageResUtils {
 
                 if (!exist) {
                     try {
-                        folders.add(importToFolder.createChildDirectory(null, it))
+                        folders.add(importToFolder.createChildDirectory(project, it))
                     } catch (e: Exception) {
                         return@runWriteCommandAction
                     }
