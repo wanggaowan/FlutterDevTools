@@ -14,8 +14,6 @@ import com.intellij.util.LocalTimeCounter
 import com.jetbrains.lang.dart.DartFileType
 import com.jetbrains.lang.dart.psi.*
 
-// import com.jetbrains.lang.dart.psi.DartFile
-
 /**
  * 创建Dart PsiElement工具类
  *
@@ -226,6 +224,7 @@ object DartPsiUtils {
 
     /**
      * 添加Import导入,[importStr]为导入的内容，如：import 'package:json_annotation/json_annotation.dart'; 。
+     * 如果已存在则不会插入
      */
     fun addImport(project: Project, psiFile: PsiFile, importStr: String) {
         val isRelPath = !importStr.startsWith("import 'package:")
@@ -239,11 +238,16 @@ object DartPsiUtils {
         // import '../utils/account_util.dart';
 
         // 插入到import 'package:分组的最后一个
-        val imports = PsiTreeUtil.getChildrenOfType(psiFile,DartImportStatement::class.java)
+        val imports = PsiTreeUtil.getChildrenOfType(psiFile, DartImportStatement::class.java)
         if (imports.isNullOrEmpty()) {
             createCommonElement(project, importStr)?.also {
                 psiFile.addBefore(it, psiFile.firstChild)
             }
+            return
+        }
+
+        val find = imports.find { it.textMatches(importStr) } != null
+        if (find) {
             return
         }
 
@@ -258,7 +262,7 @@ object DartPsiUtils {
         for (child in imports) {
             if (child.text.startsWith("import 'package:")) {
                 lastPackageImport = child
-            } else if (lastPackageImport != null){
+            } else if (lastPackageImport != null) {
                 break
             }
         }
@@ -275,7 +279,8 @@ object DartPsiUtils {
     }
 
     /**
-     * 添加part导入,[partStr]为导入的内容，如：part 'test.g.dart';
+     * 添加part导入,[partStr]为导入的内容，如：part 'test.g.dart';。
+     * 如果已存在则不会插入
      */
     fun addPartImport(project: Project, psiFile: PsiFile, partStr: String) {
         var lastImportElement: PsiElement? = null
