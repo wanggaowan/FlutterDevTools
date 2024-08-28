@@ -76,22 +76,22 @@
             <separator/>
             <action id="FlutterDevTools.CopyMultiSameNameFileAction"
                     class="com.wanggaowan.tools.actions.image.CopyMultiSameNameImageAction"
-                    text="复制不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
+                    text="复制不同分辨率下的相同图片" icon="FlutterIcons.Flutter"
                     description="复制不同分辨率下的相同图片"/>
             <action id="FlutterDevTools.DeleteMultiSameNameFileAction"
                     class="com.wanggaowan.tools.actions.image.DeleteMultiSameNameImageAction"
-                    text="删除不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"
+                    text="删除不同分辨率下的相同图片" icon="FlutterIcons.Flutter"
                     description="删除不同分辨率下的相同图片"/>
 
             <!--实现了系统重命名action的自定义逻辑，因此不需要单独的action，只有执行图片的重命名，都会走到RenameMultiSameNameImageAction逻辑-->
             <!--<action id="FlutterDevTools.RenameMultiSameNameFileAction"-->
             <!--        class="com.wanggaowan.tools.actions.image.RenameMultiSameNameImageAction"-->
-            <!--        text="重命名不同分辨率下的相同图片" icon="FlutterIcons.Flutter_13"-->
+            <!--        text="重命名不同分辨率下的相同图片" icon="FlutterIcons.Flutter"-->
             <!--        description="重命名不同分辨率下的相同图片"/>-->
 
             <action id="FlutterDevTools.CopyImageRefKeyAction"
                     class="com.wanggaowan.tools.actions.image.CopyImageRefKeyAction"
-                    text="复制图片引用" icon="FlutterIcons.Flutter_13"
+                    text="复制图片引用" icon="FlutterIcons.Flutter"
                     description="复制图片引用"/>
             <separator/>
             <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
@@ -125,7 +125,7 @@
 
         <action id="FlutterDevTools.TranslateArbAction"
                 class="com.wanggaowan.tools.actions.translate.TranslateArbAction"
-                icon="FlutterIcons.Flutter_13"
+                icon="FlutterIcons.Flutter"
                 text="根据模版arb翻译"
                 description="根据模版arb对应内容，将当前文件不存在的内容进行翻译并插入">
             <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
@@ -133,7 +133,7 @@
 
         <action id="FlutterDevTools.DeleteUnusedFilesAction"
                 class="com.wanggaowan.tools.actions.DeleteUnusedFilesAction"
-                icon="FlutterIcons.Flutter_13"
+                icon="FlutterIcons.Flutter"
                 text="删除未被使用的文件"
                 description="当前文件如果未被其它元素引用，则删除">
             <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
@@ -190,7 +190,7 @@
 
         <toolWindow id="Flutter Resource Manager"
                     factoryClass="com.wanggaowan.tools.extensions.toolwindow.ResourcePreviewToolWindowFactory"
-                    icon="FlutterIcons.Flutter_13"/>
+                    icon="FlutterIcons.Flutter"/>
 
         <projectConfigurable parentId="tools"
                              instance="com.wanggaowan.tools.settings.ProjectPluginSettingsConfigurable"
