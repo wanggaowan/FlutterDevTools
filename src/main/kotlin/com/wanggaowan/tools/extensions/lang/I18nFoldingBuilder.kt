@@ -137,7 +137,7 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
                         if (element != null) {
                             getPlaceholderText(element) ?: ""
                         } else if (arg.getChildrenOfType<DartReferenceExpression>().isNotEmpty()) {
-                            "\${$arg.text}"
+                            "\${${arg.text}}"
                         } else {
                             "\$${arg.text}"
                         }
