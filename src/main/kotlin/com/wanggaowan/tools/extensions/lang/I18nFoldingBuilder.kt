@@ -11,10 +11,7 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
-import com.jetbrains.lang.dart.psi.DartArgumentList
-import com.jetbrains.lang.dart.psi.DartCallExpression
-import com.jetbrains.lang.dart.psi.DartReferenceExpression
-import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
+import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.findChild
 import com.wanggaowan.tools.utils.ex.findModule
@@ -45,13 +42,25 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
                 }
 
                 val element = getCouldFoldPsiElement(it) ?: return@forEach
-                val parent = element.parent
                 // 如果需要多个折叠同时展开，则指定同一个group即可
                 // val group = FoldingGroup.newGroup("flutter dev tools")
-                if (parent is DartCallExpression) {
-                    descriptors.add(FoldingDescriptor(parent.node, parent.textRange, null))
-                } else {
-                    descriptors.add(FoldingDescriptor(it.node, it.textRange, null))
+                when (val parent = element.parent) {
+                    is DartLongTemplateEntry -> {
+                        descriptors.add(FoldingDescriptor(parent.node, parent.textRange, null))
+                    }
+
+                    is DartCallExpression -> {
+                        val parent2 = parent.parent
+                        if(parent2 is DartLongTemplateEntry) {
+                            descriptors.add(FoldingDescriptor(parent2.node, parent2.textRange, null))
+                        } else {
+                            descriptors.add(FoldingDescriptor(parent.node, parent.textRange, null))
+                        }
+                    }
+
+                    else -> {
+                        descriptors.add(FoldingDescriptor(it.node, it.textRange, null))
+                    }
                 }
             }
         }
@@ -82,7 +91,11 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
     }
 
     private fun getPlaceholderText(psiElement: PsiElement?): String? {
-        val element = psiElement ?: return null
+        var element = psiElement ?: return null
+        if (element is DartLongTemplateEntry) {
+            element = element.children[0]
+        }
+
         val module = element.findModule() ?: return null
 
         val psiFile = element.containingFile
