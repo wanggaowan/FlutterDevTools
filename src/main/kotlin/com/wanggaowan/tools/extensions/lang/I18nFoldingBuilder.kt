@@ -5,7 +5,6 @@ import com.intellij.lang.ASTNode
 import com.intellij.lang.folding.FoldingBuilderEx
 import com.intellij.lang.folding.FoldingDescriptor
 import com.intellij.openapi.editor.Document
-import com.intellij.openapi.editor.FoldingGroup
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.vfs.VirtualFileManager
@@ -36,35 +35,23 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         root: PsiElement,
         document: Document,
         quick: Boolean
-    ): Array<FoldingDescriptor> { // 查找需要折叠的元素
-        val group = FoldingGroup.newGroup("flutter dev tools")
+    ): Array<FoldingDescriptor> {
+        // 查找需要折叠的元素
         val descriptors = mutableListOf<FoldingDescriptor>()
-
         if (root.module.isFlutterProject) {
             PsiTreeUtil.collectElementsOfType(root, DartReferenceExpression::class.java).forEach {
                 if (it !is DartReferenceExpression) {
                     return@forEach
                 }
 
-                val text = it.text.replace("\n", "").replace(" ", "")
-                val splits = text.split('.')
-                if (splits.size != 3) {
-                    return@forEach
-                }
-
-                if (splits[0] != "S") {
-                    return@forEach
-                }
-
-                if (splits[1] != "current" && !splits[1].startsWith("of(")) {
-                    return@forEach
-                }
-
-                val parent = it.parent
+                val element = getCouldFoldPsiElement(it) ?: return@forEach
+                val parent = element.parent
+                // 如果需要多个折叠同时展开，则指定同一个group即可
+                // val group = FoldingGroup.newGroup("flutter dev tools")
                 if (parent is DartCallExpression) {
-                    descriptors.add(FoldingDescriptor(parent.node, parent.textRange, group))
+                    descriptors.add(FoldingDescriptor(parent.node, parent.textRange, null))
                 } else {
-                    descriptors.add(FoldingDescriptor(it.node, it.textRange, group))
+                    descriptors.add(FoldingDescriptor(it.node, it.textRange, null))
                 }
             }
         }
@@ -72,8 +59,30 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         return descriptors.toTypedArray()
     }
 
-    override fun getPlaceholderText(node: ASTNode): String? { // 返回折叠的元素需要展示的文本内容
-        val element = node.psi ?: return null
+    private fun getCouldFoldPsiElement(element: DartReferenceExpression): PsiElement? {
+        val text = element.text.replace("\n", "").replace(" ", "")
+        val splits = text.split('.')
+        if (splits.size != 3) {
+            return null
+        }
+
+        if (splits[0] != "S") {
+            return null
+        }
+
+        if (splits[1] != "current" && !splits[1].startsWith("of(")) {
+            return null
+        }
+        return element
+    }
+
+    override fun getPlaceholderText(node: ASTNode): String? {
+        // 返回折叠的元素需要展示的文本内容
+        return getPlaceholderText(node.psi)
+    }
+
+    private fun getPlaceholderText(psiElement: PsiElement?): String? {
+        val element = psiElement ?: return null
         val module = element.findModule() ?: return null
 
         val psiFile = element.containingFile
@@ -98,7 +107,7 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
 
             val jsonProperty = translateFile.getChildOfType<JsonObject>()?.findProperty(key)
             if (jsonProperty != null) {
-                var text = jsonProperty.value?.text
+                var text = jsonProperty.value?.text?.replace("\"", "")
                 if (!text.isNullOrEmpty() && !args.isNullOrEmpty()) {
                     text = appendArgs(text, args)
                 }
@@ -115,22 +124,34 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         val results = regex.findAll(text).iterator()
         var index = 0
         val argSize = args.size
-        var newStr = text.substring(1, text.length - 1)
+        var newStr = text
         results.forEach {
             if (index > argSize) {
                 return@forEach
             }
             val arg = args[index]
-            newStr = if (arg is DartReferenceExpression) {
-                if (arg.getChildrenOfType<DartReferenceExpression>().isNotEmpty()) {
-                    newStr.replace(it.value, "\${${args[index].text}}")
-                } else {
-                    newStr.replace(it.value, "\$${args[index].text}")
+            newStr = when (arg) {
+                is DartReferenceExpression -> {
+                    val element = getCouldFoldPsiElement(arg)
+                    val str =
+                        if (element != null) {
+                            getPlaceholderText(element) ?: ""
+                        } else if (arg.getChildrenOfType<DartReferenceExpression>().isNotEmpty()) {
+                            "\${$arg.text}"
+                        } else {
+                            "\$${arg.text}"
+                        }
+
+                    newStr.replace(it.value, str)
                 }
-            } else if (arg is DartStringLiteralExpression) {
-                newStr.replace(it.value, arg.firstChild?.nextSibling?.text ?: arg.text)
-            } else {
-                newStr.replace(it.value, arg.text ?: "")
+
+                is DartStringLiteralExpression -> {
+                    newStr.replace(it.value, arg.firstChild?.nextSibling?.text ?: arg.text)
+                }
+
+                else -> {
+                    newStr.replace(it.value, arg.text ?: "")
+                }
             }
             index++
         }
@@ -140,55 +161,53 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
     override fun isCollapsedByDefault(node: ASTNode): Boolean {
         return true
     }
+}
 
-    companion object {
-        /**
-         * 查找多语言引用的字段翻译文件对象
-         */
-        internal fun getTranslateFile(module: Module, isExample: Boolean = false): PsiFile? {
-            val basePath = module.basePath ?: return null
-            val l10nFile = if (isExample) {
-                module.findChild("example")?.findChild("l10n.yaml")?.toPsiFile(module.project)
-            } else {
-                module.findChild("l10n.yaml")?.toPsiFile(module.project)
-            }
-            var transientFilePath: String
-            if (l10nFile != null) {
-                val elements = PsiTreeUtil.collectElementsOfType(l10nFile, YAMLKeyValue::class.java)
-                var dir: String? = null
-                var templateFile: String? = null
-                for (element2 in elements) {
-                    if (element2.keyText == "arb-dir") {
-                        dir = element2.valueText
-                    } else if (element2.keyText == "template-arb-file") {
-                        templateFile = element2.valueText
-                    }
-
-                    if (dir != null && templateFile != null) {
-                        break
-                    }
-                }
-
-                if (dir == null || templateFile == null) {
-                    return null
-                }
-                transientFilePath = dir
-                transientFilePath += if (transientFilePath.endsWith("/")) {
-                    templateFile
-                } else {
-                    "/${templateFile}"
-                }
-            } else {
-                transientFilePath = "lib/l10n/app_en.arb"
-            }
-
-            if (isExample) {
-                return VirtualFileManager.getInstance()
-                    .findFileByUrl("file://$basePath/example/$transientFilePath")?.toPsiFile(module.project)
-            }
-
-            return VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$transientFilePath")
-                ?.toPsiFile(module.project)
-        }
+/**
+ * 查找多语言引用的字段翻译文件对象
+ */
+internal fun getTranslateFile(module: Module, isExample: Boolean = false): PsiFile? {
+    val basePath = module.basePath ?: return null
+    val l10nFile = if (isExample) {
+        module.findChild("example")?.findChild("l10n.yaml")?.toPsiFile(module.project)
+    } else {
+        module.findChild("l10n.yaml")?.toPsiFile(module.project)
     }
+    var transientFilePath: String
+    if (l10nFile != null) {
+        val elements = PsiTreeUtil.collectElementsOfType(l10nFile, YAMLKeyValue::class.java)
+        var dir: String? = null
+        var templateFile: String? = null
+        for (element2 in elements) {
+            if (element2.keyText == "arb-dir") {
+                dir = element2.valueText
+            } else if (element2.keyText == "template-arb-file") {
+                templateFile = element2.valueText
+            }
+
+            if (dir != null && templateFile != null) {
+                break
+            }
+        }
+
+        if (dir == null || templateFile == null) {
+            return null
+        }
+        transientFilePath = dir
+        transientFilePath += if (transientFilePath.endsWith("/")) {
+            templateFile
+        } else {
+            "/${templateFile}"
+        }
+    } else {
+        transientFilePath = "lib/l10n/app_en.arb"
+    }
+
+    if (isExample) {
+        return VirtualFileManager.getInstance()
+            .findFileByUrl("file://$basePath/example/$transientFilePath")?.toPsiFile(module.project)
+    }
+
+    return VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$transientFilePath")
+        ?.toPsiFile(module.project)
 }

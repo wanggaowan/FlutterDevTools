@@ -8,7 +8,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.jetbrains.lang.dart.psi.DartId
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
-import com.wanggaowan.tools.extensions.lang.I18nFoldingBuilder
+import com.wanggaowan.tools.extensions.lang.getTranslateFile
 import com.wanggaowan.tools.utils.dart.NameWrapperPsiElement
 import com.wanggaowan.tools.utils.ex.basePath
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
@@ -60,7 +60,7 @@ object I18nGoToDeclarationHandler {
             path != null && path.startsWith("${module.basePath}/example/")
         }
 
-        val file = I18nFoldingBuilder.getTranslateFile(module, isExample) ?: return null
+        val file = getTranslateFile(module, isExample) ?: return null
         val allFiles = mutableListOf(file)
         file.parent?.children?.forEach {
             if (it !is PsiFile) {
