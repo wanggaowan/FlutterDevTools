@@ -112,6 +112,7 @@ class DeleteUnusedFilesAction : DumbAwareAction() {
         }
     }
 
+    @Suppress("UnsafeVfsRecursion")
     private fun getAllFiles(project: Project, virtualFiles: Array<VirtualFile>, files: MutableList<PsiFile>) {
         val dirs = mutableListOf<VirtualFile>()
         virtualFiles.forEach {

@@ -228,6 +228,7 @@ class GeneratorImageRefListener : BulkFileListener {
     /**
      * 指定文件[file]是否是给定目录[imagesDir]下的文件
      */
+    @Suppress("UnsafeVfsRecursion")
     private fun isFileInDir(imagesDir: String, file: VirtualFile?): Boolean {
         if (file == null) {
             return false
@@ -253,6 +254,7 @@ class GeneratorImageRefListener : BulkFileListener {
     /**
      * 只要给的文件或文件夹包含图片，都认为是图片
      */
+    @Suppress("UnsafeVfsRecursion")
     private fun isImage(virtualFile: VirtualFile): Boolean {
         if (!virtualFile.isDirectory) {
             return XUtils.isImage(virtualFile.name)

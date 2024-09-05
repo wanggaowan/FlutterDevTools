@@ -5,7 +5,6 @@ import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
 import com.intellij.ui.ColorPicker
-import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.ui.ColorIcon
 import com.intellij.util.ui.JBUI
 import com.jetbrains.lang.dart.DartTokenTypes
@@ -68,16 +67,13 @@ class ColorLineMarkerProvider : LineMarkerProvider {
         val icon = ColorIcon(size, color)
         return LineMarkerInfo(
             element, element.textRange, icon, null,
-            { e, _ -> navigate(e, element, color) }, GutterIconRenderer.Alignment.LEFT
+            { e, _ -> navigate(e, color) }, GutterIconRenderer.Alignment.LEFT
         ) { "" }
     }
 
-    private fun navigate(e: MouseEvent, element: PsiElement, color: Color) {
+    private fun navigate(e: MouseEvent, color: Color) {
         try {
-            val relativePoint = RelativePoint(e.component, e.point)
-            ColorPicker.showColorPickerPopup(element.project, color, { _, _ ->
-
-            }, relativePoint, true)
+            ColorPicker.showDialog(e.component, "View Colors", color, true, null, true)
         } catch (e: Exception) {
             //
         }

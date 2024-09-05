@@ -38,7 +38,6 @@ object PropertiesSerializeUtils {
         PropertiesComponent.getInstance().setValue(name, value, 0)
     }
 
-    @JvmOverloads
     fun getList(name: String): List<String>? {
         return PropertiesComponent.getInstance().getList(name)
     }

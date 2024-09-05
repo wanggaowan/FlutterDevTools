@@ -37,7 +37,7 @@ class PlainTextLanguageTextField(project: Project,
                     }
 
                     CodeFoldingManager.getInstance(this@PlainTextLanguageTextField.project).updateFoldRegions(editorEx)
-                }, ModalityState.NON_MODAL)
+                }, ModalityState.nonModal())
             }
         })
 

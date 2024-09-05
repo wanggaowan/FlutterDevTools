@@ -24,7 +24,7 @@
                     text="生成类序列化方法" description="生成类构造函数及序列化方法，类注解等"/>
 
             <action id="FlutterDevTools.GeneratorSingleGFileAction"
-                    class="com.wanggaowan.tools.actions.GeneratorSingleGFileAction" text="生成 .g.dart"
+                    class="com.wanggaowan.tools.actions.GeneratorSingleGFileAction" text="生成.g.dart"
                     description="根据Dart实体生成.g.dart文件"/>
 
             <action id="FlutterDevTools.AddRouterAction"
@@ -82,12 +82,6 @@
                     class="com.wanggaowan.tools.actions.image.DeleteMultiSameNameImageAction"
                     text="删除不同分辨率下的相同图片" icon="FlutterIcons.Flutter"
                     description="删除不同分辨率下的相同图片"/>
-
-            <!--实现了系统重命名action的自定义逻辑，因此不需要单独的action，只有执行图片的重命名，都会走到RenameMultiSameNameImageAction逻辑-->
-            <!--<action id="FlutterDevTools.RenameMultiSameNameFileAction"-->
-            <!--        class="com.wanggaowan.tools.actions.image.RenameMultiSameNameImageAction"-->
-            <!--        text="重命名不同分辨率下的相同图片" icon="FlutterIcons.Flutter"-->
-            <!--        description="重命名不同分辨率下的相同图片"/>-->
 
             <action id="FlutterDevTools.CopyImageRefKeyAction"
                     class="com.wanggaowan.tools.actions.image.CopyImageRefKeyAction"

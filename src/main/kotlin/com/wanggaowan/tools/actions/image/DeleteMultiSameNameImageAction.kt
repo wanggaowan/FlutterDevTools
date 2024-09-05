@@ -75,7 +75,7 @@ class DeleteMultiSameNameImageAction : DumbAwareAction() {
         var needFind = true
         var child = parent.findChild(fileName)
         if (child != null) {
-            val psiFile = getPsiFile(project, child, needFind)
+            val psiFile = getPsiFile(project, child, true)
             results.add(psiFile)
             if (psiFile is PsiBinaryFile) {
                 needFind = false

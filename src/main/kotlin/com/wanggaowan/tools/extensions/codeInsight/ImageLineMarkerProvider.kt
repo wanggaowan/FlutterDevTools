@@ -3,7 +3,7 @@ package com.wanggaowan.tools.extensions.codeInsight
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
-import com.intellij.openapi.fileEditor.impl.FileEditorManagerImpl
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.util.ui.JBUI
@@ -14,7 +14,6 @@ import com.wanggaowan.tools.extensions.gotohandler.ImagesGoToDeclarationHandler
 import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.findModule
 import icons.FlutterDevToolsIcons
-import java.awt.event.MouseEvent
 
 /**
  * 在代码行数栏展示当前行包含的图片文件
@@ -57,22 +56,22 @@ class ImageLineMarkerProvider : LineMarkerProvider {
         val icon = FlutterDevToolsIcons.getIcon(file.virtualFile.path, size, size) ?: return null
         return LineMarkerInfo(
             element, element.textRange, icon, null,
-            { e, _ -> clickIcon(e, file) }, GutterIconRenderer.Alignment.LEFT
+            { _, _ -> clickIcon(file) }, GutterIconRenderer.Alignment.LEFT
         ) { "" }
     }
 
-    private fun clickIcon(e: MouseEvent, file: PsiFile) {
+    private fun clickIcon(file: PsiFile) {
         val virtualFile = file.virtualFile
         val parent = virtualFile.parent
         val name = parent?.name
         if (parent != null && (name == "1.5x" || name == "2.0x" || name == "3.0x" || name == "4.0x")) {
             val child = parent.parent?.findChild(file.name)
             if (child != null) {
-                FileEditorManagerImpl.getInstance(file.project).openFile(child, true)
+                FileEditorManager.getInstance(file.project).openFile(child, true)
                 return
             }
         }
 
-        FileEditorManagerImpl.getInstance(file.project).openFile(virtualFile, true)
+        FileEditorManager.getInstance(file.project).openFile(virtualFile, true)
     }
 }

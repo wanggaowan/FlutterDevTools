@@ -123,7 +123,7 @@ class DeleteArbSameKeyElementAction : DumbAwareAction() {
         if (list.isNullOrEmpty()) {
             return false
         }
-        return list.last() == element;
+        return list.last() == element
     }
 
     private fun getOtherArbSameElement(

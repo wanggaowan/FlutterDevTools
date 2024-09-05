@@ -33,7 +33,7 @@ class AndroidStringPasteProvider : PasteProvider {
         val editor = context.getData(CommonDataKeys.EDITOR) ?: return
         val project = context.getData(CommonDataKeys.PROJECT) ?: return
 
-        ProgressUtils.runBackground(project,"convert android string") {progressIndicator->
+        ProgressUtils.runBackground(project, "convert android string") { progressIndicator ->
             progressIndicator.isIndeterminate = false
             WriteCommandAction.runWriteCommandAction(project) {
                 val strings = text.split("\n")
@@ -194,14 +194,15 @@ class AndroidStringPasteProvider : PasteProvider {
         return true
     }
 
-    companion object {
-        val strPlaceholder =
-            listOf("%s", "%1\$s", "%2\$s", "%3\$s", "%4\$s", "%5\$s")
-        val intPlaceholder =
-            listOf("%d", "%1\$d", "%2\$d", "%3\$d", "%4\$d", "%5\$d")
-        val floatPlaceholder =
-            listOf("%f", "%1\$f", "%2\$f", "%3\$f", "%4\$f", "%5\$f")
-    }
 }
 
+private val strPlaceholder =
+    listOf("%s", "%1\$s", "%2\$s", "%3\$s", "%4\$s", "%5\$s")
+private val intPlaceholder =
+    listOf("%d", "%1\$d", "%2\$d", "%3\$d", "%4\$d", "%5\$d")
+private val floatPlaceholder =
+    listOf("%f", "%1\$f", "%2\$f", "%3\$f", "%4\$f", "%5\$f")
+
 class Placeholder(val placeholder: String, val type: String, val index: Int)
+
+

@@ -6,6 +6,7 @@ import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.awt.RelativePoint
+import java.awt.Point
 import javax.swing.JComponent
 
 /**
@@ -38,11 +39,12 @@ object Toast {
      */
     @JvmStatic
     fun show(project: Project, type: MessageType, msg: String) {
-        val statusBar = WindowManager.getInstance().getStatusBar(project)
+        val statusBar = WindowManager.getInstance().getStatusBar(project).component
+        val point = if (statusBar == null) RelativePoint(Point()) else RelativePoint.getCenterOf(statusBar)
         JBPopupFactory.getInstance()
             .createHtmlTextBalloonBuilder(msg, type, null)
             .setFadeoutTime(7500)
             .createBalloon()
-            .show(RelativePoint.getCenterOf(statusBar.component), Balloon.Position.atRight)
+            .show(point, Balloon.Position.atRight)
     }
 }

@@ -6,7 +6,7 @@ plugins {
 
 group = "com.wanggaowan"
 // version = "1.0-SNAPSHOT"
-version = "3.8"
+version = "3.9"
 
 repositories {
     maven { setUrl("https://maven.aliyun.com/repository/central") }
@@ -21,14 +21,14 @@ intellij {
     // version.set("223.8836.35.2231.10406996")
     type.set("AI") // AndroidStudio
     // 配置本地已下载IDE路径，具体配置文档查看：https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#configuration-intellij-extension
-    localPath.set("/Users/wgw/Documents/develop/project/ide plugin/test ide/Android Studio.app/Contents")
+    localPath.set("/Users/wgw/Documents/develop/project/ide plugin/test ide/AndroidStudio241.app/Contents")
     // Git4Idea: git插件
     plugins.set(
         listOf(
             "java",
             "Kotlin",
-            "Dart:223.8950",
-            "io.flutter:74.0.3",
+            "Dart:241.18808",
+            "io.flutter:81.0.2",
             "yaml",
             "Git4Idea",
         )
@@ -59,7 +59,7 @@ tasks {
     }
 
     patchPluginXml {
-        sinceBuild.set("223")
+        sinceBuild.set("241")
         untilBuild.set("10000.*")
     }
 
@@ -74,6 +74,6 @@ tasks {
     }
 
     instrumentCode {
-        compilerVersion.set("223.8836.35")
+        compilerVersion.set("241.15989.150")
     }
 }

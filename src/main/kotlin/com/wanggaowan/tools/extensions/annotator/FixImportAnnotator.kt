@@ -192,7 +192,6 @@ class FixImportAnnotator : Annotator {
         }
     }
 
-    companion object {
-        private val DART_ERRORS: Key<List<DartError>> = Key.create("DART_ERRORS")
-    }
 }
+
+private val DART_ERRORS: Key<List<DartError>> = Key.create("DART_ERRORS")

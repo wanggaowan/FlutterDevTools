@@ -21,6 +21,23 @@ import io.flutter.sdk.FlutterSdk
 import kotlinx.coroutines.*
 import org.jetbrains.kotlin.idea.util.projectStructure.getModule
 
+private val fileDocumentManager = lazy { FileDocumentManager.getInstance() }
+private val documentListener = lazy {
+    object : DocumentListener {
+        override fun documentChanged(event: DocumentEvent) {
+            val file = fileDocumentManager.value.getFile(event.document)
+            if (file != null) {
+                needDoGenL10nMap[file.path] = true
+            }
+        }
+    }
+}
+private val coroutineScope = lazy { CoroutineScope(Dispatchers.Default) }
+private val jobMap: MutableMap<String, Job> = mutableMapOf()
+
+// 是否需要执行 gen-l10n命令
+private val needDoGenL10nMap: MutableMap<String, Boolean> = mutableMapOf()
+
 /**
  * 监听自动执行gen-l10n命令需要的条件，一旦达成，则自动执行
  *
@@ -32,7 +49,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
     }
 
     // 处理文件保存逻辑
-    override fun processDocuments(project: Project, documents: Array<out Document>) {
+    override fun processDocuments(project: Project, documents: Array<Document>) {
         coroutineScope.value.launch {
             for (document in documents) {
                 val file = fileDocumentManager.value.getFile(document)
@@ -84,7 +101,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
         val file: VirtualFile = event.oldFile ?: return
         if (needDoGenL10nMap[file.path] == true) {
             needDoGenL10nMap.remove(file.path)
-            val module = ModuleUtilCore.findModuleForFile(file,event.manager.project) ?: return
+            val module = ModuleUtilCore.findModuleForFile(file, event.manager.project) ?: return
             fileDocumentManager.value.saveAllDocuments()
             doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
         }
@@ -114,24 +131,4 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
         }
     }
 
-    companion object {
-        private val fileDocumentManager = lazy { FileDocumentManager.getInstance() }
-
-        private val documentListener = lazy {
-            object : DocumentListener {
-                override fun documentChanged(event: DocumentEvent) {
-                    val file = fileDocumentManager.value.getFile(event.document)
-                    if (file != null) {
-                        needDoGenL10nMap[file.path] = true
-                    }
-                }
-            }
-        }
-
-        private val coroutineScope = lazy { CoroutineScope(Dispatchers.Default) }
-        private val jobMap: MutableMap<String, Job> = mutableMapOf()
-
-        // 是否需要执行 gen-l10n命令
-        private val needDoGenL10nMap: MutableMap<String, Boolean> = mutableMapOf()
-    }
 }

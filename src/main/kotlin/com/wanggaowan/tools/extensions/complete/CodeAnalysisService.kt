@@ -114,6 +114,7 @@ class CodeAnalysisService(val project: Project) {
         }
     }
 
+    @Suppress("UnsafeVfsRecursion")
     private fun parseDir(
         modulePath: String,
         file: VirtualFile,
@@ -237,13 +238,7 @@ class CodeAnalysisService(val project: Project) {
                     return
                 }
 
-                val type = declare.getChildOfType<DartType>()
-                returnType = if (type == null) {
-                    // 不主动推导类型
-                    null
-                } else {
-                    type.text
-                }
+                returnType = declare.getChildOfType<DartType>()?.text
             }
 
             is DartFunctionDeclarationWithBody -> {

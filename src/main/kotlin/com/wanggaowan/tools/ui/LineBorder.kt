@@ -11,7 +11,7 @@ import javax.swing.border.AbstractBorder
  *
  * @author Created by wanggaowan on 2023/2/10 13:12
  */
-class LineBorder constructor(
+class LineBorder(
     /**
      * 线条颜色
      */

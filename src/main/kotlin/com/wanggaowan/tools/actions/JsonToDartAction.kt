@@ -29,13 +29,13 @@ import io.flutter.sdk.FlutterSdk
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
 
-
 /**
  * JSON文件转Dart
  *
  * @author Created by wanggaowan on 2023/2/3 16:26
  */
 class JsonToDartAction : DumbAwareAction() {
+
     override fun update(e: AnActionEvent) {
         if (!e.isFlutterProject) {
             e.presentation.isVisible = false

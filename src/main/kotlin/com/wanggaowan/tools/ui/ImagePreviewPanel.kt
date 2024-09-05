@@ -73,7 +73,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private var mSelectedImage: Property? = null
 
     init {
-        Disposer.register(this, UiNotifyConnector(this, object : Activatable {
+        Disposer.register(this, UiNotifyConnector.installOn(this, object : Activatable {
             override fun hideNotify() {}
 
             override fun showNotify() {
@@ -636,9 +636,9 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             panel.preferredSize = Dimension(mGridImageLayoutWidth + 20, mGridImageLayoutWidth + labelHeight + 20)
             panel.minimumSize = panel.preferredSize
             panel.maximumSize = panel.preferredSize
-            val emptyBorderWidth= if (focused) 9 else 10
-            val lineBorderWidth= if (focused) 2 else 1
-            val lineBorderColor= if (focused) UIColor.INPUT_FOCUS_COLOR else UIColor.LINE_COLOR
+            val emptyBorderWidth = if (focused) 9 else 10
+            val lineBorderWidth = if (focused) 2 else 1
+            val lineBorderColor = if (focused) UIColor.INPUT_FOCUS_COLOR else UIColor.LINE_COLOR
             panel.border = BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(emptyBorderWidth, emptyBorderWidth, emptyBorderWidth, emptyBorderWidth),
                 LineBorder(lineBorderColor, lineBorderWidth)
@@ -690,6 +690,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     /**
      * 获取去重后的属性列表
      */
+    @Suppress("UnsafeVfsRecursion")
     private fun getDeDuplicationList(rootDir: VirtualFile, parentPath: String = ""): LinkedHashSet<Property> {
         val childrenSet = linkedSetOf<Property>()
         val name = rootDir.name

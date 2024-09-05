@@ -248,24 +248,23 @@ class CodeCompletionContributor : CompletionContributor() {
         return null
     }
 
-    companion object {
-        private fun getBaseImage(suggestion: Suggestion): Icon? {
-            return when (suggestion.kind) {
-                ElementKind.CLASS, ElementKind.CLASS_TYPE_ALIAS -> if (suggestion.isAbstract) AllIcons.Nodes.AbstractClass else AllIcons.Nodes.Class
-                ElementKind.ENUM -> AllIcons.Nodes.Enum
-                ElementKind.MIXIN -> AllIcons.Nodes.AbstractClass
-                ElementKind.ENUM_CONSTANT, ElementKind.FIELD -> AllIcons.Nodes.Field
-                ElementKind.COMPILATION_UNIT -> com.intellij.util.PlatformIcons.FILE_ICON
-                ElementKind.CONSTRUCTOR -> AllIcons.Nodes.ClassInitializer
-                ElementKind.GETTER -> if (suggestion.isStatic) AllIcons.Nodes.PropertyReadStatic else AllIcons.Nodes.PropertyRead
-                ElementKind.SETTER -> if (suggestion.isStatic) AllIcons.Nodes.PropertyReadStatic else AllIcons.Nodes.PropertyRead
-                ElementKind.FUNCTION -> AllIcons.Nodes.Lambda
-                ElementKind.FUNCTION_TYPE_ALIAS -> AllIcons.Nodes.Annotationtype
-                ElementKind.TOP_LEVEL_VARIABLE -> AllIcons.Nodes.Variable
-                ElementKind.EXTENSION -> AllIcons.Nodes.Include
-                else -> null
-            }
-        }
+}
+
+private fun getBaseImage(suggestion: Suggestion): Icon? {
+    return when (suggestion.kind) {
+        ElementKind.CLASS, ElementKind.CLASS_TYPE_ALIAS -> if (suggestion.isAbstract) AllIcons.Nodes.AbstractClass else AllIcons.Nodes.Class
+        ElementKind.ENUM -> AllIcons.Nodes.Enum
+        ElementKind.MIXIN -> AllIcons.Nodes.AbstractClass
+        ElementKind.ENUM_CONSTANT, ElementKind.FIELD -> AllIcons.Nodes.Field
+        ElementKind.COMPILATION_UNIT -> com.intellij.util.PlatformIcons.FILE_ICON
+        ElementKind.CONSTRUCTOR -> AllIcons.Nodes.ClassInitializer
+        ElementKind.GETTER -> if (suggestion.isStatic) AllIcons.Nodes.PropertyReadStatic else AllIcons.Nodes.PropertyRead
+        ElementKind.SETTER -> if (suggestion.isStatic) AllIcons.Nodes.PropertyReadStatic else AllIcons.Nodes.PropertyRead
+        ElementKind.FUNCTION -> AllIcons.Nodes.Lambda
+        ElementKind.FUNCTION_TYPE_ALIAS -> AllIcons.Nodes.Annotationtype
+        ElementKind.TOP_LEVEL_VARIABLE -> AllIcons.Nodes.Variable
+        ElementKind.EXTENSION -> AllIcons.Nodes.Include
+        else -> null
     }
 }
 
@@ -298,3 +297,4 @@ class MyInsertHandler : InsertHandler<LookupElement> {
         }
     }
 }
+

@@ -5,7 +5,6 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.content.Content
 import com.wanggaowan.tools.ui.ImagePreviewPanel
 import com.wanggaowan.tools.utils.ex.flutterModules
@@ -49,12 +48,9 @@ class ResourcePreviewToolWindowFactory : ToolWindowFactory, DumbAware {
         return false
     }
 
+
     companion object {
-        fun init(project: Project) {
-            val window = ToolWindowManager.getInstance(project).getToolWindow("Flutter Resource Manager")
-            if (window != null) {
-                window.isAvailable = true
-            }
-        }
+        const val WINDOW_ID = "Flutter Resource Manager"
     }
 }
+

@@ -35,7 +35,7 @@ class DartLanguageTextField(project: Project) :
                         return@invokeLater
                     }
                     CodeFoldingManager.getInstance(this@DartLanguageTextField.project).updateFoldRegions(editorEx)
-                }, ModalityState.NON_MODAL)
+                }, ModalityState.nonModal())
             }
         })
 

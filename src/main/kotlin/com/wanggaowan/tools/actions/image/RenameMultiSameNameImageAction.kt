@@ -1,12 +1,7 @@
 package com.wanggaowan.tools.actions.image
 
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
@@ -21,26 +16,7 @@ import com.wanggaowan.tools.utils.XUtils
 
 /**
  * 重命令多个相同名称但是在不同分辨率下的文件
- *
- * @author Created by wanggaowan on 2023/5/25 10:40
  */
-class RenameMultiSameNameImageAction : DumbAwareAction() {
-    override fun getActionUpdateThread(): ActionUpdateThread {
-        return ActionUpdateThread.BGT
-    }
-
-    override fun actionPerformed(e: AnActionEvent) {
-        val module = e.getData(LangDataKeys.MODULE) ?: return
-        val project = module.project
-        val selectFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY) ?: return
-        if (selectFiles.isEmpty()) {
-            return
-        }
-
-        RenameImageHandel(project).rename(selectFiles)
-    }
-}
-
 class RenameImageHandel(val project: Project) {
 
     /**

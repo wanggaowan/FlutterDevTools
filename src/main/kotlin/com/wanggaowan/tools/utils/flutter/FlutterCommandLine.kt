@@ -32,19 +32,17 @@ import java.util.function.Consumer
  * @author Created by wanggaowan on 2023/2/6 17:35
  */
 class FlutterCommandLine internal constructor(
-    sdk: FlutterSdk,
+    private var sdk: FlutterSdk,
     workDir: VirtualFile?,
     type: Type,
     vararg args: String
 ) {
     private val log = Logger.getInstance(FlutterCommandLine::class.java)
-    private var sdk: FlutterSdk
     private var workDir: VirtualFile? = null
     private var type: Type
     private var args: List<String>
 
     init {
-        this.sdk = sdk
         this.workDir = workDir
         this.type = type
         this.args = ImmutableList.copyOf(args)
@@ -192,9 +190,15 @@ class FlutterCommandLine internal constructor(
     }
 
     enum class Type(
-        title: String,
-        longTime: Boolean,
-        highlight: Boolean,
+        val title: String,
+        /**
+         * 命令是否耗时较长
+         */
+        val longTime: Boolean,
+        /**
+         * 命令输出是否要高亮
+         */
+        val highlight: Boolean,
         vararg subCommand: String
     ) {
         GENERATOR_JSON_SERIALIZABLE(
@@ -256,29 +260,10 @@ class FlutterCommandLine internal constructor(
             "gen-l10n",
         );
 
-        val title: String
-
         /**
          * 命令参数
          */
-        val subCommand: ImmutableList<String>
-
-        /**
-         * 命令是否耗时较长
-         */
-        val longTime: Boolean
-
-        /**
-         * 命令输出是否要高亮
-         */
-        val highlight: Boolean
-
-        init {
-            this.title = title
-            this.subCommand = ImmutableList.copyOf(subCommand)
-            this.longTime = longTime
-            this.highlight = highlight
-        }
+        val subCommand: ImmutableList<String> = ImmutableList.copyOf(subCommand)
 
         // 通知Flutter项目有变更，重新解析
         open fun sendAnalyticsEvent() {

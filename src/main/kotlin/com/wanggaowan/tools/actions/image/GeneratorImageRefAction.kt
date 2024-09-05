@@ -197,6 +197,7 @@ object GeneratorImageRefUtils {
     /**
      * 获取去重后的图片文件列表
      */
+    @Suppress("UnsafeVfsRecursion")
     private fun getDeDuplicationList(
         rootDir: VirtualFile,
         basePath: String = "",
@@ -355,6 +356,7 @@ object GeneratorImageRefUtils {
     /**
      * 增加图片目录到assets节点下
      */
+    @Suppress("UnsafeVfsRecursion")
     private fun addImagesDir(
         project: Project,
         eolElement: PsiElement,

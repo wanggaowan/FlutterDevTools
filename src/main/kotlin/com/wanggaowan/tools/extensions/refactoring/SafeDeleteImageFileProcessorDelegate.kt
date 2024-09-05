@@ -39,7 +39,7 @@ class SafeDeleteImageFileProcessorDelegate : SafeDeleteProcessorDelegateBase() {
     override fun findUsages(
         element: PsiElement,
         allElementsToDelete: Array<out PsiElement>,
-        usages: MutableList<UsageInfo>
+        usages: MutableList<in UsageInfo>
     ): NonCodeUsageSearchInfo {
         if (element !is PsiBinaryFileDelegate || element.needFind) {
             ImageUsagesHandler(element).processElementUsages(element, {
@@ -62,14 +62,14 @@ class SafeDeleteImageFileProcessorDelegate : SafeDeleteProcessorDelegateBase() {
     override fun getElementsToSearch(
         element: PsiElement,
         module: Module?,
-        allElementsToDelete: MutableCollection<PsiElement>
+        allElementsToDelete: MutableCollection<out PsiElement>
     ): MutableCollection<out PsiElement> {
         return mutableListOf(element)
     }
 
     override fun getAdditionalElementsToDelete(
         element: PsiElement,
-        allElementsToDelete: MutableCollection<PsiElement>,
+        allElementsToDelete: MutableCollection<out PsiElement>,
         askUser: Boolean
     ): MutableCollection<PsiElement>? {
         return null
@@ -82,11 +82,11 @@ class SafeDeleteImageFileProcessorDelegate : SafeDeleteProcessorDelegateBase() {
         return null
     }
 
-    override fun preprocessUsages(project: Project?, usages: Array<out UsageInfo>?): Array<out UsageInfo>? {
+    override fun preprocessUsages(project: Project, usages: Array<out UsageInfo>): Array<out UsageInfo> {
         return usages
     }
 
-    override fun prepareForDeletion(element: PsiElement?) {
+    override fun prepareForDeletion(element: PsiElement) {
 
     }
 

@@ -17,11 +17,13 @@ import com.intellij.openapi.ui.JBPopupMenu
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFileFactory
+import com.intellij.ui.JBColor
 import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
+import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.LocalTimeCounter
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBDimension
@@ -55,7 +57,7 @@ import javax.swing.tree.*
 class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, false) {
     private val mRootPanel: JPanel
     private val templateList = JBList<String>()
-    private val templateChildrenTree = JTree(MyMutableTreeNode())
+    private val templateChildrenTree = Tree(MyMutableTreeNode())
     private var languageTextFieldRoot: JPanel = JPanel(BorderLayout())
     private var languageTextField: LanguageTextField? = null
     private val addTemplateBtn = JButton("+")
@@ -1158,10 +1160,10 @@ class MyTreeCellRenderer : DefaultTreeCellRenderer() {
     }
 
     override fun getBackgroundSelectionColor(): Color {
-        return Color(0x00ffffff, true)
+        return JBColor("bgSelect", Color(0x00ffffff, true))
     }
 
     override fun getBackgroundNonSelectionColor(): Color {
-        return Color(0x00ffffff, true)
+        return JBColor("bgUnSelect", Color(0x00ffffff, true))
     }
 }
