@@ -136,11 +136,13 @@
         <action id="FlutterDevTools.save.log" class="com.wanggaowan.tools.actions.log.SaveGitCommitLogAction"
                 text="记录日志" icon="FlutterDevToolsIcons.addLog" description="将当前提交记录到每日工作日志">
             <add-to-group group-id="Vcs.MessageActionGroup"/>
+            <add-to-group group-id="Vcs.Log.ContextMenu"/>
         </action>
 
         <action id="FlutterDevTools.show.log" class="com.wanggaowan.tools.actions.log.ShowGitCommitLogAction"
-                text="展示日志" icon="FlutterDevToolsIcons.log" description="展示每日工作日志">
+                text="查看日志" icon="FlutterDevToolsIcons.log" description="查看每日工作日志">
             <add-to-group group-id="Vcs.MessageActionGroup"/>
+            <add-to-group group-id="Vcs.Log.ContextMenu"/>
         </action>
     </actions>
 
