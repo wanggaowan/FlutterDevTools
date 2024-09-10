@@ -1,41 +1,52 @@
-package com.wanggaowan.tools.ui
+package com.wanggaowan.tools.extensions.toolwindow.resourcePreview
 
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.module.Module
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.ui.Gray
 import com.intellij.ui.SingleSelectionModel
+import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.MultiColumnList
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.update.Activatable
 import com.intellij.util.ui.update.UiNotifyConnector
 import com.wanggaowan.tools.entity.Property
-import com.wanggaowan.tools.listener.SimpleComponentListener
 import com.wanggaowan.tools.settings.PluginSettings
+import com.wanggaowan.tools.ui.ChessBoardPanel
+import com.wanggaowan.tools.ui.ImageButton
+import com.wanggaowan.tools.ui.MyLabel
+import com.wanggaowan.tools.ui.UIColor
+import com.wanggaowan.tools.ui.icon.IconPanel
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.ex.basePath
 import icons.FlutterDevToolsIcons
 import kotlinx.coroutines.*
 import java.awt.*
-import java.awt.event.*
+import java.awt.event.FocusEvent
+import java.awt.event.FocusListener
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.io.File
 import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import kotlin.properties.Delegates
 
 /**
- * ImagePreviewPanel的另一种实现，采用MultiColumnList实现，不过网格情况下列宽无法精准控制，会自动自适应，暂时放在这里做一个参考
+ * ImagePreviewPanel的另一种实现，采用JBList实现，JBList同样支持网格，但是列数量无法精准控制，暂时放在这里做一个参考
  *
- * @author Created by wanggaowan on 2022/6/17 13:13
+ * @author Created by wanggaowan on 2024/2/21 17:38
  */
-class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
+class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
     // 搜素布局相关View
     private lateinit var mSearchPanel: JPanel
@@ -44,13 +55,10 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
     private lateinit var mSearchTextField: JTextField
 
     private lateinit var mScrollPane: JBScrollPane
-    private lateinit var mImagePanel: MyMultiColumnList
+    private lateinit var mImagePanel: JBList<Property>
     private val myListModel = MyListModel()
 
     // 底部布局相关View
-    private lateinit var mListLayoutBtn: ImageButton
-    private lateinit var mGridLayoutBtn: ImageButton
-    private lateinit var mRefreshBtn: ImageButton
     private lateinit var mRootPathJPanel: JPanel
     private lateinit var mRootPathLabel: MyLabel
     private lateinit var mChangeBtn: JButton
@@ -59,7 +67,10 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
     private val mGridImageLayoutWidth = 160
 
     // 当前布局模式
-    private var mLayoutMode = 0
+    private var isGridMode: Boolean by Delegates.observable(false) { _, _, _ ->
+        mImagePanel.clearSelection()
+        setImageLayout()
+    }
 
     // 需要展示的图片路径
     private var mImages: Set<Property>? = null
@@ -70,6 +81,7 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
     private val defaultCoroutineScope = CoroutineScope(Dispatchers.Default)
     private val mainCoroutineScope = CoroutineScope(Dispatchers.Main)
     private var mGetImageJob: Job? = null
+    private var mSingleClickOpenFile: Boolean = false
     private var mSelectedImage: Property? = null
 
     init {
@@ -115,56 +127,49 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
         initBottomLayout()
 
         // 展示Image预览内容的面板
-        mImagePanel = MyMultiColumnList(myListModel)
-        mImagePanel.autoResizeMode = 1
+        mImagePanel = JBList(myListModel)
         mImagePanel.background = UIColor.BG_COLOR
         mImagePanel.selectionModel = SingleSelectionModel()
-        mImagePanel.setFixedColumnsMode(1)
-        mImagePanel.tableHeader = null
+        mImagePanel.visibleRowCount = 0
         setImageLayout()
 
         mImagePanel.setCellRenderer { _, _, index, selected, focused ->
-            return@setCellRenderer getPreviewItemPanel(index, mLayoutMode, selected || focused)
+            return@setCellRenderer getPreviewItemPanel(index, isGridMode, selected || focused)
         }
 
         mImagePanel.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
                 if (e.button == MouseEvent.BUTTON3) {
-                    // 双击
+                    // 鼠标中间点击
+                    mSingleClickOpenFile = false
                     return
                 }
 
                 if (e.clickCount > 1) {
-                    mSelectedImage?.also {
-                        openFile(it)
+                    if (!mSingleClickOpenFile) {
+                        mSelectedImage?.also {
+                            openFile(it)
+                        }
                     }
+                    mSingleClickOpenFile = false
                     return
                 }
 
-                val selectedRow = mImagePanel.selectedRow
-                if (mLayoutMode == 0 || mImagePanel.maxColumns == 1) {
-                    mSelectedImage = myListModel.getData(selectedRow) ?: return
-                    return
+                mSingleClickOpenFile = false
+                val index = mImagePanel.selectionModel.anchorSelectionIndex
+                val image = myListModel.getData(index) ?: return
+                if (image == mSelectedImage) {
+                    mSingleClickOpenFile = true
+                    openFile(image)
                 }
-
-                val selectedColumn = mImagePanel.selectedColumn
-                if (selectedRow == -1 || selectedColumn == -1) {
-                    mSelectedImage = null
-                    return
-                }
-
-                val index = mImagePanel.model.toListIndex(selectedRow, selectedColumn)
-                mSelectedImage = myListModel.getData(index) ?: return
+                mSelectedImage = image
             }
         })
 
         mScrollPane = JBScrollPane(mImagePanel)
         mScrollPane.background = null
         mScrollPane.border = JBUI.Borders.customLine(UIColor.LINE_COLOR, 0, 0, 1, 0)
-        mScrollPane.horizontalScrollBar = null
         add(mScrollPane, BorderLayout.CENTER)
-
-        registerSizeChange()
     }
 
     /**
@@ -280,48 +285,18 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
      */
     private fun initBottomLayout() {
         // 底部按钮面板
-        val bottomPanel = JPanel(GridBagLayout())
+        val bottomPanel = JPanel(BorderLayout())
         bottomPanel.background = UIColor.BG_COLOR
         bottomPanel.border = BorderFactory.createEmptyBorder(5, 0, 5, 0)
         add(bottomPanel, BorderLayout.SOUTH)
 
-        val c = GridBagConstraints()
         // 底部靠左面板
-        val bottomLeftPanel = JPanel(GridBagLayout())
-        bottomLeftPanel.background = UIColor.BG_COLOR
-        c.fill = GridBagConstraints.VERTICAL
-        c.weightx = 0.0
-        bottomPanel.add(bottomLeftPanel, c)
-
-        mRefreshBtn = ImageButton(FlutterDevToolsIcons.refresh)
-        mRefreshBtn.preferredSize = JBUI.size(30)
-        mRefreshBtn.maximumSize = JBUI.size(30)
-        mRefreshBtn.minimumSize = JBUI.size(30)
-        mRefreshBtn.background = null
-        mRefreshBtn.setBorderWidth(3)
-        c.fill = GridBagConstraints.BOTH
-        bottomLeftPanel.add(mRefreshBtn, c)
-
-        mRefreshBtn.addMouseListener(object : MouseAdapter() {
-            override fun mouseEntered(e: MouseEvent?) {
-                mRefreshBtn.background = UIColor.MOUSE_ENTER_COLOR
-            }
-
-            override fun mouseExited(e: MouseEvent?) {
-                super.mouseExited(e)
-                mRefreshBtn.background = null
-            }
-
-            override fun mousePressed(e: MouseEvent?) {
-                super.mousePressed(e)
-                mRefreshBtn.background = UIColor.MOUSE_PRESS_COLOR
-            }
-
-            override fun mouseClicked(e: MouseEvent?) {
-                mRefreshBtn.background = UIColor.MOUSE_ENTER_COLOR
-                updateNewImage()
-            }
-        })
+        val refreshToolbar =
+            ActionManager.getInstance().createActionToolbar("imagePreview", DefaultActionGroup(RefreshButton()), true)
+        refreshToolbar.targetComponent = bottomPanel
+        var component = refreshToolbar.component
+        component.background = UIColor.BG_COLOR
+        bottomPanel.add(component, BorderLayout.WEST)
 
         // 增加图片预览的根路径显示
         mRootPathJPanel = JPanel(GridBagLayout())
@@ -333,16 +308,14 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
             ),
             BorderFactory.createEmptyBorder(0, 4, 0, 4)
         )
-
-        c.weightx = 1.0
-        c.fill = GridBagConstraints.BOTH
-        bottomPanel.add(mRootPathJPanel, c)
+        bottomPanel.add(mRootPathJPanel, BorderLayout.CENTER)
 
         val label = JLabel("rootPath:")
         @Suppress("UseJBColor")
         label.foreground = Color(76, 80, 82)
         label.font = UIUtil.getFont(UIUtil.FontSize.MINI, label.font)
 
+        val c = GridBagConstraints()
         c.weightx = 0.0
         c.fill = GridBagConstraints.VERTICAL
         mRootPathJPanel.add(label, c)
@@ -378,119 +351,19 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
         mRootPathJPanel.add(mChangeBtn, c)
 
         // 底部靠右的布局面板
-        val bottomRightPanel = JPanel(GridBagLayout())
-        bottomRightPanel.background = UIColor.BG_COLOR
-        c.fill = GridBagConstraints.VERTICAL
-        c.weightx = 0.0
-        bottomPanel.add(bottomRightPanel, c)
-
-        mListLayoutBtn = ImageButton(FlutterDevToolsIcons.list)
-        mListLayoutBtn.preferredSize = JBUI.size(30)
-        mListLayoutBtn.maximumSize = JBUI.size(30)
-        mListLayoutBtn.minimumSize = JBUI.size(30)
-        mListLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
-        mListLayoutBtn.setBorderWidth(3)
-        bottomRightPanel.add(mListLayoutBtn, c)
-
-        mGridLayoutBtn = ImageButton(FlutterDevToolsIcons.grid)
-        mGridLayoutBtn.preferredSize = JBUI.size(30)
-        mGridLayoutBtn.maximumSize = JBUI.size(30)
-        mGridLayoutBtn.minimumSize = JBUI.size(30)
-        mGridLayoutBtn.background = null
-        mGridLayoutBtn.setBorderWidth(3)
-        bottomRightPanel.add(mGridLayoutBtn, c)
-
-        mListLayoutBtn.addMouseListener(object : MouseAdapter() {
-            override fun mouseEntered(e: MouseEvent?) {
-                mListLayoutBtn.background = UIColor.MOUSE_ENTER_COLOR
-
-            }
-
-            override fun mouseExited(e: MouseEvent?) {
-                super.mouseExited(e)
-                if (mLayoutMode != 0) {
-                    mListLayoutBtn.background = null
-                } else {
-                    mListLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
-                }
-            }
-
-            override fun mousePressed(e: MouseEvent?) {
-                super.mousePressed(e)
-                mListLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
-            }
-
-            override fun mouseClicked(e: MouseEvent?) {
-                if (mLayoutMode == 0) {
-                    return
-                }
-
-                mListLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
-                mGridLayoutBtn.background = null
-
-                mLayoutMode = 0
-                mImagePanel.clearSelection()
-                setImageLayout()
-                mImagePanel.setFixedColumnsMode(1)
-            }
-        })
-
-        mGridLayoutBtn.addMouseListener(object : MouseAdapter() {
-            override fun mouseEntered(e: MouseEvent?) {
-                mGridLayoutBtn.background = UIColor.MOUSE_ENTER_COLOR
-            }
-
-            override fun mouseExited(e: MouseEvent?) {
-                super.mouseExited(e)
-                if (mLayoutMode != 1) {
-                    mGridLayoutBtn.background = null
-                } else {
-                    mGridLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
-                }
-            }
-
-            override fun mousePressed(e: MouseEvent?) {
-                super.mousePressed(e)
-                mGridLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
-            }
-
-            override fun mouseClicked(e: MouseEvent?) {
-                if (mLayoutMode == 1) {
-                    return
-                }
-
-                mGridLayoutBtn.background = UIColor.MOUSE_PRESS_COLOR
-                mListLayoutBtn.background = null
-
-                mLayoutMode = 1
-                mImagePanel.clearSelection()
-                setImageLayout()
-                val columns = calculationColumns()
-                mImagePanel.setFixedColumnsMode(columns)
-            }
-        })
-    }
-
-    /**
-     * 注册窗口尺寸改变监听
-     */
-    private fun registerSizeChange() {
-        addComponentListener(object : SimpleComponentListener() {
-            override fun componentResized(p0: ComponentEvent?) {
-                if (mLayoutMode == 1) {
-                    val columns = calculationColumns()
-                    if (columns != mImagePanel.maxColumns) {
-                        mImagePanel.clearSelection()
-                        mImagePanel.setFixedColumnsMode(columns)
-                    }
-                }
-            }
-        })
+        val modeSwitchToolbar =
+            ActionManager.getInstance()
+                .createActionToolbar("imagePreview", DefaultActionGroup(ListModeButton(), GridModeButton()), true)
+        modeSwitchToolbar.targetComponent = bottomPanel
+        component = modeSwitchToolbar.component
+        component.background = UIColor.BG_COLOR
+        bottomPanel.add(component, BorderLayout.EAST)
     }
 
     private fun refreshImagePanel() {
         mImagePanel.clearSelection()
-        mImagePanel.model.fireTableStructureChanged()
+        mImagePanel.revalidate()
+        mImagePanel.repaint()
     }
 
     private fun formatRootPath(rootPath: String): String {
@@ -578,23 +451,29 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
 
     // 设置图片预览的布局样式
     private fun setImageLayout() {
-        if (mLayoutMode == 0) {
-            mImagePanel.rowHeight = 100
+        if (!isGridMode) {
+            mImagePanel.layoutOrientation = JBList.VERTICAL
+            mImagePanel.fixedCellHeight = 100
+            mImagePanel.fixedCellWidth = width
+            mImagePanel.setExpandableItemsEnabled(true)
         } else {
-            mImagePanel.rowHeight = mGridImageLayoutWidth + 60 + 20
+            mImagePanel.layoutOrientation = JBList.HORIZONTAL_WRAP
+            mImagePanel.fixedCellHeight = mGridImageLayoutWidth + 60 + 20
+            mImagePanel.fixedCellWidth = mGridImageLayoutWidth + 20
+            mImagePanel.setExpandableItemsEnabled(false)
         }
     }
 
     /**
      * 获取图片预览Item样式
-     * @param layoutType 0:线性布局，1：网格布局
+     * @param isGridMode false:线性布局，true：网格布局
      */
-    private fun getPreviewItemPanel(index: Int, layoutType: Int, focused: Boolean): JPanel {
+    private fun getPreviewItemPanel(index: Int, isGridMode: Boolean, focused: Boolean): JPanel {
         val panel = JPanel()
         panel.background = UIColor.BG_COLOR
         val image = myListModel.getData(index) ?: return panel
         panel.layout = BorderLayout()
-        if (layoutType == 0) {
+        if (!isGridMode) {
             if (focused) {
                 panel.background = UIColor.MOUSE_ENTER_COLOR
             }
@@ -603,10 +482,15 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
             panel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
             panel.minimumSize = Dimension(width, 100)
 
-            val imageView = ImageView(getFile(image.value))
+            val imageView = ChessBoardPanel()
+                .apply {
+                    val iconPanel = IconPanel(image.value, true)
+                    add(iconPanel)
+                }
             imageView.preferredSize = Dimension(80, 80)
-            panel.add(imageView, BorderLayout.WEST)
             imageView.border = JBUI.Borders.customLine(UIColor.LINE_COLOR, 1)
+            panel.add(imageView, BorderLayout.WEST)
+
 
             val label = JLabel()
             label.text = image.name
@@ -631,6 +515,7 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
 
             return panel
         } else {
+            JBLabel(null, JBLabel.CENTER)
             // 网格布局
             val labelHeight = 60
             // 20 为padding 10
@@ -645,10 +530,16 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
                 JBUI.Borders.customLine(lineBorderColor, lineBorderWidth)
             )
 
-            val imageView = ImageView(getFile(image.value))
+            val imageView = ChessBoardPanel()
+                .apply {
+                    alignmentX = LEFT_ALIGNMENT
+                    val iconPanel = IconPanel(image.value, true)
+                    add(iconPanel)
+                }
             imageView.preferredSize = Dimension(mGridImageLayoutWidth, mGridImageLayoutWidth)
             imageView.minimumSize = imageView.preferredSize
             imageView.maximumSize = imageView.preferredSize
+
             panel.add(imageView, BorderLayout.CENTER)
 
             val label = JLabel()
@@ -790,24 +681,43 @@ class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
 
     }
 
-    companion object {
-        private const val ROOT_PATH = "Image Preview Root Path"
+    private inner class ListModeButton
+        : ToggleAction("List mode", "Switch to list mode", FlutterDevToolsIcons.list), DumbAware {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
+
+        override fun isSelected(e: AnActionEvent) = !isGridMode
+
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            if (state) {
+                isGridMode = false
+            }
+        }
     }
 
-    inner class MyMultiColumnList(model: ListModel<Property>) : MultiColumnList(model) {
+    private inner class GridModeButton
+        : ToggleAction("Grid mode", "Switch to grid mode", FlutterDevToolsIcons.grid), DumbAware {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
-        var maxColumns: Int = 25
-            private set
+        override fun isSelected(e: AnActionEvent) = isGridMode
 
-        override fun setFixedColumnsMode(maxColumns: Int) {
-            this.maxColumns = maxColumns
-            super.setFixedColumnsMode(maxColumns)
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            if (state) {
+                isGridMode = true
+            }
         }
+    }
 
-        override fun getPreferredSize(): Dimension {
-            val totalHeight = this.model.rowCount * rowHeight + 100
-            return Dimension(width, totalHeight)
+    private inner class RefreshButton
+        : AnAction("Refresh", "Refresh image data", FlutterDevToolsIcons.refresh), DumbAware {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
+
+        override fun actionPerformed(event: AnActionEvent) {
+            updateNewImage()
         }
+    }
+
+    companion object {
+        private const val ROOT_PATH = "Image Preview Root Path"
     }
 }
 
@@ -833,5 +743,4 @@ class MyListModel : AbstractListModel<Property>() {
         return data[index]
     }
 }
-
 

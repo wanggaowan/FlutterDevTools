@@ -16,7 +16,7 @@
         <group id="FlutterDevTools.GenerateGroup">
             <separator/>
             <action id="FlutterDevTools.JsonToDart"
-                    class="com.wanggaowan.tools.actions.JsonToDartAction" text="Json To Dart"
+                    class="com.wanggaowan.tools.actions.jsonConvert.JsonToDartAction" text="Json To Dart"
                     description="Json convert to dart"/>
 
             <action id="FlutterDevTools.GeneratorJsonSerializableAction"
@@ -28,7 +28,7 @@
                     description="根据Dart实体生成.g.dart文件"/>
 
             <action id="FlutterDevTools.AddRouterAction"
-                    class="com.wanggaowan.tools.actions.AddRouterAction" text="添加页面路由"
+                    class="com.wanggaowan.tools.actions.addRouter.AddRouterAction" text="添加页面路由"
                     description="根据给定内容，生成路由数据"/>
 
             <action
@@ -185,7 +185,7 @@
             id="FlutterDevTools.ProjectViewPane"/>
 
         <toolWindow id="Flutter Resource Manager"
-                    factoryClass="com.wanggaowan.tools.extensions.toolwindow.ResourcePreviewToolWindowFactory"
+                    factoryClass="com.wanggaowan.tools.extensions.toolwindow.resourcePreview.ResourcePreviewToolWindowFactory"
                     icon="FlutterIcons.Flutter"/>
 
         <projectConfigurable parentId="tools"

@@ -13,8 +13,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.wanggaowan.tools.settings.PluginSettings
-import com.wanggaowan.tools.ui.ImportImageFolderChooser
-import com.wanggaowan.tools.ui.RenameEntity
 import com.wanggaowan.tools.utils.*
 import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.flutterModules

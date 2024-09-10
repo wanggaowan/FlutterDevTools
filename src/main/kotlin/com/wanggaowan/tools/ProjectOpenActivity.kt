@@ -9,7 +9,7 @@ import com.intellij.openapi.startup.ProjectActivity
 import com.intellij.openapi.wm.ToolWindowManager
 import com.wanggaowan.tools.actions.filetemplate.FileTemplateUtils
 import com.wanggaowan.tools.extensions.complete.CodeAnalysisService
-import com.wanggaowan.tools.extensions.toolwindow.ResourcePreviewToolWindowFactory
+import com.wanggaowan.tools.extensions.toolwindow.resourcePreview.ResourcePreviewToolWindowFactory
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import io.flutter.bazel.WorkspaceCache
 import kotlinx.coroutines.CoroutineScope

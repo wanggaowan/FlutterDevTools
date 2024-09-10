@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.extensions.toolwindow
+package com.wanggaowan.tools.extensions.toolwindow.resourcePreview
 
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.DumbService
@@ -6,7 +6,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.Content
-import com.wanggaowan.tools.ui.ImagePreviewPanel
 import com.wanggaowan.tools.utils.ex.flutterModules
 
 

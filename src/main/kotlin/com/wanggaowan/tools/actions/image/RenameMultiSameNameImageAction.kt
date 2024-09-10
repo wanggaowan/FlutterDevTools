@@ -7,8 +7,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.usages.Usage
 import com.intellij.usages.UsageInfo2UsageAdapter
-import com.wanggaowan.tools.ui.ImagesRenameDialog
-import com.wanggaowan.tools.ui.RenameEntity
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.XUtils

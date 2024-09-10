@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.ui
+package com.wanggaowan.tools.actions.image
 
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
@@ -12,6 +12,10 @@ import com.intellij.ui.ScrollPaneFactory
 import com.intellij.usages.Usage
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.wanggaowan.tools.ui.ChessBoardPanel
+import com.wanggaowan.tools.ui.ExtensionTextField
+import com.wanggaowan.tools.ui.MyLabel
+import com.wanggaowan.tools.ui.UIColor
 import com.wanggaowan.tools.ui.icon.IconPanel
 import com.wanggaowan.tools.utils.msg.Toast
 import java.awt.*

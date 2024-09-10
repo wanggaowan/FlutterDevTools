@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.actions
+package com.wanggaowan.tools.actions.addRouter
 
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -15,7 +15,6 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.extensions.gotohandler.RouterGoToDeclarationHandler
-import com.wanggaowan.tools.ui.AddRouterDialog
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.ex.findModule

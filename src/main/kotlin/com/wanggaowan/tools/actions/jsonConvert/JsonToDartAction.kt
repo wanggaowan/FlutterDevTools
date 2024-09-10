@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.actions
+package com.wanggaowan.tools.actions.jsonConvert
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -16,14 +16,14 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
-import com.wanggaowan.tools.ui.JsonToDartDialog
+import com.wanggaowan.tools.actions.GeneratorGFileAction
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.StringUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.flutter.FlutterCommandUtils
-import io.flutter.actions.FlutterSdkAction.showMissingSdkDialog
+import io.flutter.actions.FlutterSdkAction
 import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
@@ -89,7 +89,7 @@ class JsonToDartAction : DumbAwareAction() {
         if (dialog.isGeneratorGFile()) {
             val sdk = FlutterSdk.getFlutterSdk(project)
             if (sdk == null) {
-                showMissingSdkDialog(project)
+                FlutterSdkAction.showMissingSdkDialog(project)
             } else {
                 createDart(project, dialog, sdk, psiFile, clazzElement, className ?: "", rootElement)
             }

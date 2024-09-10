@@ -1,4 +1,4 @@
-package com.wanggaowan.tools.ui
+package com.wanggaowan.tools.actions.image
 
 import com.intellij.find.findUsages.PsiElement2UsageTargetAdapter
 import com.intellij.openapi.application.ApplicationManager
@@ -21,6 +21,9 @@ import com.intellij.util.ui.UIUtil
 import com.jetbrains.lang.dart.DartBundle
 import com.wanggaowan.tools.extensions.findusage.FindProgress
 import com.wanggaowan.tools.extensions.findusage.FindUsageManager
+import com.wanggaowan.tools.ui.ChessBoardPanel
+import com.wanggaowan.tools.ui.ExtensionTextField
+import com.wanggaowan.tools.ui.UIColor
 import com.wanggaowan.tools.ui.icon.IconPanel
 import com.wanggaowan.tools.utils.XUtils
 import org.jetbrains.kotlin.idea.core.util.toPsiFile

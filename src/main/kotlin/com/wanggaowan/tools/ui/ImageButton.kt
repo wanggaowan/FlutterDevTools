@@ -42,7 +42,7 @@ class ImageButton(icon: Icon? = null, arcSize: Int? = null) :
         if (mBorderWidth == width) {
             return
         }
-        mBorderWidth = width
+        mBorderWidth = width.coerceAtLeast(0)
         repaint()
     }
 
@@ -78,28 +78,33 @@ class ImageButton(icon: Icon? = null, arcSize: Int? = null) :
         val config = GraphicsUtil.setupAAPainting(g)
         val w = g.clipBounds.width
         val h = g.clipBounds.height
-        mBorderColor?.also {
-            g.paint = it
+        if(w > 0 && h > 0) {
+            if(mBorderWidth > 0) {
+                mBorderColor?.also {
+                    g.paint = it
+                    g.fillRoundRect(
+                        0,
+                        0,
+                        w,
+                        h,
+                        mArcSize,
+                        mArcSize
+                    )
+                }
+            }
+
+            g.paint = background
+            val buttonArc = (mArcSize - 1).coerceAtLeast(0)
             g.fillRoundRect(
-                0,
-                0,
-                w,
-                h,
-                mArcSize,
-                mArcSize
+                mBorderWidth,
+                mBorderWidth,
+                w - mBorderWidth * 2,
+                h - mBorderWidth * 2,
+                buttonArc,
+                buttonArc
             )
         }
 
-        g.paint = background
-        val buttonArc = (mArcSize - 1).coerceAtLeast(0)
-        g.fillRoundRect(
-            mBorderWidth,
-            mBorderWidth,
-            w - mBorderWidth * 2,
-            h - mBorderWidth * 2,
-            buttonArc,
-            buttonArc
-        )
         icon.paintIcon(this, g, (width - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)
         config.restore()
     }
