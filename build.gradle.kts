@@ -23,6 +23,7 @@ intellij {
     // 配置本地已下载IDE路径，具体配置文档查看：https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#configuration-intellij-extension
     localPath.set("/Users/wgw/Documents/develop/project/ide plugin/test ide/AndroidStudio241.app/Contents")
     // Git4Idea: git插件
+    // org.jetbrains.android: Android插件
     plugins.set(
         listOf(
             "java",

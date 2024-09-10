@@ -27,7 +27,7 @@ import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.LocalTimeCounter
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBDimension
-import com.wanggaowan.tools.ui.LineBorder
+import com.intellij.util.ui.JBUI
 import com.wanggaowan.tools.ui.UIColor
 import com.wanggaowan.tools.ui.language.DartLanguageTextField
 import com.wanggaowan.tools.ui.language.JsonLanguageTextField
@@ -133,7 +133,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
     private fun initTemplateList(): JComponent {
         val rootPanel = JPanel()
         rootPanel.layout = BorderLayout()
-        rootPanel.border = BorderFactory.createLineBorder(UIColor.LINE_COLOR)
+        rootPanel.border = JBUI.Borders.customLine(UIColor.LINE_COLOR)
 
         templateList.selectionMode = ListSelectionModel.SINGLE_SELECTION
         templateList.visibleRowCount = 20
@@ -184,7 +184,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
 
         val box = Box.createHorizontalBox()
         box.border = BorderFactory.createCompoundBorder(
-            LineBorder(UIColor.LINE_COLOR, 1, 0, 0, 0),
+            JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 0, 0),
             BorderFactory.createEmptyBorder(0, 5, 0, 5)
         )
         rootPanel.add(box, BorderLayout.SOUTH)
@@ -225,7 +225,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
     private fun initTemplateChildrenList(): JComponent {
         val rootPanel = JPanel()
         rootPanel.layout = BorderLayout()
-        rootPanel.border = LineBorder(UIColor.LINE_COLOR, 1, 0, 1, 1)
+        rootPanel.border = JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 1, 1)
 
         templateChildrenTree.cellRenderer = MyTreeCellRenderer()
 
@@ -280,7 +280,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
 
         val box = Box.createHorizontalBox()
         box.border = BorderFactory.createCompoundBorder(
-            LineBorder(UIColor.LINE_COLOR, 1, 0, 0, 0),
+            JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 0, 0),
             BorderFactory.createEmptyBorder(0, 5, 0, 5)
         )
         rootPanel.add(box, BorderLayout.SOUTH)
@@ -304,14 +304,14 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
     private fun initLanguageTextField(): JComponent {
         val rootPanel = JPanel()
         rootPanel.layout = BorderLayout()
-        rootPanel.border = LineBorder(UIColor.LINE_COLOR, 1, 0, 1, 1)
+        rootPanel.border = JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 1, 1)
 
         languageTextFieldRoot.preferredSize = JBDimension(500, 400)
         rootPanel.add(languageTextFieldRoot, BorderLayout.CENTER)
 
         val box = Box.createHorizontalBox()
         box.border = BorderFactory.createCompoundBorder(
-            LineBorder(UIColor.LINE_COLOR, 1, 0, 0, 0),
+            JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 0, 0),
             BorderFactory.createEmptyBorder(0, 5, 0, 5)
         )
         rootPanel.add(box, BorderLayout.SOUTH)

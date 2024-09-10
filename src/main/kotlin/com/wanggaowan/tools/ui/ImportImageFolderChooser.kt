@@ -12,9 +12,9 @@ import com.intellij.ui.ScrollPaneFactory
 import com.intellij.usages.Usage
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.wanggaowan.tools.ui.icon.IconPanel
 import com.wanggaowan.tools.utils.msg.Toast
 import java.awt.*
-import java.io.File
 import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
@@ -133,7 +133,7 @@ class ImportImageFolderChooser(
         mJRenamePanel = JPanel(GridBagLayout())
         initRenamePanel()
         val scrollPane = ScrollPaneFactory.createScrollPane(mJRenamePanel)
-        scrollPane.border = LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0)
+        scrollPane.border = JBUI.Borders.customLineBottom(UIColor.LINE_COLOR)
         return scrollPane
     }
 
@@ -166,7 +166,10 @@ class ImportImageFolderChooser(
                 cc.gridy = 0
                 panel.add(box, cc)
 
-                val imageView = ImageView(File(it2.oldFile.path))
+                val imageView = ChessBoardPanel().apply {
+                    val iconPanel = IconPanel(it2.oldFile.path, true)
+                    add(iconPanel)
+                }
                 imageView.preferredSize = JBUI.size(34)
                 imageView.maximumSize = JBUI.size(34)
                 imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
@@ -182,7 +185,10 @@ class ImportImageFolderChooser(
                 panel.add(box2, cc)
 
                 val (existFile, isInMap) = isImageExist(it2)
-                val existFileImageView = ImageView(if (existFile != null) File(existFile.path) else null)
+                val existFileImageView = ChessBoardPanel().apply {
+                    val iconPanel = IconPanel(existFile?.path, true)
+                    add(iconPanel)
+                }
                 existFileImageView.preferredSize = JBUI.size(34, 16)
                 existFileImageView.minimumSize = JBUI.size(34, 16)
                 existFileImageView.maximumSize = JBUI.size(34, 16)
@@ -246,7 +252,7 @@ class ImportImageFolderChooser(
                 isDrawable = value
             } else if (component is JPanel) {
                 val hintRoot = component.getComponent(1) as Box?
-                val imageView = hintRoot?.getComponent(0) as? ImageView
+                val imageView = hintRoot?.getComponent(0) as? ChessBoardPanel
                 val checkBox = hintRoot?.getComponent(1) as? JCheckBox
                 val key = if (isDrawable) "Drawable" else "Mipmap"
                 val values = mRenameFileMap[key]
@@ -261,7 +267,7 @@ class ImportImageFolderChooser(
     }
 
     private fun refreshHintVisible(
-        entity: RenameEntity, hint: JCheckBox?, imageView: ImageView?
+        entity: RenameEntity, hint: JCheckBox?, imageView: ChessBoardPanel?
     ) {
         val (existFile2, isInMap) = isImageExist(entity)
         entity.existFile = existFile2 != null
@@ -274,7 +280,9 @@ class ImportImageFolderChooser(
             hint?.isVisible = visible
             if (existFile2 != null) {
                 imageView?.isVisible = true
-                imageView?.setImage(File(existFile2.path))
+                (imageView?.getComponent(0) as? IconPanel)?.apply {
+                    setIcon(existFile2.path, true)
+                }
             } else {
                 imageView?.isVisible = false
             }

@@ -10,8 +10,8 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.ui.Gray
 import com.intellij.ui.SingleSelectionModel
-import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.MultiColumnList
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.update.Activatable
@@ -31,11 +31,11 @@ import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 
 /**
- * ImagePreviewPanel的另一种实现，采用JBList实现，JBList同样支持网格，但是列数量无法精准控制，暂时放在这里做一个参考
+ * ImagePreviewPanel的另一种实现，采用MultiColumnList实现，不过网格情况下列宽无法精准控制，会自动自适应，暂时放在这里做一个参考
  *
- * @author Created by wanggaowan on 2024/2/21 17:38
+ * @author Created by wanggaowan on 2022/6/17 13:13
  */
-class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
+class ImagePreviewPanel3(val module: Module) : JPanel(), Disposable {
 
     // 搜素布局相关View
     private lateinit var mSearchPanel: JPanel
@@ -44,7 +44,7 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
     private lateinit var mSearchTextField: JTextField
 
     private lateinit var mScrollPane: JBScrollPane
-    private lateinit var mImagePanel: JBList<Property>
+    private lateinit var mImagePanel: MyMultiColumnList
     private val myListModel = MyListModel()
 
     // 底部布局相关View
@@ -70,9 +70,10 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
     private val defaultCoroutineScope = CoroutineScope(Dispatchers.Default)
     private val mainCoroutineScope = CoroutineScope(Dispatchers.Main)
     private var mGetImageJob: Job? = null
+    private var mSelectedImage: Property? = null
 
     init {
-        Disposer.register(this, UiNotifyConnector(this, object : Activatable {
+        Disposer.register(this, UiNotifyConnector.installOn(this, object : Activatable {
             override fun hideNotify() {}
 
             override fun showNotify() {
@@ -114,9 +115,12 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
         initBottomLayout()
 
         // 展示Image预览内容的面板
-        mImagePanel = JBList(myListModel)
+        mImagePanel = MyMultiColumnList(myListModel)
+        mImagePanel.autoResizeMode = 1
         mImagePanel.background = UIColor.BG_COLOR
         mImagePanel.selectionModel = SingleSelectionModel()
+        mImagePanel.setFixedColumnsMode(1)
+        mImagePanel.tableHeader = null
         setImageLayout()
 
         mImagePanel.setCellRenderer { _, _, index, selected, focused ->
@@ -124,16 +128,40 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
         }
 
         mImagePanel.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent?) {
-                val index = mImagePanel.selectionModel.anchorSelectionIndex
-                val image = myListModel.getData(index) ?: return
-                openFile(image)
+            override fun mouseClicked(e: MouseEvent) {
+                if (e.button == MouseEvent.BUTTON3) {
+                    // 双击
+                    return
+                }
+
+                if (e.clickCount > 1) {
+                    mSelectedImage?.also {
+                        openFile(it)
+                    }
+                    return
+                }
+
+                val selectedRow = mImagePanel.selectedRow
+                if (mLayoutMode == 0 || mImagePanel.maxColumns == 1) {
+                    mSelectedImage = myListModel.getData(selectedRow) ?: return
+                    return
+                }
+
+                val selectedColumn = mImagePanel.selectedColumn
+                if (selectedRow == -1 || selectedColumn == -1) {
+                    mSelectedImage = null
+                    return
+                }
+
+                val index = mImagePanel.model.toListIndex(selectedRow, selectedColumn)
+                mSelectedImage = myListModel.getData(index) ?: return
             }
         })
 
         mScrollPane = JBScrollPane(mImagePanel)
         mScrollPane.background = null
-        mScrollPane.border = LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0)
+        mScrollPane.border = JBUI.Borders.customLine(UIColor.LINE_COLOR, 0, 0, 1, 0)
+        mScrollPane.horizontalScrollBar = null
         add(mScrollPane, BorderLayout.CENTER)
 
         registerSizeChange()
@@ -149,9 +177,9 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
         mSearchPanel.layout = BoxLayout(mSearchPanel, BoxLayout.X_AXIS)
         mSearchPanel.border = BorderFactory.createCompoundBorder(
             BorderFactory.createCompoundBorder(
-                LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0),
+                JBUI.Borders.customLine(UIColor.LINE_COLOR, 0, 0, 1, 0),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
-            ), LineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
+            ), BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
         )
         parent.add(mSearchPanel, BorderLayout.NORTH)
 
@@ -172,18 +200,18 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
             override fun focusGained(p0: FocusEvent?) {
                 mSearchPanel.border = BorderFactory.createCompoundBorder(
                     BorderFactory.createCompoundBorder(
-                        LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0),
+                        JBUI.Borders.customLine(UIColor.LINE_COLOR, 0, 0, 1, 0),
                         BorderFactory.createEmptyBorder(9, 9, 9, 9)
-                    ), LineBorder(UIColor.INPUT_FOCUS_COLOR, 2, true)
+                    ), BorderFactory.createLineBorder(UIColor.INPUT_FOCUS_COLOR, 2, true)
                 )
             }
 
             override fun focusLost(p0: FocusEvent?) {
                 mSearchPanel.border = BorderFactory.createCompoundBorder(
                     BorderFactory.createCompoundBorder(
-                        LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0),
+                        JBUI.Borders.customLine(UIColor.LINE_COLOR, 0, 0, 1, 0),
                         BorderFactory.createEmptyBorder(10, 10, 10, 10)
-                    ), LineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
+                    ), BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
                 )
             }
         })
@@ -301,7 +329,7 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
         mRootPathJPanel.border = BorderFactory.createCompoundBorder(
             BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(2, 4, 2, 4),
-                LineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
+                BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
             ),
             BorderFactory.createEmptyBorder(0, 4, 0, 4)
         )
@@ -375,6 +403,7 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
         mListLayoutBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent?) {
                 mListLayoutBtn.background = UIColor.MOUSE_ENTER_COLOR
+
             }
 
             override fun mouseExited(e: MouseEvent?) {
@@ -402,6 +431,7 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
                 mLayoutMode = 0
                 mImagePanel.clearSelection()
                 setImageLayout()
+                mImagePanel.setFixedColumnsMode(1)
             }
         })
 
@@ -435,6 +465,8 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
                 mLayoutMode = 1
                 mImagePanel.clearSelection()
                 setImageLayout()
+                val columns = calculationColumns()
+                mImagePanel.setFixedColumnsMode(columns)
             }
         })
     }
@@ -447,13 +479,10 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
             override fun componentResized(p0: ComponentEvent?) {
                 if (mLayoutMode == 1) {
                     val columns = calculationColumns()
-                    val row =
-                        if (mImagePanel.model.size % columns == 0) mImagePanel.model.size / columns else mImagePanel.model.size / columns + 1
-                    if (mImagePanel.visibleRowCount != row) {
-                        mImagePanel.visibleRowCount = row
+                    if (columns != mImagePanel.maxColumns) {
+                        mImagePanel.clearSelection()
+                        mImagePanel.setFixedColumnsMode(columns)
                     }
-                } else {
-                    mImagePanel.fixedCellWidth = width
                 }
             }
         })
@@ -461,17 +490,7 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
 
     private fun refreshImagePanel() {
         mImagePanel.clearSelection()
-        if (mLayoutMode == 1) {
-            val columns = calculationColumns()
-            val row =
-                if (mImagePanel.model.size % columns == 0) mImagePanel.model.size / columns else mImagePanel.model.size / columns + 1
-            if (mImagePanel.visibleRowCount != row) {
-                mImagePanel.visibleRowCount = row
-            }
-        } else if (mImagePanel.visibleRowCount != 0) {
-            mImagePanel.visibleRowCount = 0
-        }
-        mImagePanel.updateUI()
+        mImagePanel.model.fireTableStructureChanged()
     }
 
     private fun formatRootPath(rootPath: String): String {
@@ -560,13 +579,9 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
     // 设置图片预览的布局样式
     private fun setImageLayout() {
         if (mLayoutMode == 0) {
-            mImagePanel.layoutOrientation = JBList.VERTICAL
-            mImagePanel.fixedCellHeight = 100
-            mImagePanel.fixedCellWidth = width
+            mImagePanel.rowHeight = 100
         } else {
-            mImagePanel.layoutOrientation = JBList.HORIZONTAL_WRAP
-            mImagePanel.fixedCellHeight = mGridImageLayoutWidth + 60 + 20
-            mImagePanel.fixedCellWidth = mGridImageLayoutWidth + 20
+            mImagePanel.rowHeight = mGridImageLayoutWidth + 60 + 20
         }
     }
 
@@ -579,11 +594,11 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
         panel.background = UIColor.BG_COLOR
         val image = myListModel.getData(index) ?: return panel
         panel.layout = BorderLayout()
-        if (focused) {
-            panel.background = UIColor.MOUSE_ENTER_COLOR
-        }
-
         if (layoutType == 0) {
+            if (focused) {
+                panel.background = UIColor.MOUSE_ENTER_COLOR
+            }
+
             // 列表布局
             panel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
             panel.minimumSize = Dimension(width, 100)
@@ -591,7 +606,7 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
             val imageView = ImageView(getFile(image.value))
             imageView.preferredSize = Dimension(80, 80)
             panel.add(imageView, BorderLayout.WEST)
-            imageView.border = LineBorder(UIColor.LINE_COLOR, 1)
+            imageView.border = JBUI.Borders.customLine(UIColor.LINE_COLOR, 1)
 
             val label = JLabel()
             label.text = image.name
@@ -605,7 +620,7 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
             val box = Box.createVerticalBox()
             box.border = BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(0, 30, 0, 0),
-                LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0)
+                JBUI.Borders.customLine(UIColor.LINE_COLOR, 0, 0, 1, 0)
             )
             box.add(Box.createVerticalGlue())
             box.add(label)
@@ -622,9 +637,12 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
             panel.preferredSize = Dimension(mGridImageLayoutWidth + 20, mGridImageLayoutWidth + labelHeight + 20)
             panel.minimumSize = panel.preferredSize
             panel.maximumSize = panel.preferredSize
+            val emptyBorderWidth = if (focused) 9 else 10
+            val lineBorderWidth = if (focused) 2 else 1
+            val lineBorderColor = if (focused) UIColor.INPUT_FOCUS_COLOR else UIColor.LINE_COLOR
             panel.border = BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(10, 10, 10, 10),
-                LineBorder(UIColor.LINE_COLOR, 1)
+                BorderFactory.createEmptyBorder(emptyBorderWidth, emptyBorderWidth, emptyBorderWidth, emptyBorderWidth),
+                JBUI.Borders.customLine(lineBorderColor, lineBorderWidth)
             )
 
             val imageView = ImageView(getFile(image.value))
@@ -673,6 +691,7 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
     /**
      * 获取去重后的属性列表
      */
+    @Suppress("UnsafeVfsRecursion")
     private fun getDeDuplicationList(rootDir: VirtualFile, parentPath: String = ""): LinkedHashSet<Property> {
         val childrenSet = linkedSetOf<Property>()
         val name = rootDir.name
@@ -774,29 +793,45 @@ class ImagePreviewPanel2(val module: Module) : JPanel(), Disposable {
     companion object {
         private const val ROOT_PATH = "Image Preview Root Path"
     }
+
+    inner class MyMultiColumnList(model: ListModel<Property>) : MultiColumnList(model) {
+
+        var maxColumns: Int = 25
+            private set
+
+        override fun setFixedColumnsMode(maxColumns: Int) {
+            this.maxColumns = maxColumns
+            super.setFixedColumnsMode(maxColumns)
+        }
+
+        override fun getPreferredSize(): Dimension {
+            val totalHeight = this.model.rowCount * rowHeight + 100
+            return Dimension(width, totalHeight)
+        }
+    }
 }
 
-// class MyListModel : AbstractListModel<Property>() {
-//     var data: List<Property>? = null
-//
-//     override fun getSize(): Int {
-//         return data?.size ?: 0
-//     }
-//
-//     override fun getElementAt(index: Int): Property {
-//         return data!![index]
-//     }
-//
-//     fun getData(index: Int): Property? {
-//         val data = this.data
-//         if (data.isNullOrEmpty()) {
-//             return null
-//         }
-//         if (index < 0 || index >= data.size) {
-//             return null
-//         }
-//         return data[index]
-//     }
-// }
+class MyListModel : AbstractListModel<Property>() {
+    var data: List<Property>? = null
+
+    override fun getSize(): Int {
+        return data?.size ?: 0
+    }
+
+    override fun getElementAt(index: Int): Property {
+        return data!![index]
+    }
+
+    fun getData(index: Int): Property? {
+        val data = this.data
+        if (data.isNullOrEmpty()) {
+            return null
+        }
+        if (index < 0 || index >= data.size) {
+            return null
+        }
+        return data[index]
+    }
+}
 
 

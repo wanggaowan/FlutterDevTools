@@ -11,7 +11,7 @@ import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBDimension
-import com.wanggaowan.tools.ui.LineBorder
+import com.intellij.util.ui.JBUI
 import com.wanggaowan.tools.ui.UIColor
 import com.wanggaowan.tools.ui.language.PlainTextLanguageTextField
 import java.awt.BorderLayout
@@ -124,7 +124,7 @@ class GitCommitLogDialog(val project: Project) : DialogWrapper(project, false) {
 
         val box = Box.createHorizontalBox()
         box.border = BorderFactory.createCompoundBorder(
-            LineBorder(UIColor.LINE_COLOR, 1, 0, 0, 0),
+            JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 0, 0),
             BorderFactory.createEmptyBorder(0, 5, 0, 5)
         )
         rootPanel.add(box, BorderLayout.SOUTH)

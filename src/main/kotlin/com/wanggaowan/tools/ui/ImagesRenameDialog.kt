@@ -21,13 +21,13 @@ import com.intellij.util.ui.UIUtil
 import com.jetbrains.lang.dart.DartBundle
 import com.wanggaowan.tools.extensions.findusage.FindProgress
 import com.wanggaowan.tools.extensions.findusage.FindUsageManager
+import com.wanggaowan.tools.ui.icon.IconPanel
 import com.wanggaowan.tools.utils.XUtils
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import java.awt.BorderLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Point
-import java.io.File
 import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
@@ -92,7 +92,7 @@ class ImagesRenameDialog(
         initRenamePanel()
         val scrollPane = ScrollPaneFactory.createScrollPane(mJRenamePanel)
         scrollPane.border = BorderFactory.createCompoundBorder(
-            LineBorder(UIColor.LINE_COLOR, 0, 0, 1, 0),
+            JBUI.Borders.customLineBottom(UIColor.LINE_COLOR),
             BorderFactory.createEmptyBorder(5, 0, 0, 0)
         )
         return scrollPane
@@ -110,7 +110,10 @@ class ImagesRenameDialog(
             cc.gridy = depth++
             mJRenamePanel.add(box, cc)
 
-            val imageView = ImageView(File(it.oldFile.path))
+            val imageView = ChessBoardPanel().apply {
+                val iconPanel = IconPanel(it.oldFile.path, true)
+                add(iconPanel)
+            }
             imageView.preferredSize = JBUI.size(34)
             imageView.maximumSize = JBUI.size(34)
             imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
@@ -126,7 +129,10 @@ class ImagesRenameDialog(
             mJRenamePanel.add(box2, cc)
 
             val existFile = isImageExist(it)
-            val existFileImageView = ImageView(if (existFile != null) File(existFile.path) else null)
+            val existFileImageView = ChessBoardPanel().apply {
+                val iconPanel = IconPanel(existFile?.path, true)
+                add(iconPanel)
+            }
             existFileImageView.preferredSize = JBUI.size(34, 16)
             existFileImageView.minimumSize = JBUI.size(34, 16)
             existFileImageView.maximumSize = JBUI.size(34, 16)
@@ -197,14 +203,14 @@ class ImagesRenameDialog(
         val components = mJRenamePanel.components
         for (index in 0 until ((components.size - 1) / 2)) {
             val hintRoot = components[index * 2 + 1] as Box?
-            val imageView = hintRoot?.getComponent(0) as? ImageView
+            val imageView = hintRoot?.getComponent(0) as? ChessBoardPanel
             val checkBox = hintRoot?.getComponent(1) as? JCheckBox
             refreshHintVisible(mRenameFileList[index], checkBox, imageView)
         }
     }
 
     private fun refreshHintVisible(
-        entity: RenameEntity, hint: JCheckBox?, imageView: ImageView?
+        entity: RenameEntity, hint: JCheckBox?, imageView: ChessBoardPanel?
     ) {
         val existFile2 = isImageExist(entity)
         entity.existFile = existFile2 != null
@@ -216,7 +222,9 @@ class ImagesRenameDialog(
             hint?.isVisible = visible
             if (existFile2 != null) {
                 imageView?.isVisible = true
-                imageView?.setImage(File(existFile2.path))
+                (imageView?.getComponent(0) as? IconPanel)?.apply {
+                    setIcon(existFile2.path, true)
+                }
             } else {
                 imageView?.isVisible = false
             }
