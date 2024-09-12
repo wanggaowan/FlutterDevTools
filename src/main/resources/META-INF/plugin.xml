@@ -135,7 +135,6 @@
 
         <action id="FlutterDevTools.save.log" class="com.wanggaowan.tools.actions.log.SaveGitCommitLogAction"
                 text="记录日志" icon="FlutterDevToolsIcons.addLog" description="将当前提交记录到每日工作日志">
-            <add-to-group group-id="Vcs.MessageActionGroup"/>
             <add-to-group group-id="Vcs.Log.ContextMenu"/>
         </action>
 
