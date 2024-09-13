@@ -143,6 +143,11 @@
             <add-to-group group-id="Vcs.MessageActionGroup"/>
             <add-to-group group-id="Vcs.Log.ContextMenu"/>
         </action>
+
+        <action id="FlutterDevTools.git.commitAndLog" class="com.wanggaowan.tools.actions.git.GitCommitExecutorAction"
+                text="Commit and Log">
+            <add-to-group group-id="Vcs.Commit.PrimaryCommitActions"/>
+        </action>
     </actions>
 
     <applicationListeners>

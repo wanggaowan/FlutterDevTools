@@ -59,7 +59,7 @@ class ProjectOpenActivity : ProjectActivity, DumbAware {
             })
         }
 
-        disposeGitCommit(project)
+        // disposeGitCommit(project)
 
         if (isFlutterProject) {
             CoroutineScope(Dispatchers.Default).launch {
