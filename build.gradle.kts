@@ -6,7 +6,7 @@ plugins {
 
 group = "com.wanggaowan"
 // version = "1.0-SNAPSHOT"
-version = "3.9"
+version = "4.0"
 
 repositories {
     maven { setUrl("https://maven.aliyun.com/repository/central") }

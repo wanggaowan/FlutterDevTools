@@ -7,6 +7,7 @@ import com.intellij.lang.folding.FoldingDescriptor
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbAware
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -42,26 +43,8 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
                 }
 
                 val element = getCouldFoldPsiElement(it) ?: return@forEach
-                // 如果需要多个折叠同时展开，则指定同一个group即可
-                // val group = FoldingGroup.newGroup("flutter dev tools")
-                when (val parent = element.parent) {
-                    is DartLongTemplateEntry -> {
-                        descriptors.add(FoldingDescriptor(parent.node, parent.textRange, null))
-                    }
-
-                    is DartCallExpression -> {
-                        val parent2 = parent.parent
-                        if(parent2 is DartLongTemplateEntry) {
-                            descriptors.add(FoldingDescriptor(parent2.node, parent2.textRange, null))
-                        } else {
-                            descriptors.add(FoldingDescriptor(parent.node, parent.textRange, null))
-                        }
-                    }
-
-                    else -> {
-                        descriptors.add(FoldingDescriptor(it.node, it.textRange, null))
-                    }
-                }
+                val descriptor = createFoldingDescriptor(element) ?: return@forEach
+                descriptors.add(descriptor)
             }
         }
 
@@ -82,12 +65,73 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
         if (splits[1] != "current" && !splits[1].startsWith("of(")) {
             return null
         }
+
         return element
+    }
+
+    private fun createFoldingDescriptor(element: PsiElement): FoldingDescriptor? {
+        // 如果需要多个折叠同时展开，则指定同一个group即可
+        // val group = FoldingGroup.newGroup("flutter dev tools")
+        val parent = element.parent
+        val key = Key<String>("I18nFoldStr")
+        if (parent is DartLongTemplateEntry) {
+            val str = getPlaceholderText(parent)
+            if (str == null) {
+                parent.node.putUserData(key, null)
+                return null
+            }
+
+            parent.node.putUserData(key, str)
+            return FoldingDescriptor(parent.node, parent.textRange, null)
+        }
+
+        if (parent is DartCallExpression) {
+            val parent2 = parent.parent
+            if (parent2 is DartLongTemplateEntry) {
+                val str = getPlaceholderText(parent2)
+                if (str == null) {
+                    parent2.node.putUserData(key, null)
+                    return null
+                }
+
+                parent2.node.putUserData(key, str)
+                return FoldingDescriptor(parent2.node, parent2.textRange, null)
+            } else {
+                val str = getPlaceholderText(parent)
+                if (str == null) {
+                    parent.node.putUserData(key, null)
+                    return null
+                }
+
+                parent.node.putUserData(key, str)
+                return FoldingDescriptor(parent.node, parent.textRange, null)
+            }
+        }
+
+        val str = getPlaceholderText(element)
+        if (str == null) {
+            element.node.putUserData(key, null)
+            return null
+        }
+
+        element.node.putUserData(key, str)
+        return FoldingDescriptor(element.node, element.textRange, null)
     }
 
     override fun getPlaceholderText(node: ASTNode): String? {
         // 返回折叠的元素需要展示的文本内容
-        return getPlaceholderText(node.psi)
+        val key = Key<String>("I18nFoldStr")
+        var str = node.getUserData(key)
+        if (str != null) {
+            return str
+        }
+
+        str = getPlaceholderText(node.psi)
+        if (str != null) {
+            node.putUserData(key, str)
+        }
+
+        return str
     }
 
     private fun getPlaceholderText(psiElement: PsiElement?): String? {

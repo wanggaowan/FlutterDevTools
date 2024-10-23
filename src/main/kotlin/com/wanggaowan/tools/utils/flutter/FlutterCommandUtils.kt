@@ -106,6 +106,20 @@ object FlutterCommandUtils {
     }
 
     /**
+     * 执行pub deps命令
+     */
+    fun pubDeps(
+        module: Module,
+        root: PubRoot,
+        sdk: FlutterSdk,
+        onDone: ((existCode: Int) -> Unit)? = null,
+        processListener: ProcessListener? = null
+    ): Process? {
+        val commandLine = FlutterCommandLine(sdk, root.root, FlutterCommandLine.Type.PUB_DEPS)
+        return commandLine.startInModuleConsole(module, onDone, processListener)
+    }
+
+    /**
      * 执行gen-l10n命令
      */
     fun genL10N(
@@ -156,6 +170,30 @@ object FlutterCommandUtils {
     ) {
         if (!havePubspecLockFile) {
             pubGet(module, pubRoot, flutterSdk, {
+                if (it == 0) {
+                    ApplicationManager.getApplication().runReadAction {
+                        onDone?.run()
+                    }
+                }
+            }
+            )
+        } else {
+            onDone?.run()
+        }
+    }
+
+    /**
+     * 执行pub deps命令
+     */
+    fun doPubDpes(
+        module: Module,
+        pubRoot: PubRoot,
+        flutterSdk: FlutterSdk,
+        havePubspecLockFile: Boolean,
+        onDone: Runnable? = null
+    ) {
+        if (!havePubspecLockFile) {
+            pubDeps(module, pubRoot, flutterSdk, {
                 if (it == 0) {
                     ApplicationManager.getApplication().runReadAction {
                         onDone?.run()

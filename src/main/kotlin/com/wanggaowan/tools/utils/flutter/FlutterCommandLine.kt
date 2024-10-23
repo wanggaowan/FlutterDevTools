@@ -258,6 +258,13 @@ class FlutterCommandLine internal constructor(
             false,
             false,
             "gen-l10n",
+        ),
+        PUB_DEPS(
+            "pub deps",
+            false,
+            false,
+            "pub",
+            "deps"
         );
 
         /**
