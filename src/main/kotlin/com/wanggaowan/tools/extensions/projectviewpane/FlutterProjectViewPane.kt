@@ -267,7 +267,8 @@ private fun fileCouldShow(module: Module?, file: VirtualFile?): Boolean {
                 return false
             }
 
-            if (name == "android" || name == "ios" || name == "web") {
+            if (name == "android" || name == "ios" || name == "web" || name == "macos"
+                || name == "windows" || name == "linux" || name == "unix") {
                 val parent = file.parent
                 if (parent != null && parent.path == module.basePath) {
                     return false

@@ -31,6 +31,7 @@ import org.jetbrains.yaml.psi.YAMLDocument
 import org.jetbrains.yaml.psi.YAMLMapping
 import org.jetbrains.yaml.psi.YAMLScalar
 import org.jetbrains.yaml.psi.YAMLSequence
+import java.io.File
 
 /**
  * 生成图片资源引用，并在pubspec.yaml中生成图片位置声明
@@ -244,7 +245,10 @@ object GeneratorImageRefUtils {
                 }
 
                 if (manager.findFileByUrl("file://${moduleRootFile.path}/$value") == null) {
-                    it.delete()
+                    val file= File("${moduleRootFile.path}/$value")
+                    if (!file.exists()) {
+                        it.delete()
+                    }
                 }
             }
         }
