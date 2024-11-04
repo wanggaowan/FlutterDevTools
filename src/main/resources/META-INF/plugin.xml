@@ -13,6 +13,12 @@
     <depends>Git4Idea</depends>
 
     <actions>
+        <action
+            id="FlutterDevTools.PubGetAction"
+            class="com.wanggaowan.tools.actions.PubGetAction"
+            text="pub get"
+            description="执行Flutter pub get命令"/>
+
         <group id="FlutterDevTools.GenerateGroup">
             <separator/>
             <action id="FlutterDevTools.JsonToDart"
@@ -31,11 +37,7 @@
                     class="com.wanggaowan.tools.actions.addRouter.AddRouterAction" text="添加页面路由"
                     description="根据给定内容，生成路由数据"/>
 
-            <action
-                id="FlutterDevTools.PubGetAction"
-                class="com.wanggaowan.tools.actions.PubGetAction"
-                text="pub get"
-                description="执行Flutter pub get命令"/>
+            <reference id="FlutterDevTools.PubGetAction"/>
 
             <action id="FlutterDevTools.DoL10nAction2"
                     class="com.wanggaowan.tools.actions.DoL10nAction2" text="gen-l10n"
@@ -48,11 +50,7 @@
         <group id="FlutterDevTools.FlutterToolsActionGroup"
                class="com.wanggaowan.tools.actions.ToolsActionGroup">
             <separator/>
-            <action
-                id="FlutterDevTools.PubGetAction"
-                class="com.wanggaowan.tools.actions.PubGetAction"
-                text="pub get"
-                description="执行Flutter pub get命令"/>
+            <reference id="FlutterDevTools.PubGetAction"/>
             <action id="FlutterDevTools.DoL10nAction"
                     class="com.wanggaowan.tools.actions.DoL10nAction" text="gen-l10n"
                     description="执行flutter gen-l10n命令"/>
