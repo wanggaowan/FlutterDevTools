@@ -189,7 +189,7 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
                     if (!XUtils.isImage(name)) {
                         return false
                     }
-                } else if (!name.startsWith("drawable") && !name.startsWith("mipmap")){
+                } else if (!name.startsWith("drawable") && !name.startsWith("mipmap")) {
                     return false
                 }
             }
@@ -201,8 +201,42 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
             return false
         }
 
+        if (isOnlyFlutterDir(virtualFiles)) {
+            return false
+        }
+
         files = virtualFiles
         return true
+    }
+
+    /// 是否仅符合Flutter多分辨率目录结构
+    private fun isOnlyFlutterDir(files: List<VirtualFile>): Boolean {
+        var isOnlyFlutterDir = true
+        val checkVirtualFiles: Iterator<VirtualFile>? =
+            if (files.size == 1) {
+                val file = files[0]
+                if (file.isDirectory) {
+                    val children = file.children
+                    if (children.isEmpty()) null else children.iterator()
+                } else {
+                    null
+                }
+            } else {
+                files.iterator()
+            }
+
+        if (checkVirtualFiles != null) {
+            checkVirtualFiles.forEach {
+                val name = it.name
+                if (it.isDirectory && name != "1.5x" && name != "2.0x" && name != "3.0x" && name != "4.0x") {
+                    isOnlyFlutterDir = false
+                    return@forEach
+                }
+            }
+        } else {
+            isOnlyFlutterDir = false
+        }
+        return isOnlyFlutterDir
     }
 
     // <editor-fold desc="项目内移动到指定目录监听">
