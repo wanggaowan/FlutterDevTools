@@ -29,7 +29,7 @@ intellij {
             "java",
             "Kotlin",
             "Dart:241.18808",
-            "io.flutter:81.0.2",
+            "io.flutter:83.0.2",
             "yaml",
             "Git4Idea",
         )
@@ -61,7 +61,7 @@ tasks {
     }
 
     patchPluginXml {
-        sinceBuild.set("241")
+        sinceBuild.set("243")
         untilBuild.set("10000.*")
     }
 

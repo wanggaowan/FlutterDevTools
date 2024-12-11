@@ -25,6 +25,8 @@
     <ul>
       <li>修复多语言折叠，如果多语言对应内容不存在，则无法展开Bug</li>
       <li>Tools菜单栏中Flutter分组增加pub deps action,查看Flutter依赖关系</li>
+      <li>flutter项目视图，移除mac、windows、linux、ohos平台目录</li>
+      <li>适配flutter新插件版本83.0.2，解决执行flutter命令行指令报错bug</li>
     </ul>
 
     <p>3.9</p>

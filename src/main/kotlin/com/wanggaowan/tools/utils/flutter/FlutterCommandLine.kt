@@ -10,7 +10,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFile
 import io.flutter.FlutterBundle
-import io.flutter.FlutterInitializer
 import io.flutter.FlutterMessages
 import io.flutter.android.IntelliJAndroidSdk
 import io.flutter.console.FlutterConsoles
@@ -116,11 +115,7 @@ class FlutterCommandLine internal constructor(
         return try {
             val commandLine = createGeneralCommandLine(null as Project?)
             log.info(commandLine.toString())
-            val handler = ColoredProcessHandler(commandLine)
-            if (sendAnalytics) {
-                type.sendAnalyticsEvent()
-            }
-            handler
+            ColoredProcessHandler(commandLine)
         } catch (var4: ExecutionException) {
             FlutterMessages.showError(
                 type.title,
@@ -146,7 +141,6 @@ class FlutterCommandLine internal constructor(
                     }
                 }
             })
-            type.sendAnalyticsEvent()
             FlutterCommandStartResult(handler)
         } catch (var4: ExecutionException) {
             if (type.longTime) {
@@ -271,11 +265,5 @@ class FlutterCommandLine internal constructor(
          * 命令参数
          */
         val subCommand: ImmutableList<String> = ImmutableList.copyOf(subCommand)
-
-        // 通知Flutter项目有变更，重新解析
-        open fun sendAnalyticsEvent() {
-            val action = java.lang.String.join("_", subCommand).replace("-".toRegex(), "")
-            FlutterInitializer.getAnalytics().sendEvent("flutter", action)
-        }
     }
 }
