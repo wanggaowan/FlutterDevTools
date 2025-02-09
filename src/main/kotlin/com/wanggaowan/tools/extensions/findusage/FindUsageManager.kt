@@ -262,6 +262,7 @@ class FindUsageManager(val project: Project) {
             val scopeSupplier = getMaxSearchScopeToWarnOfFallingOutOf(targets)
             val searchScopeToWarnOfFallingOutOf = scopeSupplier.get()
             return Searcher(
+                project,
                 psiElement, targets,
                 primaryTargets,
                 secondaryTargets,
@@ -322,6 +323,7 @@ class FindUsageManager(val project: Project) {
 }
 
 class Searcher(
+    private val project: Project,
     private val psiElement: PsiElement,
     private val targets: Array<out UsageTarget>,
     private val primaryTargets: Array<PsiElement2UsageTargetAdapter>,
@@ -343,8 +345,9 @@ class Searcher(
 
         isStart = true
         findProgress.startFindElement(indicator, psiElement)
+        val everythingScope = GlobalSearchScope.everythingScope(project)
         createUsageSearcher().generate {
-            if (!UsageViewManagerImpl.isInScope(it, searchScopeToWarnOfFallingOutOf)) {
+            if (!UsageViewManagerImpl.isInScope(it, searchScopeToWarnOfFallingOutOf, everythingScope)) {
                 return@generate true
             }
 

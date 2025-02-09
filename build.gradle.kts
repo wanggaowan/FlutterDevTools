@@ -1,49 +1,76 @@
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.8.21"
-    id("org.jetbrains.intellij") version "1.13.3"
+    id("org.jetbrains.intellij.platform") version "2.2.1"
 }
-
-group = "com.wanggaowan"
-// version = "1.0-SNAPSHOT"
-version = "4.0"
 
 repositories {
     maven { setUrl("https://maven.aliyun.com/repository/central") }
     mavenCentral()
+
+    intellijPlatform {
+        defaultRepositories()
+    }
 }
 
-// Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-intellij {
-    // version.set("2022.3.1")
-    // type.set("IC") // IC:intellij社区版 IU:intellij收费版
-
-    // version.set("223.8836.35.2231.10406996")
-    type.set("AI") // AndroidStudio
-    // 配置本地已下载IDE路径，具体配置文档查看：https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#configuration-intellij-extension
-    localPath.set("/Users/wgw/Documents/develop/project/ide plugin/test ide/AndroidStudio241.app/Contents")
-    // Git4Idea: git插件
-    // org.jetbrains.android: Android插件
-    plugins.set(
-        listOf(
-            "java",
-            "Kotlin",
-            "Dart:241.18808",
-            "io.flutter:83.0.2",
-            "yaml",
-            "Git4Idea",
-        )
-    )
-
+// 新版本的配置文件：https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
+intellijPlatform {
+    buildSearchableOptions = false
     // 是否开启增量构建
-    instrumentCode.set(false)
+    instrumentCode = false
+
+    pluginConfiguration {
+        group = "com.wanggaowan"
+        name = "FlutterDevTools"
+        version = "4.1"
+
+        ideaVersion {
+            sinceBuild = "242"
+            untilBuild = "10000.*"
+        }
+    }
+
+    // publishing {
+    //     // 用于发布插件的主机名,默认值https://plugins.jetbrains.com
+    //     host = ""
+    //     // 发布需要的秘钥
+    //     token = "7hR4nD0mT0k3n_8f2eG"
+    //     // 要将插件上传到的频道名称列表
+    //     channels = listOf("default")
+    //     // 指定是否应使用 IDE 服务插件存储库服务。
+    //     ideServices = false
+    //     // 发布插件更新并将其标记为隐藏，以防止在批准后公开可见。
+    //     hidden = false
+    // }
+
+    // signing {
+    //     cliPath = file("/path/to/marketplace-zip-signer-cli.jar")
+    //     keyStore = file("/path/to/keyStore.ks")
+    //     keyStorePassword = "..."
+    //     keyStoreKeyAlias = "..."
+    //     keyStoreType = "..."
+    //     keyStoreProviderName = "..."
+    //     privateKey = "..."
+    //     privateKeyFile = file("/path/to/private.pem")
+    //     password = "..."
+    //     certificateChain = "..."
+    //     certificateChainFile = file("/path/to/chain.crt")
+    // }
 }
 
-// dependencies {
-//     implementation("com.aliyun:alimt20181012:1.2.0") {
-//         exclude(group="org.slf4j")
-//     }
-// }
+dependencies {
+    intellijPlatform {
+        // androidStudio("2024.2.2", useInstaller = true)
+        local("/Users/wgw/Documents/develop/project/ide plugin/test ide/Android Studio.app")
+        bundledPlugins("org.jetbrains.kotlin","org.jetbrains.plugins.yaml", "Git4Idea")
+        plugins("Dart:242.24931", "io.flutter:83.0.3")
+    }
+
+    //     implementation("com.aliyun:alimt20181012:1.2.0") {
+    //         exclude(group="org.slf4j")
+    //     }
+}
+
 
 tasks {
     // Set the JVM compatibility versions
@@ -54,28 +81,5 @@ tasks {
 
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions.jvmTarget = "17"
-    }
-
-    buildSearchableOptions {
-        enabled = false
-    }
-
-    patchPluginXml {
-        sinceBuild.set("241")
-        untilBuild.set("10000.*")
-    }
-
-    signPlugin {
-        certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
-        privateKey.set(System.getenv("PRIVATE_KEY"))
-        password.set(System.getenv("PRIVATE_KEY_PASSWORD"))
-    }
-
-    publishPlugin {
-        token.set(System.getenv("PUBLISH_TOKEN"))
-    }
-
-    instrumentCode {
-        compilerVersion.set("241.15989.150")
     }
 }

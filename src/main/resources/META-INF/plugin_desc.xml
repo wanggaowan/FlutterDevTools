@@ -21,6 +21,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>4.1</p>
+    <ul>
+      <li>适配242版本IDE, 最低兼容版本升级为242</li>
+    </ul>
+
     <p>4.0</p>
     <ul>
       <li>修复多语言折叠，如果多语言对应内容不存在，则无法展开Bug</li>
