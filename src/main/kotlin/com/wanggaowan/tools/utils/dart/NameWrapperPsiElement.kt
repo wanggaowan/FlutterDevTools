@@ -25,7 +25,7 @@ class NameWrapperPsiElement(private val node: PsiElement, private val getName: (
         return node.putUserData(p0, p1)
     }
 
-    override fun getIcon(p0: Int): Icon {
+    override fun getIcon(p0: Int): Icon? {
         return node.getIcon(p0)
     }
 
@@ -37,7 +37,7 @@ class NameWrapperPsiElement(private val node: PsiElement, private val getName: (
         return node.language
     }
 
-    override fun getManager(): PsiManager {
+    override fun getManager(): PsiManager? {
         return node.manager
     }
 
@@ -45,31 +45,31 @@ class NameWrapperPsiElement(private val node: PsiElement, private val getName: (
         return node.children
     }
 
-    override fun getParent(): PsiElement {
+    override fun getParent(): PsiElement? {
         return node.parent
     }
 
-    override fun getFirstChild(): PsiElement {
+    override fun getFirstChild(): PsiElement? {
         return node.firstChild
     }
 
-    override fun getLastChild(): PsiElement {
+    override fun getLastChild(): PsiElement? {
         return node.lastChild
     }
 
-    override fun getNextSibling(): PsiElement {
+    override fun getNextSibling(): PsiElement? {
         return node.lastChild
     }
 
-    override fun getPrevSibling(): PsiElement {
+    override fun getPrevSibling(): PsiElement? {
         return node.prevSibling
     }
 
-    override fun getContainingFile(): PsiFile {
+    override fun getContainingFile(): PsiFile? {
         return node.containingFile
     }
 
-    override fun getTextRange(): TextRange {
+    override fun getTextRange(): TextRange? {
         return node.textRange
     }
 
@@ -101,11 +101,11 @@ class NameWrapperPsiElement(private val node: PsiElement, private val getName: (
         return node.textToCharArray()
     }
 
-    override fun getNavigationElement(): PsiElement {
+    override fun getNavigationElement(): PsiElement? {
         return node.navigationElement
     }
 
-    override fun getOriginalElement(): PsiElement {
+    override fun getOriginalElement(): PsiElement? {
         return node.originalElement
     }
 
@@ -129,7 +129,7 @@ class NameWrapperPsiElement(private val node: PsiElement, private val getName: (
         return node.acceptChildren(p0)
     }
 
-    override fun copy(): PsiElement {
+    override fun copy(): PsiElement? {
         return node.copy()
     }
 
@@ -226,7 +226,7 @@ class NameWrapperPsiElement(private val node: PsiElement, private val getName: (
         return node.useScope
     }
 
-    override fun getNode(): ASTNode {
+    override fun getNode(): ASTNode? {
         return node.node
     }
 
