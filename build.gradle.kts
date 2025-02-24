@@ -1,6 +1,8 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "1.8.21"
+    id("org.jetbrains.kotlin.jvm") version "2.1.0"
     id("org.jetbrains.intellij.platform") version "2.2.1"
 }
 
@@ -75,11 +77,11 @@ dependencies {
 tasks {
     // Set the JVM compatibility versions
     withType<JavaCompile> {
-        sourceCompatibility = "17"
-        targetCompatibility = "17"
+        sourceCompatibility = "21"
+        targetCompatibility = "21"
     }
 
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions.jvmTarget = "17"
+        compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
     }
 }

@@ -400,7 +400,7 @@ class JsonToDartAction : DumbAwareAction() {
 
         if (createFactory) {
             val fromJson =
-                "factory ${className}.fromJson(Map<String, dynamic> json) => _\$${className}FromJson(json);"
+                "factory ${className}.fromJson(Map<String, dynamic> json) => _$${className}FromJson(json);"
             DartPsiUtils.createClassMember(project, fromJson)?.also {
                 classMembers.add(it)
             }
@@ -415,7 +415,7 @@ class JsonToDartAction : DumbAwareAction() {
         }
 
         if (createToJson) {
-            val toJson = "Map<String, dynamic> toJson() => _\$${className}ToJson(this);"
+            val toJson = "Map<String, dynamic> toJson() => _$${className}ToJson(this);"
             DartPsiUtils.createCommonElement(project, toJson)?.also {
                 classMembers.add(it)
             }

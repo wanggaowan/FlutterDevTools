@@ -412,7 +412,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         }
 
         val images = getDeDuplicationList(file)
-        if (images.size == 0) {
+        if (images.isEmpty()) {
             return null
         }
 

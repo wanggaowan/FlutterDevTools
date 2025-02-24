@@ -57,10 +57,10 @@ class CopyMultiSameNameImageAction : DumbAwareAction() {
 
                         parent?.children?.forEach { child ->
                             if (XUtils.isImageVariantsFolder(child.name)) {
-                                copyFromFolders?.add(child.name)
+                                copyFromFolders.add(child.name)
                                 try {
                                     copyToFolders.add(copyCacheFolder.createChildDirectory(module, child.name))
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     return@runWriteCommandAction
                                 }
                             }

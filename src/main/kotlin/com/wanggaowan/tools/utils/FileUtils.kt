@@ -21,7 +21,7 @@ object FileUtils {
                 writer = BufferedWriter(FileWriter(file))
                 writer.write(content)
                 return true
-            } catch (e: IOException) {
+            } catch (_: IOException) {
                 return false
             } finally {
                 safeClose(writer)
@@ -44,7 +44,7 @@ object FileUtils {
                 while ((reader.readLine().also { line = it }) != null) {
                     builder.append(line)
                 }
-            } catch (e: IOException) {
+            } catch (_: IOException) {
                 //
             } finally {
                 safeClose(reader)
@@ -56,7 +56,7 @@ object FileUtils {
     private fun safeClose(obj: Closeable?) {
         try {
             obj?.close()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             //
         }
     }

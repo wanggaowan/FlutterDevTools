@@ -88,7 +88,7 @@ class FileChooseDialog(
         }
 
         val model = StructureTreeModel(treeStructure, disposable)
-        model.setComparator(AlphaComparator.INSTANCE)
+        model.setComparator(AlphaComparator.getInstance())
         mBuilder = model
         myTree = Tree(AsyncTreeModel(model, disposable))
         myTree.isRootVisible = false

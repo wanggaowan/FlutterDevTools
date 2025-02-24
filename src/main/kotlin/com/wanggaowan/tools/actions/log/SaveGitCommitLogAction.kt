@@ -71,7 +71,7 @@ class SaveGitCommitLogAction : DumbAwareAction() {
                         val message = logData.fullMessage
                         LogUtils.save(projectName, message)
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     NotificationUtils.showBalloonMsg(project, "日志记录过程发生异常", NotificationType.ERROR)
                     return
                 }

@@ -23,7 +23,7 @@ object ProgressUtils {
                 while (!p0.isCanceled && p0.fraction < 1) {
                     try {
                         Thread.sleep(50)
-                    }catch (e:Exception) {
+                    }catch (_:Exception) {
                         //
                     }
                 }

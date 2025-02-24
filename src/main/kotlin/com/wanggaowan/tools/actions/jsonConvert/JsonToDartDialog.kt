@@ -161,7 +161,7 @@ class JsonToDartDialog(
 
         try {
             mJsonValue = Gson().fromJson(jsonStr, JsonObject::class.java)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.show(mEtJsonContent, MessageType.ERROR, "JSON数据格式不正确")
             return
         }

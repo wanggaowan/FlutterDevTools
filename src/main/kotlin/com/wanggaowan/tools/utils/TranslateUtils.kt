@@ -141,7 +141,7 @@ object TranslateUtils {
             URLEncoder.encode(content, StandardCharsets.UTF_8.name()).replace("+", "%20")
                 .replace("%7E", "~")
                 .replace("*", "%2A")
-        } catch (var2: UnsupportedEncodingException) {
+        } catch (_: UnsupportedEncodingException) {
             content
         }
     }

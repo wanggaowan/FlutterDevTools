@@ -73,7 +73,7 @@ class ImageUsagesHandler(psiElement: PsiElement, private val findDefined: Boolea
 
             val filePath = "${parent.path}/${file.name}"
             val fileRelativePath = if (isExample) {
-                filePath.replace("${exampleDir!!.path}/", "")
+                filePath.replace("${exampleDir.path}/", "")
             } else {
                 filePath.replace("${pubRoot.root.path}/", "")
             }

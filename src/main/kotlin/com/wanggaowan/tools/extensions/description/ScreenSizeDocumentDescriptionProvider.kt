@@ -45,7 +45,7 @@ class ScreenSizeDocumentDescriptionProvider : DocumentationProvider {
                 val size = text.toFloat()
                 val format = DecimalFormat("#.##")
                 "414设计图尺寸：" + format.format(size * 0.38333333333) + "dp"
-            } catch (e: NumberFormatException) {
+            } catch (_: NumberFormatException) {
                 null
             }
         }
@@ -57,7 +57,7 @@ class ScreenSizeDocumentDescriptionProvider : DocumentationProvider {
                 val size = text.toFloat()
                 val format = DecimalFormat("#.##")
                 "1080设计图尺寸：" + format.format(size / 0.38333333333) + "px"
-            } catch (e: NumberFormatException) {
+            } catch (_: NumberFormatException) {
                 null
             }
         }
@@ -90,7 +90,7 @@ class ScreenSizeDocumentDescriptionProvider : DocumentationProvider {
                         return element
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // 不满足要求
             }
         }

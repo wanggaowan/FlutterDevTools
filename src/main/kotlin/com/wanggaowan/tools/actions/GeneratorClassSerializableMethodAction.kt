@@ -69,7 +69,7 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
             return
         }
 
-        selectedClassPsiElement = psiElement as DartClass
+        selectedClassPsiElement = psiElement
         e.presentation.isVisible = true
     }
 
@@ -146,7 +146,7 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
         // 如果选中的类存在序列化方法则则创建
         var existToJson = false
         var existFromList = false
-        for (child in classMembers!!.children) {
+        for (child in classMembers.children) {
             if (child is DartFactoryConstructorDeclaration) {
                 val children = child.getChildrenOfType<DartComponentName>()
                 if (children.size >= 2 && children[0].textMatches(className) && children[1].textMatches("fromJson")) {
@@ -174,7 +174,7 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
 
         createClassConstructorAndSerializableMethod(
             project,
-            classMembers!!,
+            classMembers,
             className,
             !existConstructor,
             !existFactory,
@@ -198,7 +198,7 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
 
         if (createFactory) {
             val fromJson =
-                "factory ${className}.fromJson(Map<String, dynamic> json) => _\$${className}FromJson(json);"
+                "factory ${className}.fromJson(Map<String, dynamic> json) => _$${className}FromJson(json);"
             DartPsiUtils.createClassMember(project, fromJson)?.also {
                 classMembers.add(it)
             }
@@ -213,7 +213,7 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
         }
 
         if (createToJson) {
-            val toJson = "Map<String, dynamic> toJson() => _\$${className}ToJson(this);"
+            val toJson = "Map<String, dynamic> toJson() => _$${className}ToJson(this);"
             DartPsiUtils.createCommonElement(project, toJson)?.also {
                 classMembers.add(it)
             }
@@ -250,21 +250,21 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
                     }
 
                     if (type != null && fieldName != null) {
-                        val isPrivate = fieldName!!.startsWith("_")
+                        val isPrivate = fieldName.startsWith("_")
                         if (isPrivate) {
-                            privateFiled.add(fieldName!!)
+                            privateFiled.add(fieldName)
                         }
 
                         if (index > 0) {
                             constructor.append(", ")
                         }
 
-                        if (!type!!.endsWith("?")) {
+                        if (!type.endsWith("?")) {
                             constructor.append("required ")
                         }
 
                         if (isPrivate) {
-                            constructor.append("$type ${fieldName!!.substring(1)}")
+                            constructor.append("$type ${fieldName.substring(1)}")
                         } else {
                             constructor.append("this.$fieldName")
                         }
@@ -274,7 +274,7 @@ class GeneratorClassSerializableMethodAction : DumbAwareAction() {
             }
 
             val constructorStr: String
-            if (privateFiled.size == 0) {
+            if (privateFiled.isEmpty()) {
                 constructorStr = if (index == 0) "$className();" else constructor.append("});").toString()
             } else {
                 if (index == 0) {

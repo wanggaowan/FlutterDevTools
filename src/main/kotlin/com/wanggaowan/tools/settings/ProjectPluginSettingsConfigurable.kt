@@ -96,7 +96,7 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
         applyCodeComplete()
         PluginSettings.setCopyAndroidStrUseSimpleMode(
             getProjectWrapper(),
-            mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected ?: true
+            mSettingsView?.copyAndroidStrUseSimpleMode?.isSelected != false
         )
 
     }
@@ -147,19 +147,19 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
     private fun applyExtractStr2L10n() {
         PluginSettings.setExtractStr2L10nShowRenameDialog(
             getProjectWrapper(),
-            mSettingsView?.extractStr2L10nShowRenameDialog?.isSelected ?: true
+            mSettingsView?.extractStr2L10nShowRenameDialog?.isSelected != false
         )
         PluginSettings.setExtractStr2L10nTranslateOther(
             getProjectWrapper(),
-            mSettingsView?.extractStr2L10nTranslateOther?.isSelected ?: true
+            mSettingsView?.extractStr2L10nTranslateOther?.isSelected != false
         )
     }
 
     private fun applyCodeComplete() {
         val oldDev = PluginSettings.getCodeCompleteTypeDirectDev(project)
         val oldTransitive = PluginSettings.getCodeCompleteTypeTransitive(project)
-        val dev = mSettingsView?.codeCompleteTypeDirectDev?.isSelected ?: true
-        val transitive = mSettingsView?.codeCompleteTypeTransitive?.isSelected ?: true
+        val dev = mSettingsView?.codeCompleteTypeDirectDev?.isSelected != false
+        val transitive = mSettingsView?.codeCompleteTypeTransitive?.isSelected != false
         PluginSettings.setCodeCompleteTypeDirectDev(getProjectWrapper(), dev)
         PluginSettings.setCodeCompleteTypeTransitive(getProjectWrapper(), transitive)
         if (oldDev != dev || oldTransitive != transitive) {

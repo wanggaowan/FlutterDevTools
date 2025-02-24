@@ -171,7 +171,7 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
                 return text
             }
             return null
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return null
         }
     }
@@ -196,7 +196,7 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
                         } else if (arg.getChildrenOfType<DartReferenceExpression>().isNotEmpty()) {
                             "\${${arg.text}}"
                         } else {
-                            "\$${arg.text}"
+                            "$${arg.text}"
                         }
 
                     newStr.replace(it.value, str)

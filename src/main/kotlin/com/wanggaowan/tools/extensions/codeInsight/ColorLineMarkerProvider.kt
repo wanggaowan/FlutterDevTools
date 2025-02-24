@@ -74,7 +74,7 @@ class ColorLineMarkerProvider : LineMarkerProvider {
     private fun navigate(e: MouseEvent, color: Color) {
         try {
             ColorPicker.showDialog(e.component, "View Colors", color, true, null, true)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             //
         }
     }

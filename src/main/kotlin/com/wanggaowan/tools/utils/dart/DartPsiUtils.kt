@@ -6,13 +6,17 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiWhiteSpace
-import com.intellij.psi.impl.source.codeStyle.CodeStyleManagerImpl
+import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.IncorrectOperationException
 import com.intellij.util.LocalTimeCounter
 import com.jetbrains.lang.dart.DartFileType
-import com.jetbrains.lang.dart.psi.*
+import com.jetbrains.lang.dart.psi.DartFile
+import com.jetbrains.lang.dart.psi.DartImportStatement
+import com.jetbrains.lang.dart.psi.DartIncompleteDeclaration
+import com.jetbrains.lang.dart.psi.DartPartStatement
+import com.wanggaowan.tools.utils.dart.DartPsiUtils.createSemicolonElement
 
 /**
  * 创建Dart PsiElement工具类
@@ -143,7 +147,7 @@ object DartPsiUtils {
             } else {
                 element
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -180,7 +184,7 @@ object DartPsiUtils {
             } else {
                 element
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -196,7 +200,7 @@ object DartPsiUtils {
 
         return try {
             return psiFile.children[0].children[1].children[0].children[0]
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -208,7 +212,7 @@ object DartPsiUtils {
      * @param psiFile 需要格式化文件
      */
     fun reformatFile(project: Project, psiFile: PsiFile) {
-        CodeStyleManagerImpl(project).reformatText(psiFile, mutableListOf(TextRange(0, psiFile.textLength)))
+        CodeStyleManager.getInstance(project).reformatText(psiFile, mutableListOf(TextRange(0, psiFile.textLength)))
     }
 
     /**
@@ -219,7 +223,7 @@ object DartPsiUtils {
      * @param ranges 需要格式化数据区域
      */
     fun reformatFile(project: Project, psiFile: PsiFile, ranges: Collection<TextRange>) {
-        CodeStyleManagerImpl(project).reformatText(psiFile, ranges)
+        CodeStyleManager.getInstance(project).reformatText(psiFile, ranges)
     }
 
     /**

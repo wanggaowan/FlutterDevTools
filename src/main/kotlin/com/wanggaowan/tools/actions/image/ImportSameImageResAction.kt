@@ -312,7 +312,7 @@ object ImportSameImageResUtils {
                 if (!exist) {
                     try {
                         folders.add(importToFolder.createChildDirectory(project, it))
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         return@runWriteCommandAction
                     }
                 }

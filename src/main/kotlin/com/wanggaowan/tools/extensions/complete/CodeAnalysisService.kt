@@ -24,7 +24,6 @@ import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
 import org.jetbrains.yaml.psi.YAMLFile
 import org.jetbrains.yaml.psi.YAMLKeyValue
-import kotlin.collections.set
 
 /**
  * 代码分析
@@ -59,12 +58,9 @@ class CodeAnalysisService(val project: Project) {
             }
 
             val psiFile = pubspecLock.toPsiFile(project) ?: return@runReadAction
-            val pubspecLockPsi = if (psiFile !is YAMLFile) {
-                // IDE可能会把.lock解析为普通文本，因此主动创建虚拟YAMLFile
-                YamlUtils.createDummyFile(project, psiFile.text)
-            } else {
-                psiFile
-            }
+            val pubspecLockPsi = psiFile as? YAMLFile ?:
+            // IDE可能会把.lock解析为普通文本，因此主动创建虚拟YAMLFile
+            YamlUtils.createDummyFile(project, psiFile.text)
 
             val packages = YamlUtils.findElement(pubspecLockPsi, "packages") ?: return@runReadAction
             ModuleRootManager.getInstance(module).orderEntries().classesRoots.forEach {

@@ -18,7 +18,9 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.ThrowableComputable
-import com.intellij.psi.*
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiInvalidElementAccessException
+import com.intellij.psi.PsiReference
 import com.intellij.psi.search.*
 import com.intellij.usageView.UsageInfo
 import com.intellij.usageView.UsageViewContentManager
@@ -78,7 +80,7 @@ class FindUsageManager(val project: Project) {
                     while (mySearchCount.get() < totalCount && !indicator.isCanceled) {
                         try {
                             Thread.sleep(50)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             //
                         }
                     }
@@ -135,7 +137,7 @@ class FindUsageManager(val project: Project) {
                     override fun run(indicator: ProgressIndicator) {
                         try {
                             searcher.search(myUsageCount, parentIndicator)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // 搜索被取消
                         }
 
@@ -452,7 +454,7 @@ class Searcher(
                         val searcher = iterator.next()
                         try {
                             searcher.processElementUsages(element, processor, optionsClone)
-                        } catch (var25: IndexNotReadyException) {
+                        } catch (_: IndexNotReadyException) {
                             DumbService.getInstance(element.project).showDumbModeNotification(
                                 FindBundle.message("notification.find.usages.is.not.available.during.indexing")
                             )

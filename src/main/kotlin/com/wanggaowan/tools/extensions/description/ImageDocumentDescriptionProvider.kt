@@ -68,7 +68,7 @@ class ImageDocumentDescriptionProvider : DocumentationProvider {
         val modulePath = module.basePath ?: ""
         val read = try {
             ImageIO.read(File(imgPath).inputStream())
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
         val width = read?.width ?: 200

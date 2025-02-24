@@ -176,18 +176,18 @@ class CodeCompletionContributor : CompletionContributor() {
         val psiElement = context.file.findElementAt(context.startOffset)
         val parent = psiElement?.parent
         if (parent is DartStringLiteralExpression) {
-            val parentParent = parent.getParent()
+            val parentParent = parent.parent
             if (parentParent is DartUriElement) {
                 val uriAndRange = parentParent.uriStringAndItsRange
                 context.replacementOffset =
-                    parentParent.getTextRange().startOffset + (uriAndRange.second as TextRange).endOffset
+                    parentParent.textRange.startOffset + (uriAndRange.second as TextRange).endOffset
             } else {
                 context.replacementOffset = context.replacementOffset
             }
         } else {
             var reference = context.file.findReferenceAt(context.startOffset)
             if (reference is PsiMultiReference && reference.references.isNotEmpty()) {
-                reference.getRangeInElement()
+                reference.rangeInElement
                 reference = reference.references[0]
             }
 
@@ -237,12 +237,12 @@ class CodeCompletionContributor : CompletionContributor() {
     private fun getPrefixIfCompletingUri(parameters: CompletionParameters): String? {
         val psiElement = parameters.originalPosition
         val parent = psiElement?.parent
-        val parentParent = if (parent is DartStringLiteralExpression) parent.getParent() else null
+        val parentParent = if (parent is DartStringLiteralExpression) parent.parent else null
         if (parentParent is DartUriElement) {
             val uriStringOffset = parentParent.uriStringAndItsRange.second.startOffset
-            if (parameters.offset >= parentParent.getTextRange().startOffset + uriStringOffset) {
-                return parentParent.getText()
-                    .substring(uriStringOffset, parameters.offset - parentParent.getTextRange().startOffset)
+            if (parameters.offset >= parentParent.textRange.startOffset + uriStringOffset) {
+                return parentParent.text
+                    .substring(uriStringOffset, parameters.offset - parentParent.textRange.startOffset)
             }
         }
         return null
