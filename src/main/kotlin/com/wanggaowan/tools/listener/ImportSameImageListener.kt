@@ -216,8 +216,13 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
             if (files.size == 1) {
                 val file = files[0]
                 if (file.isDirectory) {
-                    val children = file.children
-                    if (children.isEmpty()) null else children.iterator()
+                    val fileName = file.name
+                    if (fileName.startsWith("drawable") || fileName.startsWith("mipmap")) {
+                        files.iterator()
+                    } else {
+                        val children = file.children
+                        if (children.isEmpty()) null else children.iterator()
+                    }
                 } else {
                     null
                 }

@@ -119,6 +119,17 @@
                 id="FlutterDevTools.DeleteArbSameKeyElementAction"
                 class="com.wanggaowan.tools.actions.DeleteArbSameKeyElementAction"
                 text="在所有arb文件中删除此项"/>
+
+            <action
+                id="FlutterDevTools.DeleteArbRepeatKeyElementAction"
+                class="com.wanggaowan.tools.actions.DeleteArbRepeatKeyElementAction"
+                text="删除重复项"/>
+
+            <action
+                id="FlutterDevTools.DeleteArbRepeatKeyAndValueElementAction"
+                class="com.wanggaowan.tools.actions.DeleteArbRepeatKeyAndValueElementAction"
+                text="删除重复项(内容也重复)"/>
+
             <separator/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
         </group>

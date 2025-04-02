@@ -6,6 +6,8 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.XUtils
 import java.awt.Toolkit
@@ -44,9 +46,15 @@ class CopyImageRefKeyAction : DumbAwareAction() {
         val project = e.getData(LangDataKeys.PROJECT) ?: return
         val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
         val parent = virtualFile.parent ?: return
-        val referenceKey = XUtils.imageFileToImageKey(project, parent, virtualFile.name, true) ?: return
-        Toolkit.getDefaultToolkit().systemClipboard.setContents(TextTransferable(referenceKey), null)
+        copy(project, parent, virtualFile.name)
         NotificationUtils.showBalloonMsg(project, "已复制到剪切板", NotificationType.INFORMATION)
+    }
+
+    companion object {
+        fun copy(project: Project, parent: VirtualFile, fileName: String) {
+            val referenceKey = XUtils.imageFileToImageKey(project, parent, fileName, true) ?: return
+            Toolkit.getDefaultToolkit().systemClipboard.setContents(TextTransferable(referenceKey), null)
+        }
     }
 }
 

@@ -319,12 +319,15 @@ object ImportSameImageResUtils {
             }
 
             var existsException = false
+            var fileName: String? = null
+            var parent: VirtualFile? = null
             folders.forEach { folder ->
                 val files = if (folder == importToFolder) {
                     mapFiles["1.0x"]
                 } else {
                     mapFiles[folder.name]
                 }
+                parent = folder
 
                 files?.let {
                     it.forEach { child ->
@@ -349,12 +352,18 @@ object ImportSameImageResUtils {
                                 }
                             }
 
-                            if (renameEntity != null && renameEntity.existFile && renameEntity.coverExistFile) {
+                            if (renameEntity != null && renameEntity.existFile) {
+                                if (!renameEntity.coverExistFile) {
+                                    fileName = renameEntity.newName
+                                    return@forEach
+                                }
                                 // 删除已经存在的文件
                                 folder.findChild(renameEntity.newName)?.delete(project)
                             }
 
-                            child.copy(project, folder, renameEntity?.newName ?: child.name)
+                            val name = renameEntity?.newName ?: child.name
+                            fileName = name
+                            child.copy(project, folder, name)
                         } catch (e: Exception) {
                             existsException = true
                             LOG.error(e)
@@ -363,12 +372,18 @@ object ImportSameImageResUtils {
                 }
             }
 
-            progressHelper.done()
             if (existsException) {
                 NotificationUtils.showBalloonMsg(project, "图片已导入，部分图片导入失败", NotificationType.WARNING)
             } else {
+                if (importFiles.size == 1) {
+                    // 导入的图片为单张时，自动创建图片的引用key到剪切板
+                    if (parent != null && fileName != null) {
+                        CopyImageRefKeyAction.copy(project, parent, fileName)
+                    }
+                }
                 NotificationUtils.showBalloonMsg(project, "图片已导入", NotificationType.INFORMATION)
             }
+            progressHelper.done()
             TempFileUtils.clearUnZipCacheFolder(project)
             doneCallback?.invoke()
         }
