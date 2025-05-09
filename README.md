@@ -1,16 +1,26 @@
-### RnDevTools
+### FlutterDevTools
 
-提供RN开发所需工具
+提供Flutter开发所需工具
 
-1. 生成图片资源引用文件
-2. 生成I18n文本资源引用文件
-3. 提供图片资源实时预览文档
-4. 提供I18n文本实时预览文档
-5. i18n文本引用点击快速跳转定位处
+1. 项目结构增加Flutter项目专属分类
+2. 图片资源管理窗口
+3. json转dart
+4. 一键导入android图片
+5. 复制/删除/重命名不同分辨率下的相同图片
+6. 自动/手动生成图片资源引用文件并配置assets节点
+7. 实时显示多语言翻译后文本
+8. 常用Flutter/Dart命令提供快捷方式
+9. 文件导航
+10. 页面路由配置
+11. Android <string/>转化arb文件格式
+12. 创建Dart文件模版，支持多级目录
+13. 提取中文为多语言
+14. 根据模版arb翻译其它语言arb文件功能
+15. 一键删除未使用文件/资源功能
 
 ## ***License***
 
-RnDevTools is released under the Apache 2.0 license.
+FlutterDevTools is released under the Apache 2.0 license.
 
 ```TEXT
 Copyright 2022 wanggaowan.
