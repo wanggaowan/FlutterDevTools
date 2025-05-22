@@ -19,38 +19,151 @@
             text="pub get"
             description="执行Flutter pub get命令"/>
 
-        <group id="FlutterDevTools.GenerateGroup">
+        <group id="FlutterDevTools.ImageOperationActionGroup"
+               class="com.wanggaowan.tools.actions.image.ImageOperationActionGroup">
+            <action id="FlutterDevTools.CopyMultiSameNameFileAction"
+                    class="com.wanggaowan.tools.actions.image.CopyMultiSameNameImageAction"
+                    text="复制不同分辨率下的相同图片"
+                    description="复制不同分辨率下的相同图片"/>
+            <action id="FlutterDevTools.DeleteMultiSameNameFileAction"
+                    class="com.wanggaowan.tools.actions.image.DeleteMultiSameNameImageAction"
+                    text="删除不同分辨率下的相同图片"
+                    description="删除不同分辨率下的相同图片"/>
+            <action id="FlutterDevTools.CopyImageRefKeyAction"
+                    class="com.wanggaowan.tools.actions.image.CopyImageRefKeyAction"
+                    text="复制图片引用"
+                    description="复制图片引用"/>
+        </group>
+
+        <group id="FlutterDevTools.l10n">
+            <action
+                id="FlutterDevTools.ExtractStr2L10n"
+                class="com.wanggaowan.tools.actions.translate.ExtractStr2L10n"
+                text="提取为多语言"/>
+            <action
+                id="FlutterDevTools.ExtractStr2L10nAndTranslate"
+                class="com.wanggaowan.tools.actions.translate.ExtractStr2L10nAndTranslate"
+                text="提取为多语言并翻译"/>
+            <action
+                id="FlutterDevTools.DeleteArbSameKeyElementAction"
+                class="com.wanggaowan.tools.actions.DeleteArbSameKeyElementAction"
+                text="在所有arb文件中删除此项"/>
+
+            <action
+                id="FlutterDevTools.DeleteArbRepeatKeyElementAction"
+                class="com.wanggaowan.tools.actions.DeleteArbRepeatKeyElementAction"
+                text="删除key重复项"/>
+
+            <action
+                id="FlutterDevTools.DeleteArbRepeatKeyAndValueElementAction"
+                class="com.wanggaowan.tools.actions.DeleteArbRepeatKeyAndValueElementAction"
+                text="删除key-value均重复项"/>
+        </group>
+
+        <action id="FlutterDevTools.TranslateArbAction"
+                class="com.wanggaowan.tools.actions.translate.TranslateArbAction"
+                icon="FlutterIcons.Flutter"
+                text="根据模版arb翻译"
+                description="根据模版arb对应内容，将当前文件不存在的内容进行翻译并插入"/>
+
+        <action id="FlutterDevTools.DeleteUnusedFilesAction"
+                class="com.wanggaowan.tools.actions.DeleteUnusedFilesAction"
+                text="删除未被使用的文件"
+                description="当前文件如果未被其它元素引用，则删除"/>
+
+        <action
+            id="FlutterDevTools.CreateFileTemplateAction"
+            class="com.wanggaowan.tools.actions.filetemplate.CreateFileTemplateAction"
+            text="创建Flutter模版文件"
+            icon="FlutterDevToolsIcons.fileTemplate">
+            <add-to-group group-id="NewGroup" relative-to-action="NewFile" anchor="before"/>
+        </action>
+
+        <action id="FlutterDevTools.save.log" class="com.wanggaowan.tools.actions.log.SaveGitCommitLogAction"
+                text="记录日志" icon="FlutterDevToolsIcons.addLog" description="将当前提交记录到每日工作日志">
+            <add-to-group group-id="Vcs.Log.ContextMenu"/>
+        </action>
+
+        <action id="FlutterDevTools.show.log" class="com.wanggaowan.tools.actions.log.ShowGitCommitLogAction"
+                text="查看日志" icon="FlutterDevToolsIcons.log" description="查看每日工作日志">
+            <add-to-group group-id="Vcs.MessageActionGroup"/>
+            <add-to-group group-id="Vcs.Log.ContextMenu"/>
+        </action>
+
+        <action id="FlutterDevTools.git.commitAndLog" class="com.wanggaowan.tools.actions.git.GitCommitExecutorAction"
+                text="Commit and Log">
+            <add-to-group group-id="Vcs.Commit.PrimaryCommitActions"/>
+        </action>
+
+
+        <group id="FlutterDevTools.ProjectViewGroup"
+               popup="true"
+               text="Flutter"
+               icon="FlutterIcons.Flutter"
+               class="com.wanggaowan.tools.actions.MyDefaultActionGroup">
+            <reference id="FlutterDevTools.ImageOperationActionGroup"/>
             <separator/>
+            <reference id="FlutterDevTools.TranslateArbAction"/>
+            <reference id="FlutterDevTools.DeleteUnusedFilesAction"/>
+        </group>
+
+        <group id="FlutterDevTools.ProjectViewGroup.wrap">
+            <reference id="FlutterDevTools.ProjectViewGroup"/>
+            <separator/>
+            <add-to-group group-id="ProjectViewPopupMenu" relative-to-action="CutCopyPasteGroup" anchor="before"/>
+        </group>
+
+        <group id="FlutterDevTools.Images.EditMenuGroup" popup="true" text="Flutter" icon="FlutterIcons.Flutter"
+               class="com.wanggaowan.tools.actions.MyDefaultActionGroup">
+            <reference id="FlutterDevTools.ImageOperationActionGroup"/>
+        </group>
+
+        <group id="FlutterDevTools.Images.EditMenuGroup.wrap">
+            <reference id="FlutterDevTools.Images.EditMenuGroup"/>
+            <separator/>
+            <add-to-group group-id="Images.EditorPopupMenu" anchor="first"/>
+        </group>
+
+        <group id="FlutterDevTools.EditorPopupMenuGroup"
+               popup="true"
+               text="Flutter"
+               icon="FlutterIcons.Flutter"
+               class="com.wanggaowan.tools.actions.MyDefaultActionGroup">
+            <reference id="FlutterDevTools.l10n"/>
+            <action id="FlutterDevTools.DoL10nAction2"
+                    class="com.wanggaowan.tools.actions.DoL10nAction2" text="gen-l10n"
+                    description="执行flutter gen-l10n命令"/>
+            <separator/>
+
             <action id="FlutterDevTools.JsonToDart"
-                    class="com.wanggaowan.tools.actions.jsonConvert.JsonToDartAction" text="Json To Dart"
+                    class="com.wanggaowan.tools.actions.jsonConvert.JsonToDartAction"
+                    text="Json To Dart"
                     description="Json convert to dart"/>
 
             <action id="FlutterDevTools.GeneratorJsonSerializableAction"
                     class="com.wanggaowan.tools.actions.GeneratorClassSerializableMethodAction"
-                    text="生成类序列化方法" description="生成类构造函数及序列化方法，类注解等"/>
+                    text="生成类序列化方法"
+                    description="生成类构造函数及序列化方法，类注解等"/>
 
             <action id="FlutterDevTools.GeneratorSingleGFileAction"
                     class="com.wanggaowan.tools.actions.GeneratorSingleGFileAction" text="生成.g.dart"
                     description="根据Dart实体生成.g.dart文件"/>
 
+            <separator/>
             <action id="FlutterDevTools.AddRouterAction"
                     class="com.wanggaowan.tools.actions.addRouter.AddRouterAction" text="添加页面路由"
                     description="根据给定内容，生成路由数据"/>
-
             <reference id="FlutterDevTools.PubGetAction"/>
-
-            <action id="FlutterDevTools.DoL10nAction2"
-                    class="com.wanggaowan.tools.actions.DoL10nAction2" text="gen-l10n"
-                    description="执行flutter gen-l10n命令"/>
-
-            <separator/>
-            <add-to-group group-id="GenerateGroup" anchor="last"/>
         </group>
 
-        <group id="FlutterDevTools.FlutterToolsActionGroup"
-               class="com.wanggaowan.tools.actions.ToolsActionGroup">
+        <group id="FlutterDevTools.EditorPopupMenuGroup.wrap">
+            <reference id="FlutterDevTools.EditorPopupMenuGroup"/>
             <separator/>
-            <reference id="FlutterDevTools.PubGetAction"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+        </group>
+
+        <group id="FlutterDevTools.FlutterToolsActionGroup">
+            <separator/>
             <action id="FlutterDevTools.DoL10nAction"
                     class="com.wanggaowan.tools.actions.DoL10nAction" text="gen-l10n"
                     description="执行flutter gen-l10n命令"/>
@@ -76,95 +189,6 @@
                     description="生成图片资源引用文件并配置pubspec.yaml assets节点"/>
             <add-to-group group-id="FlutterToolsActionGroup" anchor="last"/>
         </group>
-
-        <group id="FlutterDevTools.ImageOperationActionGroup"
-               class="com.wanggaowan.tools.actions.image.ImageOperationActionGroup">
-            <separator/>
-            <action id="FlutterDevTools.CopyMultiSameNameFileAction"
-                    class="com.wanggaowan.tools.actions.image.CopyMultiSameNameImageAction"
-                    text="复制不同分辨率下的相同图片" icon="FlutterIcons.Flutter"
-                    description="复制不同分辨率下的相同图片"/>
-            <action id="FlutterDevTools.DeleteMultiSameNameFileAction"
-                    class="com.wanggaowan.tools.actions.image.DeleteMultiSameNameImageAction"
-                    text="删除不同分辨率下的相同图片" icon="FlutterIcons.Flutter"
-                    description="删除不同分辨率下的相同图片"/>
-
-            <action id="FlutterDevTools.CopyImageRefKeyAction"
-                    class="com.wanggaowan.tools.actions.image.CopyImageRefKeyAction"
-                    text="复制图片引用" icon="FlutterIcons.Flutter"
-                    description="复制图片引用"/>
-            <separator/>
-            <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
-            <add-to-group group-id="EditorTabPopupMenu" relative-to-action="SplitVertically"
-                          anchor="before"/>
-        </group>
-
-        <action
-            id="FlutterDevTools.CreateFileTemplateAction"
-            class="com.wanggaowan.tools.actions.filetemplate.CreateFileTemplateAction" text="创建Flutter模版文件"
-            icon="FlutterDevToolsIcons.fileTemplate">
-            <add-to-group group-id="NewGroup" relative-to-action="NewFile" anchor="before"/>
-        </action>
-
-        <group id="FlutterDevTools.l10n">
-            <action
-                id="FlutterDevTools.ExtractStr2L10n"
-                class="com.wanggaowan.tools.actions.translate.ExtractStr2L10n"
-                text="提取为多语言"/>
-            <action
-                id="FlutterDevTools.ExtractStr2L10nAndTranslate"
-                class="com.wanggaowan.tools.actions.translate.ExtractStr2L10nAndTranslate"
-                text="提取为多语言并翻译"/>
-            <action
-                id="FlutterDevTools.DeleteArbSameKeyElementAction"
-                class="com.wanggaowan.tools.actions.DeleteArbSameKeyElementAction"
-                text="在所有arb文件中删除此项"/>
-
-            <action
-                id="FlutterDevTools.DeleteArbRepeatKeyElementAction"
-                class="com.wanggaowan.tools.actions.DeleteArbRepeatKeyElementAction"
-                text="删除重复项"/>
-
-            <action
-                id="FlutterDevTools.DeleteArbRepeatKeyAndValueElementAction"
-                class="com.wanggaowan.tools.actions.DeleteArbRepeatKeyAndValueElementAction"
-                text="删除重复项(内容也重复)"/>
-
-            <separator/>
-            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
-        </group>
-
-        <action id="FlutterDevTools.TranslateArbAction"
-                class="com.wanggaowan.tools.actions.translate.TranslateArbAction"
-                icon="FlutterIcons.Flutter"
-                text="根据模版arb翻译"
-                description="根据模版arb对应内容，将当前文件不存在的内容进行翻译并插入">
-            <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
-        </action>
-
-        <action id="FlutterDevTools.DeleteUnusedFilesAction"
-                class="com.wanggaowan.tools.actions.DeleteUnusedFilesAction"
-                icon="FlutterIcons.Flutter"
-                text="删除未被使用的文件"
-                description="当前文件如果未被其它元素引用，则删除">
-            <add-to-group group-id="CutCopyPasteGroup" anchor="last"/>
-        </action>
-
-        <action id="FlutterDevTools.save.log" class="com.wanggaowan.tools.actions.log.SaveGitCommitLogAction"
-                text="记录日志" icon="FlutterDevToolsIcons.addLog" description="将当前提交记录到每日工作日志">
-            <add-to-group group-id="Vcs.Log.ContextMenu"/>
-        </action>
-
-        <action id="FlutterDevTools.show.log" class="com.wanggaowan.tools.actions.log.ShowGitCommitLogAction"
-                text="查看日志" icon="FlutterDevToolsIcons.log" description="查看每日工作日志">
-            <add-to-group group-id="Vcs.MessageActionGroup"/>
-            <add-to-group group-id="Vcs.Log.ContextMenu"/>
-        </action>
-
-        <action id="FlutterDevTools.git.commitAndLog" class="com.wanggaowan.tools.actions.git.GitCommitExecutorAction"
-                text="Commit and Log">
-            <add-to-group group-id="Vcs.Commit.PrimaryCommitActions"/>
-        </action>
     </actions>
 
     <applicationListeners>

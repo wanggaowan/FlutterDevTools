@@ -21,6 +21,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>4.3</p>
+    <ul>
+      <li>重新组织插件中的action，将其全部放到Flutter分组中</li>
+    </ul>
+
     <p>4.2</p>
     <ul>
       <li>增加一键删除arb中重复定义的内容</li>
