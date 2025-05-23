@@ -28,6 +28,7 @@ object TranslateUtils {
 
     suspend fun translate(
         text: String,
+        sourceLanguage: String,
         targetLanguage: String,
     ): String? {
         val uuid = UUID.randomUUID().toString()
@@ -48,7 +49,7 @@ object TranslateUtils {
         queryMap["SignatureMethod"] = "HMAC-SHA1"
         queryMap["Status"] = "Available"
         queryMap["SignatureNonce"] = uuid
-        queryMap["SourceLanguage"] = "zh"
+        queryMap["SourceLanguage"] = sourceLanguage
         queryMap["SourceText"] = text
         queryMap["TargetLanguage"] = targetLanguage
         queryMap["Timestamp"] = time
@@ -213,7 +214,7 @@ object TranslateUtils {
     ): String? {
         var translateStr = fixTranslatePlaceHolderStr(translate, useEscaping, placeHolderCount)
         translateStr = fixNewLineFormatError(translateStr)
-        translateStr = translateStr?.replace("\"","\\\"")
+        translateStr = translateStr?.replace("\"", "\\\"")
         return translateStr
     }
 
@@ -265,23 +266,6 @@ object TranslateUtils {
         }
 
         val regex = Regex("\\\\\\s+n") // \\\s+n
-        return fixFormatError(regex, text, "\\n")
-    }
-
-    private tailrec fun fixFormatError(
-        regex: Regex,
-        text: String,
-        placeHolder: String,
-        oldRange: IntRange? = null
-    ): String {
-        if (text.isEmpty()) {
-            return text
-        }
-        val matchResult = regex.find(text) ?: return text
-        if (matchResult.range == oldRange) {
-            return text
-        }
-
-        return fixFormatError(regex, text.replaceRange(matchResult.range, placeHolder), placeHolder, matchResult.range)
+        return text.replace(regex, "\\n")
     }
 }

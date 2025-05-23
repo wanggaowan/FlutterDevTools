@@ -132,13 +132,27 @@ class TranslateArbAction : DumbAwareAction() {
 
         val tempArbPsiFile = arbFile.toPsiFile(project) ?: return
         val arbPsiFile = selectedFile.toPsiFile(project) ?: return
+        if (selectedFile.path == arbFile.path) {
+            return
+        }
+
         val tempJsonObject = tempArbPsiFile.getChildOfType<JsonObject>() ?: return
         val jsonObject = arbPsiFile.getChildOfType<JsonObject>()
         val targetLanguage = jsonObject?.findProperty("@@locale")?.value?.text?.replace("\"", "")
         if (targetLanguage == null) {
             NotificationUtils.showBalloonMsg(
                 project,
-                "未配置arb文件@@locale属性",
+                "${selectedFile.name}未配置@@locale属性",
+                NotificationType.WARNING
+            )
+            return
+        }
+
+        val sourceLanguage = tempJsonObject.findProperty("@@locale")?.value?.text?.replace("\"", "")
+        if (sourceLanguage == null) {
+            NotificationUtils.showBalloonMsg(
+                project,
+                "模板文件${arbFile.name}未配置@@locale属性",
                 NotificationType.WARNING
             )
             return
@@ -164,7 +178,7 @@ class TranslateArbAction : DumbAwareAction() {
 
                 progressIndicator.fraction = 0.05
                 var existTranslateFailed = false
-                CoroutineScope(Dispatchers.Default).launch launch2@{
+                CoroutineScope(Dispatchers.IO).launch launch2@{
                     var count = 1.0
                     val total = needTranslateMap.size
                     needTranslateMap.forEach { (key, value) ->
@@ -179,7 +193,9 @@ class TranslateArbAction : DumbAwareAction() {
                         // 如果是翻译API有QPS等限制，那应该不管什么平台都会变慢。但是Android Studio基本不会变慢。
                         // 但是如果我只是模拟翻译接口，不去实际调用接口，IDE也不会变慢，从这又感觉是翻译API的限制
                         var translateStr =
-                            if (value.isNullOrEmpty()) value else TranslateUtils.translate(value, targetLanguage)
+                            if (value.isNullOrEmpty()) value else TranslateUtils.translate(value,
+                                sourceLanguage,
+                                targetLanguage)
                         progressIndicator.fraction = count / total * 0.94 + 0.05
                         if (translateStr == null) {
                             existTranslateFailed = true

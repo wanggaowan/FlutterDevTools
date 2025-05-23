@@ -1,6 +1,7 @@
 package com.wanggaowan.tools.listener
 
 import com.intellij.ide.actionsOnSave.impl.ActionsOnSaveFileDocumentManagerListener.ActionOnSave
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -101,9 +102,11 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
         val file: VirtualFile = event.oldFile ?: return
         if (needDoGenL10nMap[file.path] == true) {
             needDoGenL10nMap.remove(file.path)
-            val module = ModuleUtilCore.findModuleForFile(file, event.manager.project) ?: return
-            fileDocumentManager.value.saveAllDocuments()
-            doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
+            ApplicationManager.getApplication().runReadAction {
+                val module = ModuleUtilCore.findModuleForFile(file, event.manager.project) ?: return@runReadAction
+                fileDocumentManager.value.saveAllDocuments()
+                doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
+            }
         }
     }
 

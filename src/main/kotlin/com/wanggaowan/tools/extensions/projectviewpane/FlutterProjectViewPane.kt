@@ -14,6 +14,7 @@ import com.intellij.ide.projectView.impl.ProjectTreeStructure
 import com.intellij.ide.projectView.impl.ProjectViewPane
 import com.intellij.ide.projectView.impl.nodes.*
 import com.intellij.ide.util.treeView.AbstractTreeNode
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.module.impl.LoadedModuleDescriptionImpl
@@ -38,6 +39,25 @@ import javax.swing.Icon
 class FlutterProjectViewPane(private val project: Project) : ProjectViewPane(project) {
     private val id = "FlutterDevTools.FlutterPane"
 
+    private var isFlutterProject = false;
+
+    init {
+        ApplicationManager.getApplication().runReadAction {
+            val modules = project.getModules()
+            if (modules.isNullOrEmpty()) {
+                isFlutterProject = true
+                return@runReadAction
+            }
+
+            for (module in modules) {
+                if (module.isFlutterProject) {
+                    isFlutterProject = true
+                    return@runReadAction
+                }
+            }
+        }
+    }
+
     override fun getTitle(): String {
         return "Flutter"
     }
@@ -46,18 +66,7 @@ class FlutterProjectViewPane(private val project: Project) : ProjectViewPane(pro
      * 判断项目视图是否展示
      */
     override fun isInitiallyVisible(): Boolean {
-        val modules = project.getModules()
-        if (modules.isNullOrEmpty()) {
-            return false
-        }
-
-        for (module in modules) {
-            if (module.isFlutterProject) {
-                return true
-            }
-        }
-
-        return false
+        return isFlutterProject
     }
 
     override fun getIcon(): Icon {
