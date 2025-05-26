@@ -27,7 +27,7 @@ intellijPlatform {
         version = "4.3"
 
         ideaVersion {
-            sinceBuild = "242"
+            sinceBuild = "243"
             untilBuild = "10000.*"
         }
     }
@@ -65,7 +65,7 @@ dependencies {
         // androidStudio("2024.2.2", useInstaller = true)
         local("/Users/wgw/Documents/develop/project/ide plugin/test ide/Android Studio.app")
         bundledPlugins("org.jetbrains.kotlin","org.jetbrains.plugins.yaml", "Git4Idea")
-        plugins("Dart:242.24931", "io.flutter:83.0.3")
+        plugins("Dart:243.23654.44", "io.flutter:85.3.1")
     }
 
     //     implementation("com.aliyun:alimt20181012:1.2.0") {

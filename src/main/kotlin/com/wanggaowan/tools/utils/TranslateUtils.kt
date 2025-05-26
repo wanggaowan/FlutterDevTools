@@ -5,14 +5,15 @@ import ai.grazie.text.replace
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.diagnostic.logger
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import java.io.UnsupportedEncodingException
+import java.net.URI
 import java.net.URLEncoder
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
+import java.time.Duration
 import java.util.*
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -26,7 +27,20 @@ private val LOG = logger<TranslateUtils>()
  */
 object TranslateUtils {
 
-    suspend fun translate(
+    private var httpClient: HttpClient? = null
+    private var ofString: HttpResponse.BodyHandler<String?>? = null
+
+    fun createHttpClient(): HttpClient {
+        if (httpClient == null) {
+            httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMillis(10000))
+                .build()
+            ofString = HttpResponse.BodyHandlers.ofString()
+        }
+        return httpClient!!
+    }
+
+    fun translate(
         text: String,
         sourceLanguage: String,
         targetLanguage: String,
@@ -60,15 +74,13 @@ object TranslateUtils {
         val signature = encodeURI(Base64.getEncoder().encodeToString(signatureMethod(stringToSign)))
         queryString += "&Signature=$signature"
         try {
-            val response = HttpClient(CIO) {
-                engine {
-                    requestTimeout = 5000
-                    endpoint {
-                        connectTimeout = 5000
-                    }
-                }
-            }.get("https://mt.cn-hangzhou.aliyuncs.com/?$queryString")
-            val body = response.bodyAsText()
+            val request: HttpRequest? = HttpRequest.newBuilder()
+                .uri(URI.create("https://mt.cn-hangzhou.aliyuncs.com/?$queryString"))
+                .GET()
+                .build()
+
+            val response: HttpResponse<String?> = createHttpClient().send(request, ofString)
+            val body = response.body() ?: ""
             if (body.isEmpty()) {
                 return null
             }
