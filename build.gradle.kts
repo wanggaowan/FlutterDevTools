@@ -24,7 +24,7 @@ intellijPlatform {
     pluginConfiguration {
         group = "com.wanggaowan"
         name = "FlutterDevTools"
-        version = "4.3"
+        version = "4.4"
 
         ideaVersion {
             sinceBuild = "243"

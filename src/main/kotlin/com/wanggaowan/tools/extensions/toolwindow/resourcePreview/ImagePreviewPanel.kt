@@ -2,6 +2,7 @@ package com.wanggaowan.tools.extensions.toolwindow.resourcePreview
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -42,7 +43,7 @@ import javax.swing.event.DocumentListener
 import kotlin.properties.Delegates
 
 /**
- * ImagePreviewPanel的另一种实现，采用JBList实现，JBList同样支持网格，但是列数量无法精准控制，暂时放在这里做一个参考
+ * ImagePreviewPanel的另一种实现，采用JBList实现，JBList同样支持网格，但是列数量无法精准控制
  *
  * @author Created by wanggaowan on 2024/2/21 17:38
  */
@@ -79,7 +80,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private var mRootFilePath: String? = null
 
     private val defaultCoroutineScope = CoroutineScope(Dispatchers.Default)
-    private val mainCoroutineScope = CoroutineScope(Dispatchers.Main)
+    private val mainCoroutineScope = CoroutineScope(Dispatchers.EDT)
     private var mGetImageJob: Job? = null
     private var mSingleClickOpenFile: Boolean = false
     private var mSelectedImage: Property? = null

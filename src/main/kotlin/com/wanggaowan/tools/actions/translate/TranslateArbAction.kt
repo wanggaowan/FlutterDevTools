@@ -7,7 +7,6 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
@@ -17,6 +16,7 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.util.LocalTimeCounter
+import com.intellij.util.application
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.TranslateUtils
@@ -160,9 +160,9 @@ class TranslateArbAction : DumbAwareAction() {
 
         ProgressUtils.runBackground(project, "Translate", true) { progressIndicator ->
             progressIndicator.isIndeterminate = false
-            ApplicationManager.getApplication().runReadAction {
-                progressIndicator.text = "Count all strings that need to be translated"
-                val needTranslateMap = mutableMapOf<String, String?>()
+            progressIndicator.text = "Count all strings that need to be translated"
+            val needTranslateMap = mutableMapOf<String, String?>()
+            application.invokeAndWait {
                 tempJsonObject.propertyList.forEach {
                     val name = it.name
                     val find = jsonObject.findProperty(name)
@@ -170,60 +170,60 @@ class TranslateArbAction : DumbAwareAction() {
                         needTranslateMap[name] = it.value?.text?.replace("\"", "")
                     }
                 }
+            }
 
-                if (needTranslateMap.isEmpty()) {
-                    progressIndicator.fraction = 1.0
-                    return@runReadAction
-                }
+            if (needTranslateMap.isEmpty()) {
+                progressIndicator.fraction = 1.0
+                return@runBackground
+            }
 
-                progressIndicator.fraction = 0.05
-                var existTranslateFailed = false
-                CoroutineScope(Dispatchers.IO).launch launch2@{
-                    var count = 1.0
-                    val total = needTranslateMap.size
-                    needTranslateMap.forEach { (key, value) ->
-                        if (progressIndicator.isCanceled) {
-                            return@launch2
-                        }
+            progressIndicator.fraction = 0.05
+            var existTranslateFailed = false
+            CoroutineScope(Dispatchers.IO).launch launch2@{
+                var count = 1.0
+                val total = needTranslateMap.size
+                needTranslateMap.forEach { (key, value) ->
+                    if (progressIndicator.isCanceled) {
+                        return@launch2
+                    }
 
-                        progressIndicator.text = "${count.toInt()} / $total Translating: $key"
+                    progressIndicator.text = "${count.toInt()} / $total Translating: $key"
 
-                        // 目前发现IDE连续翻译大概300条内容后，速度会越来越慢，而Android Studio基本没有此问题
-                        // 目前不知道为何。此处暂时记录，以后 看看能不能优化。
-                        // 如果是翻译API有QPS等限制，那应该不管什么平台都会变慢。但是Android Studio基本不会变慢。
-                        // 但是如果我只是模拟翻译接口，不去实际调用接口，IDE也不会变慢，从这又感觉是翻译API的限制
-                        var translateStr =
-                            if (value.isNullOrEmpty()) value else TranslateUtils.translate(value,
-                                sourceLanguage,
-                                targetLanguage)
-                        progressIndicator.fraction = count / total * 0.94 + 0.05
-                        if (translateStr == null) {
-                            existTranslateFailed = true
+                    // 目前发现IDE连续翻译大概300条内容后，速度会越来越慢，而Android Studio基本没有此问题
+                    // 目前不知道为何。此处暂时记录，以后 看看能不能优化。
+                    // 如果是翻译API有QPS等限制，那应该不管什么平台都会变慢。但是Android Studio基本不会变慢。
+                    // 但是如果我只是模拟翻译接口，不去实际调用接口，IDE也不会变慢，从这又感觉是翻译API的限制
+                    var translateStr =
+                        if (value.isNullOrEmpty()) value else TranslateUtils.translate(value,
+                            sourceLanguage,
+                            targetLanguage)
+                    progressIndicator.fraction = count / total * 0.94 + 0.05
+                    if (translateStr == null) {
+                        existTranslateFailed = true
+                    } else {
+                        val placeHolderCount = if (translateStr.indexOf("{Param") != -1) 5 else 0
+                        translateStr =
+                            TranslateUtils.fixTranslateError(
+                                translateStr,
+                                targetLanguage,
+                                useEscaping,
+                                placeHolderCount
+                            )
+                        if (translateStr != null) {
+                            writeResult(project, arbPsiFile, jsonObject, key, translateStr)
                         } else {
-                            val placeHolderCount = if (translateStr.indexOf("{Param") != -1) 5 else 0
-                            translateStr =
-                                TranslateUtils.fixTranslateError(
-                                    translateStr,
-                                    targetLanguage,
-                                    useEscaping,
-                                    placeHolderCount
-                                )
-                            if (translateStr != null) {
-                                writeResult(project, arbPsiFile, jsonObject, key, translateStr)
-                            } else {
-                                existTranslateFailed = true
-                            }
+                            existTranslateFailed = true
                         }
-                        count++
                     }
-                    progressIndicator.fraction = 1.0
-                    if (existTranslateFailed) {
-                        NotificationUtils.showBalloonMsg(
-                            project,
-                            "部分内容未翻译或插入成功，请重试",
-                            NotificationType.WARNING
-                        )
-                    }
+                    count++
+                }
+                progressIndicator.fraction = 1.0
+                if (existTranslateFailed) {
+                    NotificationUtils.showBalloonMsg(
+                        project,
+                        "部分内容未翻译或插入成功，请重试",
+                        NotificationType.WARNING
+                    )
                 }
             }
         }
