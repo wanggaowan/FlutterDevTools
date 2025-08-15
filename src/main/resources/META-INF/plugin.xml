@@ -257,6 +257,8 @@
 
         <customPasteProvider
             implementation="com.wanggaowan.tools.extensions.AndroidStringPasteProvider"/>
+        <customPasteProvider
+            implementation="com.wanggaowan.tools.extensions.AndroidColorPasteProvider"/>
 
         <fileType name="ARB" extensions="arb" language="JSON"
                   implementationClass="com.wanggaowan.tools.extensions.filetype.ArbFileType"/>

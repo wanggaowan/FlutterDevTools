@@ -21,6 +21,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>4.5</p>
+    <ul>
+      <li>增加粘贴Android &lt;color/&gt; 文本到dart文件时，自动转化为dart代码格式</li>
+    </ul>
+
     <p>4.4</p>
     <ul>
       <li>修复提取多语言部分操作只能在EDT执行但实际执行不在EDT线程及写入上下文不安全问题</li>
@@ -154,7 +159,7 @@
 
     <p>2.3</p>
     <ul>
-       <li>粘贴android <string/>文本转化为flutter多语言文本，占位符转化支持简单模式</li>
+       <li>粘贴android <string/>文本转化为flutter多语言文本时，占位符转化支持简单模式</li>
        <li>优化图片资源管理窗口，解决图片数量巨大的情况下使用卡顿问题</li>
     </ul>
 
