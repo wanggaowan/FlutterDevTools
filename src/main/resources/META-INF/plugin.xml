@@ -101,25 +101,25 @@
                text="Flutter"
                icon="FlutterIcons.Flutter"
                class="com.wanggaowan.tools.actions.MyDefaultActionGroup">
-            <reference id="FlutterDevTools.ImageOperationActionGroup"/>
+            <reference ref="FlutterDevTools.ImageOperationActionGroup"/>
             <separator/>
-            <reference id="FlutterDevTools.TranslateArbAction"/>
-            <reference id="FlutterDevTools.DeleteUnusedFilesAction"/>
+            <reference ref="FlutterDevTools.TranslateArbAction"/>
+            <reference ref="FlutterDevTools.DeleteUnusedFilesAction"/>
         </group>
 
         <group id="FlutterDevTools.ProjectViewGroup.wrap">
-            <reference id="FlutterDevTools.ProjectViewGroup"/>
+            <reference ref="FlutterDevTools.ProjectViewGroup"/>
             <separator/>
             <add-to-group group-id="ProjectViewPopupMenu" relative-to-action="CutCopyPasteGroup" anchor="before"/>
         </group>
 
         <group id="FlutterDevTools.Images.EditMenuGroup" popup="true" text="Flutter" icon="FlutterIcons.Flutter"
                class="com.wanggaowan.tools.actions.MyDefaultActionGroup">
-            <reference id="FlutterDevTools.ImageOperationActionGroup"/>
+            <reference ref="FlutterDevTools.ImageOperationActionGroup"/>
         </group>
 
         <group id="FlutterDevTools.Images.EditMenuGroup.wrap">
-            <reference id="FlutterDevTools.Images.EditMenuGroup"/>
+            <reference ref="FlutterDevTools.Images.EditMenuGroup"/>
             <separator/>
             <add-to-group group-id="Images.EditorPopupMenu" anchor="first"/>
         </group>
@@ -129,7 +129,7 @@
                text="Flutter"
                icon="FlutterIcons.Flutter"
                class="com.wanggaowan.tools.actions.MyDefaultActionGroup">
-            <reference id="FlutterDevTools.l10n"/>
+            <reference ref="FlutterDevTools.l10n"/>
             <action id="FlutterDevTools.DoL10nAction2"
                     class="com.wanggaowan.tools.actions.DoL10nAction2" text="gen-l10n"
                     description="执行flutter gen-l10n命令"/>
@@ -153,11 +153,11 @@
             <action id="FlutterDevTools.AddRouterAction"
                     class="com.wanggaowan.tools.actions.addRouter.AddRouterAction" text="添加页面路由"
                     description="根据给定内容，生成路由数据"/>
-            <reference id="FlutterDevTools.PubGetAction"/>
+            <reference ref="FlutterDevTools.PubGetAction"/>
         </group>
 
         <group id="FlutterDevTools.EditorPopupMenuGroup.wrap">
-            <reference id="FlutterDevTools.EditorPopupMenuGroup"/>
+            <reference ref="FlutterDevTools.EditorPopupMenuGroup"/>
             <separator/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
         </group>

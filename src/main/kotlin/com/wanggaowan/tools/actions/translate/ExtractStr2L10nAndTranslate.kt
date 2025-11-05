@@ -222,11 +222,14 @@ object ExtractUtils {
 
         var sourceLanguage = "zh"
         if (existKey == null) {
-            val language = jsonObject?.findProperty("@@locale")?.value?.text?.replace("\"", "")
+            var language = jsonObject?.findProperty("@@locale_alias")?.value?.text?.replace("\"", "")
+            if (language == null || language.isEmpty()) {
+                language = jsonObject?.findProperty("@@locale")?.value?.text?.replace("\"", "")
+            }
             if (language == null) {
                 NotificationUtils.showBalloonMsg(
                     project,
-                    "模板文件${arbFile.name}未配置@@locale属性",
+                    "模板文件${arbFile.name}未配置@@locale属性或@@locale_alias属性",
                     NotificationType.WARNING
                 )
                 return
@@ -253,8 +256,9 @@ object ExtractUtils {
                         continue
                     }
 
+                    val targetLanguageAlias = json.findProperty("@@locale_alias")?.value?.text?.replace("\"", "")
                     val targetLanguage = json.findProperty("@@locale")?.value?.text?.replace("\"", "")
-                    otherArbFile.add(TranslateArbFile(targetLanguage, file, json))
+                    otherArbFile.add(TranslateArbFile(targetLanguage, targetLanguageAlias, file, json))
                 }
             }
         }
@@ -311,12 +315,13 @@ object ExtractUtils {
                     var current = 1.0
                     progressIndicator.fraction = current / totalCount * 0.95
                     otherArbFile.forEach { file ->
-                        if (file.targetLanguage == "en" && !isFormat) {
+                        val targetLanguage = file.translateLanguage
+                        if (targetLanguage == "en" && !isFormat) {
                             file.translate = enTranslate
-                        } else if (file.targetLanguage != null) {
+                        } else if (!targetLanguage.isNullOrEmpty()) {
                             val translate2 = TranslateUtils.fixTranslateError(
-                                TranslateUtils.translate(originalText, sourceLanguage, file.targetLanguage),
-                                file.targetLanguage,
+                                TranslateUtils.translate(originalText, sourceLanguage, targetLanguage),
+                                targetLanguage,
                                 useEscaping,
                                 dartTemplateEntryList.size,
                             )
@@ -385,7 +390,7 @@ object ExtractUtils {
                                             tl,
                                             false
                                         )
-                                    } else if (file.targetLanguage == null) {
+                                    } else if (file.translateLanguage.isNullOrEmpty()) {
                                         existFailed = true
                                     }
                                 }
@@ -393,7 +398,7 @@ object ExtractUtils {
                                 if (existFailed) {
                                     NotificationUtils.showBalloonMsg(
                                         project,
-                                        "存在部分arb文件未配置@@locale属性，此文件的翻译已忽略",
+                                        "存在部分arb文件未配置@@locale属性或@@locale_alias属性，此文件的翻译已忽略",
                                         NotificationType.WARNING
                                     )
                                 }
@@ -617,17 +622,32 @@ class InputKeyDialog(
                 val box = Box.createHorizontalBox()
                 box.border = BorderFactory.createEmptyBorder(4, 0, 0, 0)
 
-                val label2 = JLabel("${it.targetLanguage ?: ""}：")
+
+                var title = it.targetLanguage ?: ""
+                if (!it.targetLanguageAlias.isNullOrEmpty()) {
+                    title += "(${it.targetLanguageAlias})"
+                }
+                title += "："
+
+                // val label2 = JLabel(title)
+
+                val label2 = JBTextArea (title)
+                label2.isEditable = false // 如果不需要编辑功能
+                label2.lineWrap = true // 启用自动换行
+                label2.wrapStyleWord = true // 确保单词不会被拆分到两行
+                label2.setBorder(BorderFactory.createEmptyBorder())
                 label2.preferredSize = Dimension(40, 60)
+                label2.maximumSize = Dimension(80, 60)
+                label2.minimumSize = Dimension(40, 60)
                 box.add(label2)
 
                 val content =
-                    if (it.targetLanguage == null) "${it.arbFile.name}未配置@@locale属性,无法翻译, 请配置属性后重试" else it.translate
+                    if (it.translateLanguage.isNullOrEmpty()) "${it.arbFile.name}未配置@@locale属性或@@locale_alias属性,无法翻译, 请配置属性后重试" else it.translate
                 val textArea = JBTextArea(content)
                 textArea.minimumSize = Dimension(260, 60)
                 textArea.lineWrap = true
                 textArea.wrapStyleWord = true
-                if(it.targetLanguage == null) {
+                if (it.translateLanguage.isNullOrEmpty()) {
                     textArea.isEditable = false
                     textArea.foreground = JBColor.RED
                 }
@@ -724,8 +744,13 @@ class InputKeyDialog(
 // 需要翻译的arbFile数据
 data class TranslateArbFile(
     val targetLanguage: String?,
+    val targetLanguageAlias: String?,
     val arbFile: PsiFile,
     val jsonObject: JsonObject?,
     var translate: String? = null
-)
+) {
+    /// 用于翻译的目标语言
+    val translateLanguage
+        get() = targetLanguageAlias ?: targetLanguage
+}
 

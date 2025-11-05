@@ -21,6 +21,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>4.6</p>
+    <ul>
+      <li>翻译arb文件时，支持通过@@locale_alias设置语言别名</li>
+    </ul>
+
     <p>4.5</p>
     <ul>
       <li>增加粘贴Android &lt;color/&gt; 文本到dart文件时，自动转化为dart代码格式</li>

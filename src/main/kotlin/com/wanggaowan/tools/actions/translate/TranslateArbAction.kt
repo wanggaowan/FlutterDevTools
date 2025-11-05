@@ -138,21 +138,29 @@ class TranslateArbAction : DumbAwareAction() {
 
         val tempJsonObject = tempArbPsiFile.getChildOfType<JsonObject>() ?: return
         val jsonObject = arbPsiFile.getChildOfType<JsonObject>()
-        val targetLanguage = jsonObject?.findProperty("@@locale")?.value?.text?.replace("\"", "")
-        if (targetLanguage == null) {
+        var targetLanguage = jsonObject?.findProperty("@@locale_alias")?.value?.text?.replace("\"", "")
+        if (targetLanguage == null || targetLanguage.isEmpty()) {
+            targetLanguage = jsonObject?.findProperty("@@locale")?.value?.text?.replace("\"", "")
+        }
+
+        if (jsonObject == null || targetLanguage == null) {
             NotificationUtils.showBalloonMsg(
                 project,
-                "${selectedFile.name}未配置@@locale属性",
+                "${selectedFile.name}未配置@@locale属性或@@locale_alias属性",
                 NotificationType.WARNING
             )
             return
         }
 
-        val sourceLanguage = tempJsonObject.findProperty("@@locale")?.value?.text?.replace("\"", "")
+        var sourceLanguage = tempJsonObject.findProperty("@@locale_alias")?.value?.text?.replace("\"", "")
+        if (sourceLanguage == null || sourceLanguage.isEmpty()) {
+            sourceLanguage = tempJsonObject.findProperty("@@locale")?.value?.text?.replace("\"", "")
+        }
+
         if (sourceLanguage == null) {
             NotificationUtils.showBalloonMsg(
                 project,
-                "模板文件${arbFile.name}未配置@@locale属性",
+                "模板文件${arbFile.name}未配置@@locale属性或@@locale_alias属性",
                 NotificationType.WARNING
             )
             return
@@ -221,7 +229,7 @@ class TranslateArbAction : DumbAwareAction() {
                 if (existTranslateFailed) {
                     NotificationUtils.showBalloonMsg(
                         project,
-                        "部分内容未翻译或插入成功，请重试",
+                        "存在部分内容未翻译或插入成功，请重试",
                         NotificationType.WARNING
                     )
                 }
