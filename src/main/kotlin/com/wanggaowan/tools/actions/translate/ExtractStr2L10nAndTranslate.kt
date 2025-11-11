@@ -51,9 +51,12 @@ import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.yaml.psi.YAMLKeyValue
+import java.awt.Color
 import java.awt.Dimension
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
+import java.awt.event.KeyEvent
+import java.awt.event.KeyListener
 import java.io.File
 import javax.swing.*
 import javax.swing.event.DocumentEvent
@@ -610,6 +613,24 @@ class InputKeyDialog(
             }
         })
 
+        content.addKeyListener(object : KeyListener {
+            override fun keyTyped(e: KeyEvent?) {
+
+            }
+
+            override fun keyPressed(e: KeyEvent?) {
+
+            }
+
+            override fun keyReleased(e: KeyEvent?) {
+                if (e?.keyCode == KeyEvent.VK_ENTER) {
+                    val text = content.text
+                    content.text = text.replace("\n", "").replace("\r", "")
+                    doOKAction()
+                }
+            }
+        })
+
         builder.addComponent(jsp)
         builder.addComponent(existKeyHint)
 
@@ -629,13 +650,12 @@ class InputKeyDialog(
                 }
                 title += "："
 
-                // val label2 = JLabel(title)
-
                 val label2 = JBTextArea (title)
                 label2.isEditable = false // 如果不需要编辑功能
                 label2.lineWrap = true // 启用自动换行
                 label2.wrapStyleWord = true // 确保单词不会被拆分到两行
                 label2.setBorder(BorderFactory.createEmptyBorder())
+                label2.background = Color(0, 0, 0, 0)
                 label2.preferredSize = Dimension(40, 60)
                 label2.maximumSize = Dimension(80, 60)
                 label2.minimumSize = Dimension(40, 60)
