@@ -204,7 +204,7 @@ object ExtractUtils {
             text.substring(1, text.length - 1)
         }
 
-        var translateText = text.trim()
+        var keyTranslateText = text.trim()
         val dartTemplateEntryList = mutableListOf<DartPsiCompositeElement>()
         findAllDartTemplateEntry(selectedElement.firstChild, dartTemplateEntryList)
         if (dartTemplateEntryList.isNotEmpty()) {
@@ -222,9 +222,9 @@ object ExtractUtils {
                     text = text.replaceRange(index, index + element.length, placeHolder)
                 }
 
-                index = translateText.indexOf(element)
+                index = keyTranslateText.indexOf(element)
                 if (index != -1) {
-                    translateText = translateText.replaceRange(index, index + element.length, "")
+                    keyTranslateText = keyTranslateText.replaceRange(index, index + element.length, "")
                 }
             }
         }
@@ -296,7 +296,7 @@ object ExtractUtils {
             existKey,
             dartTemplateEntryList,
             text,
-            translateText,
+            keyTranslateText,
             defaultArbFile,
             rootDir,
             otherArbFile,
@@ -310,7 +310,7 @@ object ExtractUtils {
      * [existKey] 表示当前提取的多语言是否在模版arb文件中已存在
      * [dartTemplateEntryList] 为占位符列表
      * [originalText] 为选中的原始文本，未经任何加工
-     * [translateText] 为对原始文本进行加工，需要执行翻译的文本
+     * [keyTranslateText] 为对原始文本进行加工，用于翻译为引用字段Key的文本内容
      * [defaultArbFile] 为模板arb文件中需要翻译的内容
      * [rootDir] 为arb文件的根目录
      * [otherArbFile] 为其它语言arb文件
@@ -323,7 +323,7 @@ object ExtractUtils {
         existKey: String?,
         dartTemplateEntryList: List<DartPsiCompositeElement>,
         originalText: String,
-        translateText: String,
+        keyTranslateText: String,
         defaultArbFile: TranslateArbFile,
         rootDir: VirtualFile,
         otherArbFile: List<TranslateArbFile>,
@@ -340,7 +340,7 @@ object ExtractUtils {
                 val totalCount = 1.0 + otherArbFile.size
                 CoroutineScope(Dispatchers.IO).launch launch2@{
                     val sourceLanguage = defaultArbFile.translateLanguage!!
-                    val enTranslate = TranslateUtils.translate(translateText, sourceLanguage, "en")
+                    val enTranslate = TranslateUtils.translate(keyTranslateText, sourceLanguage, "en")
                     val isFormat = dartTemplateEntryList.isNotEmpty()
                     val key = TranslateUtils.mapStrToKey(enTranslate, isFormat)
                     if (progressIndicator.isCanceled) {
