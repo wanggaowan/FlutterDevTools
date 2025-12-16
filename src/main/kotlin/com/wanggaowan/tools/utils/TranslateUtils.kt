@@ -1,7 +1,5 @@
 package com.wanggaowan.tools.utils
 
-import ai.grazie.text.TextRange
-import ai.grazie.text.replace
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.diagnostic.logger
@@ -196,64 +194,258 @@ object TranslateUtils {
         }
 
         if (value.endsWith("_")) {
-            value = value.substring(0, value.length - 1)
+            value = value.dropLast(1)
         }
 
         return value
     }
 
-    /// 修复翻译错误，如占位符为大写，\n，%s翻译后被分开成 \ n,% s等错误
+    /**
+     * 修复翻译错误，如占位符为大写，\n，%s翻译后被分开成 \ n,% s等错误
+     *
+     * [useEscaping] arb文件是否启用转义字符
+     * [isByTemplate] 是否根据模板翻译
+     */
     fun fixTranslateError(
         translate: String?,
-        targetLanguage: String,
         useEscaping: Boolean = false,
-        placeHolderCount: Int? = null
+        isByTemplate: Boolean = false,
     ): String? {
-        var translateStr = fixTranslatePlaceHolderStr(translate, useEscaping, placeHolderCount)
+        var translateStr = fixTranslatePlaceHolderStr(translate, useEscaping, isByTemplate)
         translateStr = fixNewLineFormatError(translateStr)
-        translateStr = translateStr?.replace("\"", "\\\"")
+        if (translateStr != null) {
+            // 处理单引号多余的转义斜杠。以下正则匹配单引号前面有奇数个反斜杠
+            // (?<!\\\\) - 负向后瞻，确保当前位置前面不是单个反斜杠
+            // (?:\\\\\\\\)* - 非捕获组，匹配零个或多个连续的两个反斜杠（即偶数个反斜杠）
+            // \\\\' - 匹配\'
+            var regex = Regex("(?<!\\\\)(?:\\\\\\\\)*\\\\'")
+            translateStr = fixEscapeFormatError(regex, translateStr, false)
+            // 处理双引号缺失的转义斜杠。以下正则匹配双引号前面有偶数个反斜杠
+            regex = Regex("(?<!\\\\)(?:\\\\\\\\)*\"")
+            translateStr = fixEscapeFormatError(regex, translateStr)
+        }
         return translateStr
     }
 
-    /// 修复因翻译，导致占位符被翻译为大写的问题
+    /**
+     * 修复因翻译，导致占位符被翻译为大写的问题
+     *
+     * [useEscaping] 是否启用转义字符
+     * [isByTemplate] 是否根据模板翻译
+     */
     private fun fixTranslatePlaceHolderStr(
         translate: String?,
         useEscaping: Boolean = false,
-        placeHolderCount: Int? = null
+        isByTemplate: Boolean = false,
     ): String? {
         if (translate.isNullOrEmpty()) {
             return null
         }
 
-        if (placeHolderCount == null || placeHolderCount <= 0) {
-            return translate
+        val regex = if (isByTemplate) {
+            if (useEscaping) {
+                Regex("(('+\\s*\\{\\s*[Pp]aram[0-9]*\\s*\\}\\s*'+)|(\\{\\s*[Pp]aram[0-9]*\\s*\\}))")
+            } else {
+                Regex("\\{\\s*[Pp]aram[0-9]*\\s*\\}")
+            }
+        } else if (useEscaping) {
+            Regex("<\\s*[Pp]aram[0-9]*\\s*>")
+        } else {
+            Regex("\\{\\s*[Pp]aram[0-9]*\\s*\\}")
         }
 
-        var start = 0
-        var newValue = translate
-        for (i in 0 until placeHolderCount) {
-            val param = "{Param$i}"
-            val index = translate.indexOf(param, start)
-            if (index != -1) {
-                if (useEscaping) {
-                    val index2 = translate.indexOf("'$param'", start)
-                    if (index2 != -1) {
-                        if (index2 == index - 1) {
-                            continue
+        var text = fixWhiteFormatError(regex, translate, useEscaping)
+        if (useEscaping) {
+            if (isByTemplate) {
+                var offset = 0
+                // 查找单引号，但前后不能是{或}
+                val regex = Regex("(?<![{}]\\s*)('+[\\s']*)(?!\\s*[{}])")
+                do {
+                    val matchResult = regex.find(text, offset)
+                    if (matchResult != null) {
+                        var placeHolder = text.substring(matchResult.range)
+                        val placeHolder2 = placeHolder.replace("'", "")
+                        if (placeHolder.length - placeHolder2.length == 1) {
+                            // 仅处理单引号只有一个的数据，存在连续多个单引号不处理
+                            placeHolder = placeHolder.replace("'", "''")
+                            text = text.replaceRange(matchResult.range, placeHolder)
+                            // matchResult.range.last为正则匹配最后一个字符下标，如果像上面仅查找一个字符，
+                            // 那 matchResult.range.first和matchResult.range.last相等，下次需要跳过
+                            // 本次查找的字符，需要matchResult.range.last + 1，再+1是上面一个单引号改为两个单引号
+                            // 追加的字符长度， 否则下次匹配刚好就是上面追加的单引号，会陷入死循环
+                            offset = matchResult.range.last + 1 + 1
+                        } else {
+                            offset = matchResult.range.last + 1
                         }
-
-                        newValue = newValue?.replace(TextRange(index, index + param.length), "{param$i}")
-                    } else {
-                        newValue = newValue?.replace(TextRange(index, index + param.length), "{param$i}")
                     }
-                } else {
-                    newValue = newValue?.replace(TextRange(index, index + param.length), "{param$i}")
-                }
+                } while (matchResult != null)
+            } else {
+                // 不是根据模板翻译且启用转义的情况下，如果文本中出现单引号，需要再追加一个单引号进行转义
+                text = text.replace("'", "''")
+                // 需要对出现的{进行转义
+                text = text.replace("{", "'{'")
+                // 需要对出现的}进行转义
+                text = text.replace("}", "'}'")
+                text = replacePlaceHolder(Regex("<param[0-9]*>"), text)
+            }
 
-                start = index + param.length
+            // 如果{前面存在单引号且不止一个，则需要在离{最近的单引号前加空格，否则此转义单引号会被当做普通单引号字符处理
+            var regex = Regex("\\s*'\\s*\\{")
+            var offset = 0
+            do {
+                val matchResult = regex.find(text, offset)
+                if (matchResult != null) {
+                    var placeHolder = text.substring(matchResult.range)
+                    var addCount = 0
+                    if (!placeHolder.startsWith(" ")) {
+                        val start = matchResult.range.first
+                        if (start > 0) {
+                            val str = text.substring(start - 1, start)
+                            if (str == "'") {
+                                placeHolder = " $placeHolder"
+                                text = text.replaceRange(matchResult.range, placeHolder)
+                                addCount = 1
+                            }
+                        }
+                    }
+                    offset = matchResult.range.last + 1 + addCount
+                }
+            } while (matchResult != null)
+
+            // 如果}后面存在单引号且不止一个，则需要在离}最近的单引号后加空格，否则此转义单引号会被当做普通单引号字符处理
+            regex = Regex("}\\s*'\\s*")
+            offset = 0
+            do {
+                val matchResult = regex.find(text, offset)
+                if (matchResult != null) {
+                    var placeHolder = text.substring(matchResult.range)
+                    var addCount = 0
+                    if (!placeHolder.endsWith(" ")) {
+                        val end = matchResult.range.last
+                        if (end < text.length) {
+                            val str = text.substring(end + 1, end + 2)
+                            if (str == "'") {
+                                placeHolder = "$placeHolder "
+                                text = text.replaceRange(matchResult.range, placeHolder)
+                                addCount = 1
+                            }
+                        }
+                    }
+                    offset = matchResult.range.last + 1 + addCount
+                }
+            } while (matchResult != null)
+        }
+        return text
+    }
+
+    /**
+     * 修复多了空格、大小写错误，比如%s翻译后是%S，\n翻译后是\N，或者中间有空格如% s，\ n等
+     *
+     * [text]为需要修复的文本
+     * [regex]为查找错误格式文本的正则表达式
+     */
+    private tailrec fun fixWhiteFormatError(
+        regex: Regex,
+        text: String,
+        useEscaping: Boolean = false,
+        isByTemplate: Boolean = false,
+        offset: Int? = null,
+    ): String {
+        if (text.isEmpty()) {
+            return text
+        }
+
+        val matchResult = regex.find(text, offset ?: 0) ?: return text
+        var placeHolder = text.substring(matchResult.range)
+        var needReplace = true
+        if (isByTemplate && useEscaping) {
+            val start = placeHolder.indexOf("{")
+            val end = placeHolder.indexOf("}")
+            // 起始单引号数量
+            val startSymbolCount = placeHolder.take(start).replace(" ", "").length
+            // 尾部单引号数量
+            val endSymbolCount = placeHolder.substring(end + 1).replace(" ", "").length
+            if (startSymbolCount != endSymbolCount || startSymbolCount % 2 != 0) {
+                // 使用了转义字符包裹占位符，保持原样
+                // startSymbolCount != endSymbolCount,此时dart执行gen-l10n命令时会报错，启用转义时，单引号要成对出现，因此不处理
+                // startSymbolCount % 2 != 0,单引号为奇数个，存在一对单引号用来转义{}占位符
+                needReplace = false
             }
         }
-        return newValue
+
+        var end = matchResult.range.last + 1
+        val mapText = if (needReplace) {
+            val oldLength = placeHolder.length
+            placeHolder = placeHolder.replace(" ", "").lowercase()
+            end -= oldLength - placeHolder.length
+            text.replaceRange(matchResult.range, placeHolder)
+        } else {
+            text
+        }
+
+        return fixWhiteFormatError(
+            regex,
+            mapText,
+            useEscaping,
+            isByTemplate,
+            end
+        )
+    }
+
+    /**
+     * 修复转义错误，比如'，"未加反斜杠或反斜杠数量多了
+     *
+     * [text] 为需要修复的文本
+     * [regex] 为查找错误格式文本的正则表达式
+     * [isAdd] 表示是添加还是去除反斜杠
+     */
+    tailrec fun fixEscapeFormatError(
+        regex: Regex,
+        text: String,
+        isAdd: Boolean = true,
+        offset: Int? = null,
+    ): String {
+        if (text.isEmpty()) {
+            return text
+        }
+
+        val matchResult = regex.find(text, offset ?: 0) ?: return text
+        var placeHolder = text.substring(matchResult.range)
+        val end = if (isAdd) {
+            placeHolder = "\\$placeHolder"
+            matchResult.range.last + 2
+        } else {
+            placeHolder = placeHolder.substring(1, placeHolder.length)
+            matchResult.range.last
+        }
+
+        return fixEscapeFormatError(
+            regex,
+            text.replaceRange(matchResult.range, placeHolder),
+            isAdd,
+            end
+        )
+    }
+
+    /**
+     * 替换占位符，当不是根据模版翻译时，需要将<param0>替换为{param0}
+     */
+    private tailrec fun replacePlaceHolder(
+        regex: Regex,
+        text: String,
+        offset: Int? = null,
+    ): String {
+        if (text.isEmpty()) {
+            return text
+        }
+
+        val matchResult = regex.find(text, offset ?: 0) ?: return text
+        val placeHolder = text.substring(matchResult.range).replace("<", "{").replace(">", "}")
+        return replacePlaceHolder(
+            regex,
+            text.replaceRange(matchResult.range, placeHolder),
+            matchResult.range.last + 1
+        )
     }
 
     // 修复格式错误，如\n,翻译成 \ n
@@ -262,7 +454,7 @@ object TranslateUtils {
             return text
         }
 
-        val regex = Regex("\\\\\\s+n") // \\\s+n
-        return text.replace(regex, "\\n")
+        val regex = Regex("\\s*\\\\\\s*[nN]\\s*")
+        return text.replace(regex, "\\\\n")
     }
 }

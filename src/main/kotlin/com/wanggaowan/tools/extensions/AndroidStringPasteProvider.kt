@@ -11,6 +11,7 @@ import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.util.TextRange
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.ProgressUtils
+import com.wanggaowan.tools.utils.TranslateUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import java.awt.datatransfer.DataFlavor
@@ -62,16 +63,15 @@ class AndroidStringPasteProvider : PasteProvider {
                     var value = str.substring(index2 + 1, index3)
                     val placeholderList = mutableListOf<Placeholder>()
                     if (value.isNotEmpty()) {
-                        strPlaceholder.forEach {
-                            replace(0, value, it, "String", placeholderList)
-                        }
-
-                        intPlaceholder.forEach {
-                            replace(0, value, it, "int", placeholderList)
-                        }
-
-                        floatPlaceholder.forEach {
-                            replace(0, value, it, "double", placeholderList)
+                        val placeholderSuffixes = listOf("s", "d", "f")
+                        placeholderSuffixes.forEach {
+                            val regex = Regex("%[-+.#(0-9\\s\\\\$]*($it|${it.uppercase()})")
+                            val type = when (it) {
+                                "s" -> "String"
+                                "d" -> "int"
+                                else -> "double"
+                            }
+                            replace(regex, value, type, placeholderList)
                         }
                     }
 
@@ -110,6 +110,13 @@ class AndroidStringPasteProvider : PasteProvider {
                         }
                     }
 
+                    // 处理双引号缺失的转义斜杠。以下正则匹配双引号前面有偶数个反斜杠
+                    var regex = Regex("(?<!\\\\)(?:\\\\\\\\)*\"")
+                    value = TranslateUtils.fixEscapeFormatError(regex, value)
+                    regex = Regex("(?<!\\\\)(?:\\\\\\\\)*\\\\'")
+                    // 处理单引号多余的转义斜杠。以下正则匹配单引号前面有奇数个反斜杠
+                    value = TranslateUtils.fixEscapeFormatError(regex, value, false)
+
                     stringBuilder.append("$key: \"$value\"")
                     if (placeholderStr != null || (strings.size > 1 && count < strings.size - 1)) {
                         stringBuilder.append(",").append("\n")
@@ -147,18 +154,16 @@ class AndroidStringPasteProvider : PasteProvider {
     }
 
     private tailrec fun replace(
-        startIndex: Int,
+        regex: Regex,
         value: String,
-        placeholder: String,
         type: String,
-        placeholderList: MutableList<Placeholder>
+        placeholderList: MutableList<Placeholder>,
+        startIndex: Int? = null,
     ) {
-        val indexOf = value.indexOf(placeholder, startIndex = startIndex)
-        if (indexOf != -1) {
-            val endIndex = indexOf + placeholder.length
-            placeholderList.add(Placeholder(placeholder, type, indexOf))
-            replace(endIndex, value, placeholder, type, placeholderList)
-        }
+        val matchResult = regex.find(value, startIndex ?: 0) ?: return
+        val placeholder = value.substring(matchResult.range)
+        placeholderList.add(Placeholder(placeholder, type, matchResult.range.first))
+        replace(regex, value, type, placeholderList, matchResult.range.last + 1)
     }
 
     override fun isPastePossible(dataContext: DataContext): Boolean {
@@ -195,13 +200,6 @@ class AndroidStringPasteProvider : PasteProvider {
     }
 
 }
-
-private val strPlaceholder =
-    listOf("%s", "%1\$s", "%2\$s", "%3\$s", "%4\$s", "%5\$s")
-private val intPlaceholder =
-    listOf("%d", "%1\$d", "%2\$d", "%3\$d", "%4\$d", "%5\$d")
-private val floatPlaceholder =
-    listOf("%f", "%1\$f", "%2\$f", "%3\$f", "%4\$f", "%5\$f")
 
 class Placeholder(val placeholder: String, val type: String, val index: Int)
 

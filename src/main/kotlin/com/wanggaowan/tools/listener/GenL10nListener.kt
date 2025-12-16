@@ -1,7 +1,7 @@
 package com.wanggaowan.tools.listener
 
 import com.intellij.ide.actionsOnSave.impl.ActionsOnSaveFileDocumentManagerListener.ActionOnSave
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -102,8 +102,9 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
         val file: VirtualFile = event.oldFile ?: return
         if (needDoGenL10nMap[file.path] == true) {
             needDoGenL10nMap.remove(file.path)
-            ApplicationManager.getApplication().runReadAction {
-                val module = ModuleUtilCore.findModuleForFile(file, event.manager.project) ?: return@runReadAction
+            WriteCommandAction.runWriteCommandAction(event.manager.project) {
+                val module =
+                    ModuleUtilCore.findModuleForFile(file, event.manager.project) ?: return@runWriteCommandAction
                 fileDocumentManager.value.saveAllDocuments()
                 doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
             }

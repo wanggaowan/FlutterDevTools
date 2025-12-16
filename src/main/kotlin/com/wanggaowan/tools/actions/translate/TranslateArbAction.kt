@@ -2,6 +2,7 @@ package com.wanggaowan.tools.actions.translate
 
 import com.intellij.json.JsonFileType
 import com.intellij.json.psi.JsonObject
+import com.intellij.json.psi.JsonProperty
 import com.intellij.json.psi.JsonPsiUtil
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -169,13 +170,26 @@ class TranslateArbAction : DumbAwareAction() {
         ProgressUtils.runBackground(project, "Translate", true) { progressIndicator ->
             progressIndicator.isIndeterminate = false
             progressIndicator.text = "Count all strings that need to be translated"
-            val needTranslateMap = mutableMapOf<String, String?>()
+            val needTranslateMap = mutableMapOf<String, Any?>()
             application.invokeAndWait {
                 tempJsonObject.propertyList.forEach {
                     val name = it.name
+                    if (name.startsWith("@@")) {
+                        return@forEach
+                    }
+
                     val find = jsonObject.findProperty(name)
                     if (find == null) {
-                        needTranslateMap[name] = it.value?.text?.replace("\"", "")
+                        if (name.startsWith("@")) {
+                            needTranslateMap[name] = it
+                            return@forEach
+                        }
+
+                        var text = it.value?.text?.trim()
+                        if (text != null) {
+                            text = text.substring(1, text.length - 1)
+                        }
+                        needTranslateMap[name] = text
                     }
                 }
             }
@@ -195,28 +209,31 @@ class TranslateArbAction : DumbAwareAction() {
                         return@launch2
                     }
 
+                    if (key.startsWith("@")) {
+                        // 这是描述文本，直接复制
+                        if (value != null) {
+                            writeResult(project, arbPsiFile, jsonObject, key, value)
+                        }
+                        count++
+                        return@forEach
+                    }
+
                     progressIndicator.text = "${count.toInt()} / $total Translating: $key"
 
                     // 目前发现IDE连续翻译大概300条内容后，速度会越来越慢，而Android Studio基本没有此问题
                     // 目前不知道为何。此处暂时记录，以后 看看能不能优化。
                     // 如果是翻译API有QPS等限制，那应该不管什么平台都会变慢。但是Android Studio基本不会变慢。
                     // 但是如果我只是模拟翻译接口，不去实际调用接口，IDE也不会变慢，从这又感觉是翻译API的限制
+                    val content = value as String?
                     var translateStr =
-                        if (value.isNullOrEmpty()) value else TranslateUtils.translate(value,
+                        if (content.isNullOrEmpty()) content else TranslateUtils.translate(content,
                             sourceLanguage,
                             targetLanguage)
                     progressIndicator.fraction = count / total * 0.94 + 0.05
                     if (translateStr == null) {
                         existTranslateFailed = true
                     } else {
-                        val placeHolderCount = if (translateStr.indexOf("{Param") != -1) 5 else 0
-                        translateStr =
-                            TranslateUtils.fixTranslateError(
-                                translateStr,
-                                targetLanguage,
-                                useEscaping,
-                                placeHolderCount
-                            )
+                        translateStr = TranslateUtils.fixTranslateError(translateStr, useEscaping, true)
                         if (translateStr != null) {
                             writeResult(project, arbPsiFile, jsonObject, key, translateStr)
                         } else {
@@ -237,13 +254,19 @@ class TranslateArbAction : DumbAwareAction() {
         }
     }
 
-    private fun writeResult(project: Project, arbPsiFile: PsiFile, jsonObject: JsonObject, key: String, value: String) {
+    private fun writeResult(project: Project, arbPsiFile: PsiFile, jsonObject: JsonObject, key: String, value: Any) {
         WriteCommandAction.runWriteCommandAction(project) {
             val document = arbPsiFile.viewProvider.document
             if (document != null) {
                 PsiDocumentManager.getInstance(project).commitDocument(document)
             }
-            insertElement(project, arbPsiFile, jsonObject, key, value)
+
+            if (value is JsonProperty) {
+                JsonPsiUtil.addProperty(jsonObject, value, false)
+            } else {
+                insertElement(project, arbPsiFile, jsonObject, key, value as String)
+            }
+
             if (document != null) {
                 PsiDocumentManager.getInstance(project).commitDocument(document)
             } else {
