@@ -218,10 +218,13 @@ object TranslateUtils {
             // (?<!\\\\) - 负向后瞻，确保当前位置前面不是单个反斜杠
             // (?:\\\\\\\\)* - 非捕获组，匹配零个或多个连续的两个反斜杠（即偶数个反斜杠）
             // \\\\' - 匹配\'
-            var regex = Regex("(?<!\\\\)(?:\\\\\\\\)*\\\\'")
-            translateStr = fixEscapeFormatError(regex, translateStr, false)
-            // 处理双引号缺失的转义斜杠。以下正则匹配双引号前面有偶数个反斜杠
-            regex = Regex("(?<!\\\\)(?:\\\\\\\\)*\"")
+            // var regex = Regex("(?<!\\\\)(?:\\\\\\\\)*\\\\'")
+
+            // 处理单引号多余的转义斜杠。以下正则匹配单引号前面的反斜杠
+            var regex = Regex("[\\\\\\s]*'")
+            translateStr = fixEscapeFormatError(regex, translateStr,false)
+            // 处理双引号缺失的转义斜杠。以下正则匹配双引号前面的反斜杠
+            regex = Regex("[\\\\\\s]*\"")
             translateStr = fixEscapeFormatError(regex, translateStr)
         }
         return translateStr
@@ -411,12 +414,24 @@ object TranslateUtils {
 
         val matchResult = regex.find(text, offset ?: 0) ?: return text
         var placeHolder = text.substring(matchResult.range)
+        val oldLength = placeHolder.length
+        placeHolder = placeHolder.replace(" ", "")
+
+        val count = placeHolder.count { it.toString() == "\\" }
         val end = if (isAdd) {
-            placeHolder = "\\$placeHolder"
-            matchResult.range.last + 2
-        } else {
+            if (count % 2 == 0) {
+                // 新增转义字符时，只有之前存在偶数个时才处理
+                placeHolder = "\\$placeHolder"
+                matchResult.range.last + 1 + (placeHolder.length - oldLength)
+            } else {
+                matchResult.range.last + 1 + (placeHolder.length - oldLength)
+            }
+        } else if (count % 2 != 0) {
+            // 移除转义字符时，只有之前存在奇数个时才处理
             placeHolder = placeHolder.substring(1, placeHolder.length)
-            matchResult.range.last
+            matchResult.range.last + (placeHolder.length - oldLength)
+        } else {
+            matchResult.range.last + 1 + (placeHolder.length - oldLength)
         }
 
         return fixEscapeFormatError(

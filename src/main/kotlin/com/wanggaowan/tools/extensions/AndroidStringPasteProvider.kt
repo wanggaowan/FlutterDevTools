@@ -110,12 +110,12 @@ class AndroidStringPasteProvider : PasteProvider {
                         }
                     }
 
-                    // 处理双引号缺失的转义斜杠。以下正则匹配双引号前面有偶数个反斜杠
-                    var regex = Regex("(?<!\\\\)(?:\\\\\\\\)*\"")
+                    // 处理单引号多余的转义斜杠。以下正则匹配单引号前面的反斜杠
+                    var regex = Regex("[\\\\\\s]*'")
+                    value = TranslateUtils.fixEscapeFormatError(regex, value,false)
+                    // 处理双引号缺失的转义斜杠。以下正则匹配双引号前面的反斜杠
+                    regex = Regex("[\\\\\\s]*\"")
                     value = TranslateUtils.fixEscapeFormatError(regex, value)
-                    regex = Regex("(?<!\\\\)(?:\\\\\\\\)*\\\\'")
-                    // 处理单引号多余的转义斜杠。以下正则匹配单引号前面有奇数个反斜杠
-                    value = TranslateUtils.fixEscapeFormatError(regex, value, false)
 
                     stringBuilder.append("$key: \"$value\"")
                     if (placeholderStr != null || (strings.size > 1 && count < strings.size - 1)) {
