@@ -218,14 +218,16 @@ object TranslateUtils {
             // (?<!\\\\) - 负向后瞻，确保当前位置前面不是单个反斜杠
             // (?:\\\\\\\\)* - 非捕获组，匹配零个或多个连续的两个反斜杠（即偶数个反斜杠）
             // \\\\' - 匹配\'
-            // var regex = Regex("(?<!\\\\)(?:\\\\\\\\)*\\\\'")
+            // \\x20：表示空格字符，不包含换行，回车符等
 
+            // var regex = Regex("(?<!\\\\)(?:\\\\\\\\)*\\\\'")
             // 处理单引号多余的转义斜杠。以下正则匹配单引号前面的反斜杠
-            var regex = Regex("[\\\\\\s]*'")
-            translateStr = fixEscapeFormatError(regex, translateStr,false)
+            var regex = Regex("[\\\\\\x20]*'")
+            translateStr = fixEscapeFormatError(regex, translateStr, false)
             // 处理双引号缺失的转义斜杠。以下正则匹配双引号前面的反斜杠
-            regex = Regex("[\\\\\\s]*\"")
+            regex = Regex("[\\\\\\x20]*\"")
             translateStr = fixEscapeFormatError(regex, translateStr)
+            translateStr = insertWhiteSpace(translateStr, useEscaping)
         }
         return translateStr
     }
@@ -247,22 +249,22 @@ object TranslateUtils {
 
         val regex = if (isByTemplate) {
             if (useEscaping) {
-                Regex("(('+\\s*\\{\\s*[Pp]aram[0-9]*\\s*\\}\\s*'+)|(\\{\\s*[Pp]aram[0-9]*\\s*\\}))")
+                Regex("((['\\x20]+\\x20*\\{\\x20*[Pp]aram[0-9]*\\x20*\\}\\x20*['\\x20]+)|(\\{\\x20*[Pp]aram[0-9]*\\x20*\\}))")
             } else {
-                Regex("\\{\\s*[Pp]aram[0-9]*\\s*\\}")
+                Regex("\\{\\x20*[Pp]aram[0-9]*\\x20*\\}")
             }
         } else if (useEscaping) {
-            Regex("<\\s*[Pp]aram[0-9]*\\s*>")
+            Regex("<\\x20*[Pp]aram[0-9]*\\x20*>")
         } else {
-            Regex("\\{\\s*[Pp]aram[0-9]*\\s*\\}")
+            Regex("\\{\\x20*[Pp]aram[0-9]*\\x20*\\}")
         }
 
-        var text = fixWhiteFormatError(regex, translate, useEscaping)
+        var text = fixWhiteFormatError(regex, translate, useEscaping, isByTemplate)
         if (useEscaping) {
             if (isByTemplate) {
                 var offset = 0
                 // 查找单引号，但前后不能是{或}
-                val regex = Regex("(?<![{}]\\s*)('+[\\s']*)(?!\\s*[{}])")
+                val regex = Regex("(?<![{}]\\x20*)('+[\\x20']*)(?!\\x20*[{}])")
                 do {
                     val matchResult = regex.find(text, offset)
                     if (matchResult != null) {
@@ -291,58 +293,68 @@ object TranslateUtils {
                 text = text.replace("}", "'}'")
                 text = replacePlaceHolder(Regex("<param[0-9]*>"), text)
             }
-
-            // 如果{前面存在单引号且不止一个，则需要在离{最近的单引号前加空格，否则此转义单引号会被当做普通单引号字符处理
-            var regex = Regex("\\s*'\\s*\\{")
-            var offset = 0
-            do {
-                val matchResult = regex.find(text, offset)
-                if (matchResult != null) {
-                    var placeHolder = text.substring(matchResult.range)
-                    var addCount = 0
-                    if (!placeHolder.startsWith(" ")) {
-                        val start = matchResult.range.first
-                        if (start > 0) {
-                            val str = text.substring(start - 1, start)
-                            if (str == "'") {
-                                placeHolder = " $placeHolder"
-                                text = text.replaceRange(matchResult.range, placeHolder)
-                                addCount = 1
-                            }
-                        }
-                    }
-                    offset = matchResult.range.last + 1 + addCount
-                }
-            } while (matchResult != null)
-
-            // 如果}后面存在单引号且不止一个，则需要在离}最近的单引号后加空格，否则此转义单引号会被当做普通单引号字符处理
-            regex = Regex("}\\s*'\\s*")
-            offset = 0
-            do {
-                val matchResult = regex.find(text, offset)
-                if (matchResult != null) {
-                    var placeHolder = text.substring(matchResult.range)
-                    var addCount = 0
-                    if (!placeHolder.endsWith(" ")) {
-                        val end = matchResult.range.last
-                        if (end < text.length) {
-                            val str = text.substring(end + 1, end + 2)
-                            if (str == "'") {
-                                placeHolder = "$placeHolder "
-                                text = text.replaceRange(matchResult.range, placeHolder)
-                                addCount = 1
-                            }
-                        }
-                    }
-                    offset = matchResult.range.last + 1 + addCount
-                }
-            } while (matchResult != null)
         }
         return text
     }
 
     /**
-     * 修复多了空格、大小写错误，比如%s翻译后是%S，\n翻译后是\N，或者中间有空格如% s，\ n等
+     * 在{，}前后插入空格
+     */
+    private fun insertWhiteSpace(translate: String, useEscaping: Boolean = false): String {
+        if (!useEscaping || translate.isEmpty()) {
+            return translate
+        }
+        // 如果{前面存在单引号且不止一个，则需要在离{最近的单引号前加空格，否则此转义单引号会被当做普通单引号字符处理
+        var regex = Regex("\\x20*'\\x20*\\{")
+        var offset = 0
+        var text = translate
+        do {
+            val matchResult = regex.find(text, offset)
+            if (matchResult != null) {
+                var placeHolder = text.substring(matchResult.range)
+                var addCount = 0
+                if (!placeHolder.startsWith(" ")) {
+                    val start = matchResult.range.first
+                    if (start > 0) {
+                        val str = text.substring(start - 1, start)
+                        if (str == "'") {
+                            placeHolder = " $placeHolder"
+                            text = text.replaceRange(matchResult.range, placeHolder)
+                            addCount = 1
+                        }
+                    }
+                }
+                offset = matchResult.range.last + 1 + addCount
+            }
+        } while (matchResult != null)
+
+        // 如果}后面存在单引号且不止一个，则需要在离}最近的单引号后加空格，否则此转义单引号会被当做普通单引号字符处理
+        regex = Regex("}\\x20*'\\x20*")
+        offset = 0
+        do {
+            val matchResult = regex.find(text, offset)
+            if (matchResult != null) {
+                var placeHolder = text.substring(matchResult.range)
+                var addCount = 0
+                if (!placeHolder.endsWith(" ")) {
+                    val end = matchResult.range.last
+                    if (end < text.length) {
+                        val str = text.substring(end + 1, end + 2)
+                        if (str == "'") {
+                            placeHolder = "$placeHolder "
+                            text = text.replaceRange(matchResult.range, placeHolder)
+                            addCount = 1
+                        }
+                    }
+                }
+                offset = matchResult.range.last + 1 + addCount
+            }
+        } while (matchResult != null)
+        return text
+    }
+
+    /**
+     * 修复多了空格、大小写错误，比如{param0}翻译后是{Param0}，\n翻译后是\N，或者中间有空格如{param 0}，\ n等
      *
      * [text]为需要修复的文本
      * [regex]为查找错误格式文本的正则表达式
@@ -469,7 +481,7 @@ object TranslateUtils {
             return text
         }
 
-        val regex = Regex("\\s*\\\\\\s*[nN]\\s*")
+        val regex = Regex("\\x20*\\\\\\x20*[nN]\\x20*")
         return text.replace(regex, "\\\\n")
     }
 }

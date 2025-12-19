@@ -339,6 +339,8 @@ object ExtractUtils {
                 progressIndicator.isIndeterminate = false
                 val totalCount = 1.0 + otherArbFile.size
                 CoroutineScope(Dispatchers.IO).launch launch2@{
+                    progressIndicator.text = "Translating key..."
+
                     val sourceLanguage = defaultArbFile.translateLanguage!!
                     val enTranslate = TranslateUtils.translate(keyTranslateText, sourceLanguage, "en")
                     val isFormat = dartTemplateEntryList.isNotEmpty()
@@ -350,6 +352,9 @@ object ExtractUtils {
                     var current = 1.0
                     progressIndicator.fraction = current / totalCount * 0.95
                     otherArbFile.forEach { file ->
+                        progressIndicator.text =
+                            "${current.toInt()} / ${(totalCount - 1).toInt()} Translating: ${file.arbFile.name}"
+
                         val targetLanguage = file.translateLanguage
                         if (targetLanguage == "en" && !isFormat) {
                             file.translate = TranslateUtils.fixTranslateError(enTranslate, useEscaping)
