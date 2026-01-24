@@ -233,7 +233,10 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
         if (checkVirtualFiles != null) {
             checkVirtualFiles.forEach {
                 val name = it.name
-                if (it.isDirectory && name != "1.5x" && name != "2.0x" && name != "3.0x" && name != "4.0x") {
+                if (name.lowercase().endsWith(".zip")) {
+                    isOnlyFlutterDir = false
+                    return@forEach
+                } else if (it.isDirectory && name != "1.5x" && name != "2.0x" && name != "3.0x" && name != "4.0x") {
                     isOnlyFlutterDir = false
                     return@forEach
                 }
