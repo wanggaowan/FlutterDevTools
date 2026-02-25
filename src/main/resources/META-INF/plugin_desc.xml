@@ -21,6 +21,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>4.7</p>
+    <ul>
+      <li>翻译ak，sk使用插件设置配置，不再内置，存在泄露风险</li>
+    </ul>
+
     <p>4.6</p>
     <ul>
       <li>翻译arb文件时，支持通过@@locale_alias设置语言别名</li>

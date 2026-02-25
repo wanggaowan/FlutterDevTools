@@ -27,6 +27,10 @@ object PluginSettings {
     private const val CODE_COMPLETE_TYPE_DIRECT_DEV = "codeCompleteTypeDirectDev"
     private const val CODE_COMPLETE_TYPE_TRANSITIVE = "codeCompleteTypeTransitive"
 
+    // 阿里api配置
+    private const val ALI_AK = "aliAk"
+    private const val ALI_SK = "aliSk"
+
     const val DEFAULT_IMAGE_DIR = "assets/images"
     const val DEFAULT_IMAGES_REF_FILE_PATH = "lib/resources"
     const val DEFAULT_IMAGES_REF_FILE_NAME = "images.dart"
@@ -145,6 +149,22 @@ object PluginSettings {
 
     fun setCodeCompleteTypeTransitive(project: Project? = null, value: Boolean) {
         setValue(project, CODE_COMPLETE_TYPE_TRANSITIVE, if (value) "1" else "0")
+    }
+
+    fun getAliAk(): String {
+        return getValue(null, ALI_AK,"")
+    }
+
+    fun setAliAk(value: String) {
+        setValue(null, ALI_AK, value)
+    }
+
+    fun getAliSk(): String {
+        return getValue(null, ALI_SK,"")
+    }
+
+    fun setAliSk(value: String) {
+        setValue(null, ALI_SK, value)
     }
 
     private fun getValue(project: Project?, key: String, defValue: String): String {

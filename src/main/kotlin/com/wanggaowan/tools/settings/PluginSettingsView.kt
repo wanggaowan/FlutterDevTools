@@ -37,6 +37,9 @@ class PluginSettingsView(pubRoot: PubRoot?) {
     val codeCompleteTypeDirectDev = JBCheckBox("支持dev_dependencies依赖的库自动补全")
     val codeCompleteTypeTransitive = JBCheckBox("支持间接依赖的库自动补全")
 
+    val aliAk = JBTextField()
+    val aliSk = JBTextField()
+
     init {
         var builder = FormBuilder.createFormBuilder()
         builder
@@ -55,6 +58,8 @@ class PluginSettingsView(pubRoot: PubRoot?) {
         }
 
         builder = builder.addComponent(createCategoryTitle("提取多语言设置", marginTop = 10), 1)
+            .addLabeledComponent(createItemLabel("阿里翻译AK: ", marginLeft = 20), aliAk, 1, false)
+            .addLabeledComponent(createItemLabel("阿里翻译SK: ", marginLeft = 20), aliSk, 1, false)
         extractStr2L10nShowRenameDialog.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
         builder = builder.addComponent(extractStr2L10nShowRenameDialog, 1)
         // extractStr2L10nTranslateOther.border = BorderFactory.createEmptyBorder(4, 10, 0, 0)
