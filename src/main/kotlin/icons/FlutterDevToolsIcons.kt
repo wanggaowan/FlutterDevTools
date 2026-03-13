@@ -1,5 +1,6 @@
 package icons
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.util.IconLoader
 import com.intellij.util.SVGLoader
 import java.awt.Image
@@ -23,7 +24,7 @@ object FlutterDevToolsIcons {
      * 搜索Icon
      */
     @JvmField
-    val search: Icon = IconLoader.getIcon("/icons/ic_search.svg", FlutterDevToolsIcons::class.java)
+    val search: Icon = AllIcons.Actions.Search
 
     /**
      * 图片预览方式为列表的Icon
@@ -41,19 +42,19 @@ object FlutterDevToolsIcons {
      * 刷新Icon
      */
     @JvmField
-    val refresh: Icon = IconLoader.getIcon("/icons/ic_refresh.svg", FlutterDevToolsIcons::class.java)
+    val refresh: Icon = AllIcons.Actions.Refresh
 
     /**
      * 关闭Icon
      */
     @JvmField
-    val close: Icon = IconLoader.getIcon("/icons/ic_close.svg", FlutterDevToolsIcons::class.java)
+    val close: Icon = AllIcons.Actions.Close
 
     /**
      * 关闭获取到焦点时的Icon
      */
     @JvmField
-    val closeFocus: Icon = IconLoader.getIcon("/icons/ic_close_focus.svg", FlutterDevToolsIcons::class.java)
+    val closeFocus: Icon = AllIcons.Actions.CloseHovered
 
     @JvmField
     val add: Icon = IconLoader.getIcon("/icons/add.svg", FlutterDevToolsIcons::class.java)

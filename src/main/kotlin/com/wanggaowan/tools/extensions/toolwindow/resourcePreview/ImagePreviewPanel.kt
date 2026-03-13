@@ -1,5 +1,6 @@
 package com.wanggaowan.tools.extensions.toolwindow.resourcePreview
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.application.EDT
@@ -13,11 +14,16 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.ui.Gray
 import com.intellij.ui.SingleSelectionModel
+import com.intellij.ui.components.JBBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.JBTextField
+import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.intellij.util.ui.components.BorderLayoutPanel
 import com.intellij.util.ui.update.Activatable
 import com.intellij.util.ui.update.UiNotifyConnector
 import com.wanggaowan.tools.entity.Property
@@ -47,13 +53,13 @@ import kotlin.properties.Delegates
  *
  * @author Created by wanggaowan on 2024/2/21 17:38
  */
-class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
+class ImagePreviewPanel(val module: Module) : BorderLayoutPanel(), Disposable {
 
     // 搜素布局相关View
-    private lateinit var mSearchPanel: JPanel
+    private lateinit var mSearchPanel: JBBox
     private lateinit var mSearchBtn: ImageButton
     private lateinit var mClearBtn: ImageButton
-    private lateinit var mSearchTextField: JTextField
+    private lateinit var mSearchTextField: JBTextField
 
     private lateinit var mScrollPane: JBScrollPane
     private lateinit var mImagePanel: JBList<Property>
@@ -62,10 +68,15 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     // 底部布局相关View
     private lateinit var mRootPathJPanel: JPanel
     private lateinit var mRootPathLabel: MyLabel
-    private lateinit var mChangeBtn: JButton
 
     // 网格展示模式时图片布局宽度
     private val mGridImageLayoutWidth = 160
+
+    // 网格展示模式时文本布局高度
+    private val mGridLabelLayoutHeight = 60
+
+    // 列表布局时列表的高度
+    private val mListImageLayoutHeight = 80
 
     // 当前布局模式
     private var isGridMode: Boolean by Delegates.observable(false) { _, _, _ ->
@@ -94,7 +105,6 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
             }
         }))
 
-        layout = BorderLayout()
         preferredSize = JBUI.size(320, 100)
         initRootPath()
         initPanel()
@@ -120,19 +130,13 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     }
 
     private fun initPanel() {
-        val topPanel = JPanel()
-        topPanel.layout = BorderLayout()
-        add(topPanel, BorderLayout.NORTH)
-
-        initSearchLayout(topPanel)
+        initSearchLayout()
         initBottomLayout()
 
-        // 展示Image预览内容的面板
+        // 展示 Image 预览内容的面板
         mImagePanel = JBList(myListModel)
-        mImagePanel.background = UIColor.BG_COLOR
         mImagePanel.selectionModel = SingleSelectionModel()
         mImagePanel.visibleRowCount = 0
-        setImageLayout()
 
         mImagePanel.setCellRenderer { _, _, index, selected, focused ->
             return@setCellRenderer getPreviewItemPanel(index, isGridMode, selected || focused)
@@ -168,56 +172,54 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         })
 
         mScrollPane = JBScrollPane(mImagePanel)
-        mScrollPane.background = null
-        mScrollPane.border = JBUI.Borders.customLine(UIColor.LINE_COLOR, 0, 0, 1, 0)
-        add(mScrollPane, BorderLayout.CENTER)
+        mScrollPane.border = JBUI.Borders.customLine(UIUtil.getBoundsColor(), 0, 0, 1, 0)
+        addToCenter(mScrollPane)
+
+        setImageLayout()
     }
 
     /**
      * 初始化搜索界面布局
      */
-    private fun initSearchLayout(parent: JPanel) {
+    private fun initSearchLayout() {
         // 搜索一栏根布局
-        mSearchPanel = JPanel()
-        mSearchPanel.background = UIColor.BG_COLOR
-        mSearchPanel.layout = BoxLayout(mSearchPanel, BoxLayout.X_AXIS)
-        mSearchPanel.border = BorderFactory.createCompoundBorder(
-            BorderFactory.createCompoundBorder(
-                JBUI.Borders.customLine(UIColor.LINE_COLOR, 0, 0, 1, 0),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
-            ), BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
+        mSearchPanel = JBBox(BoxLayout.X_AXIS)
+        mSearchPanel.border = JBUI.Borders.compound(
+            JBUI.Borders.compound(
+                JBUI.Borders.customLine(UIUtil.getBoundsColor(), 0, 0, 1, 0),
+                JBUI.Borders.empty(10)
+            ), JBUI.Borders.customLine(UIUtil.getListSelectionBackground(false), 1)
         )
-        parent.add(mSearchPanel, BorderLayout.NORTH)
 
         mSearchBtn = ImageButton(FlutterDevToolsIcons.search)
-        mSearchBtn.preferredSize = Dimension(30, 30)
+        mSearchBtn.preferredSize = JBDimension(30, 30)
         mSearchBtn.minimumSize = mSearchBtn.preferredSize
         mSearchBtn.maximumSize = mSearchBtn.preferredSize
         mSearchBtn.background = UIColor.TRANSPARENT
         mSearchPanel.add(mSearchBtn)
 
-        mSearchTextField = JTextField()
-        mSearchTextField.preferredSize = Dimension(100, 30)
-        mSearchTextField.minimumSize = Dimension(100, 30)
+        mSearchTextField = JBTextField()
+        mSearchTextField.preferredSize = JBDimension(100, 30)
+        mSearchTextField.minimumSize = JBDimension(100, 30)
         mSearchTextField.background = UIColor.TRANSPARENT
-        mSearchTextField.border = BorderFactory.createEmptyBorder()
+        mSearchTextField.border = JBUI.Borders.empty()
         mSearchTextField.isOpaque = true
         mSearchTextField.addFocusListener(object : FocusListener {
             override fun focusGained(p0: FocusEvent?) {
-                mSearchPanel.border = BorderFactory.createCompoundBorder(
-                    BorderFactory.createCompoundBorder(
-                        JBUI.Borders.customLine(UIColor.LINE_COLOR, 0, 0, 1, 0),
-                        BorderFactory.createEmptyBorder(9, 9, 9, 9)
-                    ), BorderFactory.createLineBorder(UIColor.INPUT_FOCUS_COLOR, 2, true)
+                mSearchPanel.border = JBUI.Borders.compound(
+                    JBUI.Borders.compound(
+                        JBUI.Borders.customLine(UIUtil.getBoundsColor(), 0, 0, 1, 0),
+                        JBUI.Borders.empty(9)
+                    ), JBUI.Borders.customLine(UIUtil.getListSelectionBackground(true), 2)
                 )
             }
 
             override fun focusLost(p0: FocusEvent?) {
-                mSearchPanel.border = BorderFactory.createCompoundBorder(
-                    BorderFactory.createCompoundBorder(
-                        JBUI.Borders.customLine(UIColor.LINE_COLOR, 0, 0, 1, 0),
-                        BorderFactory.createEmptyBorder(10, 10, 10, 10)
-                    ), BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
+                mSearchPanel.border = JBUI.Borders.compound(
+                    JBUI.Borders.compound(
+                        JBUI.Borders.customLine(UIUtil.getBoundsColor(), 0, 0, 1, 0),
+                        JBUI.Borders.empty(10)
+                    ), JBUI.Borders.customLine(UIUtil.getListSelectionBackground(false), 1)
                 )
             }
         })
@@ -225,7 +227,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         mSearchPanel.add(mSearchTextField)
 
         mClearBtn = ImageButton(FlutterDevToolsIcons.close, arcSize = 100)
-        mClearBtn.preferredSize = Dimension(30, 30)
+        mClearBtn.preferredSize = JBDimension(30, 30)
         mClearBtn.minimumSize = mSearchBtn.preferredSize
         mClearBtn.maximumSize = mSearchBtn.preferredSize
         mClearBtn.background = null
@@ -233,7 +235,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         mClearBtn.setBorderWidth(7)
         mClearBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent?) {
-                mClearBtn.background = UIColor.MOUSE_ENTER_COLOR2
+                mClearBtn.background = JBUI.CurrentTheme.ActionButton.hoverBackground()
                 mClearBtn.icon = FlutterDevToolsIcons.closeFocus
             }
 
@@ -245,7 +247,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
             override fun mousePressed(e: MouseEvent?) {
                 super.mousePressed(e)
-                mClearBtn.background = UIColor.MOUSE_PRESS_COLOR2
+                mClearBtn.background = JBUI.CurrentTheme.ActionButton.pressedBackground()
                 mClearBtn.icon = FlutterDevToolsIcons.closeFocus
             }
 
@@ -279,6 +281,8 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 setNewImages(mImages, str)
             }
         })
+
+        addToTop(mSearchPanel)
     }
 
     /**
@@ -286,34 +290,30 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
      */
     private fun initBottomLayout() {
         // 底部按钮面板
-        val bottomPanel = JPanel(BorderLayout())
-        bottomPanel.background = UIColor.BG_COLOR
-        bottomPanel.border = BorderFactory.createEmptyBorder(5, 0, 5, 0)
-        add(bottomPanel, BorderLayout.SOUTH)
+        val bottomPanel = BorderLayoutPanel()
+        bottomPanel.border = JBUI.Borders.empty(5, 0)
+        addToBottom(bottomPanel)
 
         // 底部靠左面板
         val refreshToolbar =
             ActionManager.getInstance().createActionToolbar("imagePreview", DefaultActionGroup(RefreshButton()), true)
         refreshToolbar.targetComponent = bottomPanel
         var component = refreshToolbar.component
-        component.background = UIColor.BG_COLOR
-        bottomPanel.add(component, BorderLayout.WEST)
+        bottomPanel.addToLeft(component)
 
         // 增加图片预览的根路径显示
         mRootPathJPanel = JPanel(GridBagLayout())
-        mRootPathJPanel.background = UIColor.BG_COLOR
-        mRootPathJPanel.border = BorderFactory.createCompoundBorder(
-            BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(2, 4, 2, 4),
-                BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true)
+        mRootPathJPanel.border = JBUI.Borders.compound(
+            JBUI.Borders.compound(
+                JBUI.Borders.empty(2, 4),
+                JBUI.Borders.customLine(UIUtil.getBoundsColor(), 1)
             ),
-            BorderFactory.createEmptyBorder(0, 4, 0, 4)
+            JBUI.Borders.empty(0, 4)
         )
-        bottomPanel.add(mRootPathJPanel, BorderLayout.CENTER)
+        bottomPanel.addToCenter(mRootPathJPanel)
 
-        val label = JLabel("rootPath:")
-        @Suppress("UseJBColor")
-        label.foreground = Color(76, 80, 82)
+        val label = JBLabel("RootPath：")
+        label.foreground = UIUtil.getLabelDisabledForeground()
         label.font = UIUtil.getFont(UIUtil.FontSize.MINI, label.font)
 
         val c = GridBagConstraints()
@@ -328,28 +328,15 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
         c.weightx = 1.0
         mRootPathJPanel.add(mRootPathLabel, c)
 
-        mChangeBtn = JButton("Change")
-        mChangeBtn.preferredSize = JBUI.size(60, 26)
-        mChangeBtn.maximumSize = JBUI.size(60, 26)
-        mChangeBtn.minimumSize = JBUI.size(60, 26)
-        mChangeBtn.font = UIUtil.getFont(UIUtil.FontSize.SMALL, mChangeBtn.font)
-        mChangeBtn.addActionListener {
-            mChangeBtn.isEnabled = false
-            val file = VirtualFileManager.getInstance().findFileByUrl("file://$mRootFilePath")
-            val descriptor = FileChooserDescriptor(false, true, false, false, false, false)
-            val selectedFile = FileChooser.chooseFile(descriptor, module.project, file)
-            mChangeBtn.isEnabled = true
-            selectedFile?.also {
-                mRootFilePath = it.path
-                PropertiesSerializeUtils.putString(module.project, ROOT_PATH, it.path)
-                mRootPathLabel.text = formatRootPath(it.path)
-                updateNewImage()
-            }
-        }
+        val toolbar =
+            ActionManager.getInstance()
+                .createActionToolbar("imagePreview", DefaultActionGroup(SelectPathButton()), true)
+        toolbar.targetComponent = bottomPanel
+        component = toolbar.component
 
         c.fill = GridBagConstraints.VERTICAL
         c.weightx = 0.0
-        mRootPathJPanel.add(mChangeBtn, c)
+        mRootPathJPanel.add(component, c)
 
         // 底部靠右的布局面板
         val modeSwitchToolbar =
@@ -357,8 +344,7 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                 .createActionToolbar("imagePreview", DefaultActionGroup(ListModeButton(), GridModeButton()), true)
         modeSwitchToolbar.targetComponent = bottomPanel
         component = modeSwitchToolbar.component
-        component.background = UIColor.BG_COLOR
-        bottomPanel.add(component, BorderLayout.EAST)
+        bottomPanel.addToRight(component)
     }
 
     private fun refreshImagePanel() {
@@ -454,12 +440,13 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
     private fun setImageLayout() {
         if (!isGridMode) {
             mImagePanel.layoutOrientation = JBList.VERTICAL
-            mImagePanel.fixedCellHeight = 100
-            mImagePanel.fixedCellWidth = width
+            mImagePanel.fixedCellHeight = mListImageLayoutHeight
+            // 设置为0说明宽度自适应
+            mImagePanel.fixedCellWidth = 0
             mImagePanel.setExpandableItemsEnabled(true)
         } else {
             mImagePanel.layoutOrientation = JBList.HORIZONTAL_WRAP
-            mImagePanel.fixedCellHeight = mGridImageLayoutWidth + 60 + 20
+            mImagePanel.fixedCellHeight = mGridImageLayoutWidth + mGridLabelLayoutHeight + 20
             mImagePanel.fixedCellWidth = mGridImageLayoutWidth + 20
             mImagePanel.setExpandableItemsEnabled(false)
         }
@@ -470,64 +457,76 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
      * @param isGridMode false:线性布局，true：网格布局
      */
     private fun getPreviewItemPanel(index: Int, isGridMode: Boolean, focused: Boolean): JPanel {
-        val panel = JPanel()
-        panel.background = UIColor.BG_COLOR
+        val panel = BorderLayoutPanel()
         val image = myListModel.getData(index) ?: return panel
-        panel.layout = BorderLayout()
+
         if (!isGridMode) {
-            if (focused) {
-                panel.background = UIColor.MOUSE_ENTER_COLOR
-            }
-
             // 列表布局
-            panel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
-            panel.minimumSize = Dimension(width, 100)
-
+            if (focused) {
+                panel.border = JBUI.Borders.compound(
+                    JBUI.Borders.compound(
+                        JBUI.Borders.empty(7),
+                        JBUI.Borders.customLine(UIUtil.getListSelectionBackground(true), 2)
+                    ),
+                    JBUI.Borders.empty(1),
+                )
+            } else {
+                panel.border = JBUI.Borders.empty(10)
+            }
+            panel.minimumSize = JBDimension(120, mListImageLayoutHeight)
             val imageView = ChessBoardPanel()
                 .apply {
                     val iconPanel = IconPanel(image.value, true)
                     add(iconPanel)
                 }
-            imageView.preferredSize = Dimension(80, 80)
-            imageView.border = JBUI.Borders.customLine(UIColor.LINE_COLOR, 1)
-            panel.add(imageView, BorderLayout.WEST)
 
+            // 20为上下左右padding
+            val size = mListImageLayoutHeight - 20
+            imageView.preferredSize = JBDimension(size, size)
+            imageView.minimumSize = imageView.preferredSize
+            imageView.maximumSize = imageView.preferredSize
+            imageView.border = JBUI.Borders.customLine(UIUtil.getListSelectionBackground(false), 1)
+            panel.addToLeft(imageView)
 
-            val label = JLabel()
+            val label = JBLabel()
             label.text = image.name
 
-            val label2 = JLabel()
+            val label2 = JBLabel()
             label2.foreground = Gray._131
             label2.font = UIUtil.getFont(UIUtil.FontSize.MINI, label.font)
-            label2.border = BorderFactory.createEmptyBorder(2, 0, 0, 0)
+            label2.border = JBUI.Borders.emptyTop(2)
             label2.text = image.key
 
-            val box = Box.createVerticalBox()
-            box.border = BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(0, 30, 0, 0),
-                JBUI.Borders.customLine(UIColor.LINE_COLOR, 0, 0, 1, 0)
-            )
-            box.add(Box.createVerticalGlue())
-            box.add(label)
-            box.add(label2)
-            box.add(Box.createVerticalGlue())
+            val box = JBBox.createVerticalBox()
+            if (focused) {
+                box.border = JBUI.Borders.emptyLeft(20)
+            } else {
+                box.border = JBUI.Borders.compound(
+                    JBUI.Borders.emptyLeft(20),
+                    JBUI.Borders.customLine(UIUtil.getListSelectionBackground(false), 0, 0, 1, 0)
+                )
+            }
 
-            panel.add(box, BorderLayout.CENTER)
+            box.add(JBBox.createVerticalGlue())
+            box.add(label)
+            box.add(JBBox.createVerticalStrut(4))
+            box.add(label2)
+            box.add(JBBox.createVerticalGlue())
+
+            panel.addToCenter(box)
 
             return panel
         } else {
-            JBLabel(null, JBLabel.CENTER)
             // 网格布局
-            val labelHeight = 60
-            // 20 为padding 10
-            panel.preferredSize = Dimension(mGridImageLayoutWidth + 20, mGridImageLayoutWidth + labelHeight + 20)
+            panel.preferredSize =
+                JBDimension(mGridImageLayoutWidth + 20, mGridImageLayoutWidth + mGridLabelLayoutHeight + 20)
             panel.minimumSize = panel.preferredSize
             panel.maximumSize = panel.preferredSize
             val emptyBorderWidth = if (focused) 9 else 10
             val lineBorderWidth = if (focused) 2 else 1
-            val lineBorderColor = if (focused) UIColor.INPUT_FOCUS_COLOR else UIColor.LINE_COLOR
-            panel.border = BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(emptyBorderWidth, emptyBorderWidth, emptyBorderWidth, emptyBorderWidth),
+            val lineBorderColor = UIUtil.getListSelectionBackground(focused)
+            panel.border = JBUI.Borders.compound(
+                JBUI.Borders.empty(emptyBorderWidth),
                 JBUI.Borders.customLine(lineBorderColor, lineBorderWidth)
             )
 
@@ -537,34 +536,35 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
                     val iconPanel = IconPanel(image.value, true)
                     add(iconPanel)
                 }
-            imageView.preferredSize = Dimension(mGridImageLayoutWidth, mGridImageLayoutWidth)
+            imageView.preferredSize = JBDimension(mGridImageLayoutWidth, mGridImageLayoutWidth)
             imageView.minimumSize = imageView.preferredSize
             imageView.maximumSize = imageView.preferredSize
 
-            panel.add(imageView, BorderLayout.CENTER)
+            panel.addToCenter(imageView)
 
-            val label = JLabel()
+            val label = JBLabel()
             label.text = image.name
 
-            val label2 = JLabel()
+            val label2 = JBLabel()
             label2.foreground = Gray._131
-            label2.border = BorderFactory.createEmptyBorder(2, 0, 0, 0)
+            label2.border = JBUI.Borders.emptyTop(2)
             label2.font = UIUtil.getFont(UIUtil.FontSize.MINI, label.font)
             label2.text = image.key
 
-            val box = Box.createVerticalBox()
+            val box = JBBox.createVerticalBox()
             box.isOpaque = true
-            box.background = UIColor.IMAGE_TITLE_BG_COLOR
-            box.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
-            box.preferredSize = Dimension(mGridImageLayoutWidth, labelHeight)
+            box.background = JBUI.CurrentTheme.ActionButton.pressedBackground()
+            box.border = JBUI.Borders.empty(5)
+            box.preferredSize = JBDimension(mGridImageLayoutWidth, mGridLabelLayoutHeight)
             box.minimumSize = box.preferredSize
             box.maximumSize = box.preferredSize
-            box.add(Box.createVerticalGlue())
+            box.add(JBBox.createVerticalGlue())
             box.add(label)
+            box.add(JBBox.createVerticalStrut(4))
             box.add(label2)
-            box.add(Box.createVerticalGlue())
+            box.add(JBBox.createVerticalGlue())
 
-            panel.add(box, BorderLayout.SOUTH)
+            panel.addToBottom(box)
         }
 
         return panel
@@ -714,6 +714,23 @@ class ImagePreviewPanel(val module: Module) : JPanel(), Disposable {
 
         override fun actionPerformed(event: AnActionEvent) {
             updateNewImage()
+        }
+    }
+
+    private inner class SelectPathButton
+        : AnAction("Select", "Select image root path", AllIcons.Actions.Edit), DumbAware {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
+
+        override fun actionPerformed(event: AnActionEvent) {
+            val file = VirtualFileManager.getInstance().findFileByUrl("file://$mRootFilePath")
+            val descriptor = FileChooserDescriptor(false, true, false, false, false, false)
+            val selectedFile = FileChooser.chooseFile(descriptor, module.project, file)
+            selectedFile?.also {
+                mRootFilePath = it.path
+                PropertiesSerializeUtils.putString(module.project, ROOT_PATH, it.path)
+                mRootPathLabel.text = formatRootPath(it.path)
+                updateNewImage()
+            }
         }
     }
 

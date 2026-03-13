@@ -3,6 +3,7 @@ package com.wanggaowan.tools.ui
 import com.intellij.ui.JBColor
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.ImageUtil
+import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.*
 import java.awt.image.BufferedImage
 import javax.swing.JPanel
@@ -32,10 +33,7 @@ private fun createTexturePattern(scaledCellSize: Int): BufferedImage {
 /**
  * 绘制黑白相间的网格背景
  */
-class ChessBoardPanel(
-    cellSize: Int = 10,
-    layoutManager: LayoutManager = BorderLayout())
-    : JPanel(layoutManager) {
+class ChessBoardPanel(cellSize: Int = 10) : BorderLayoutPanel() {
 
     private val chessBoardPaint by object {
         private val scaledCellSize = JBUIScale.scale(cellSize)

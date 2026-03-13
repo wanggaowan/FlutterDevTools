@@ -19,7 +19,6 @@ import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.BorderFactory
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JTextField
@@ -66,7 +65,7 @@ class AddRouterDialog(val project: Project) : DialogWrapper(project, false) {
 
     private fun initContentPanel(): JPanel {
         val jParamsTitlePanel = JPanel(BorderLayout())
-        jParamsTitlePanel.border = BorderFactory.createEmptyBorder(10, 0, 0, 0)
+        jParamsTitlePanel.border = JBUI.Borders.emptyTop(10)
 
         val label = JBLabel("参数")
         label.alignmentX = 0f

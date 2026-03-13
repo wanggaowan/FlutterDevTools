@@ -78,12 +78,12 @@ class GitCommitLogDialog(val project: Project) : DialogWrapper(project, false) {
     private fun initTemplateList(): JComponent {
         val rootPanel = JPanel()
         rootPanel.layout = BorderLayout()
-        rootPanel.border = BorderFactory.createLineBorder(UIColor.LINE_COLOR)
+        rootPanel.border = JBUI.Borders.customLine(UIColor.LINE_COLOR)
 
         templateList.selectionMode = ListSelectionModel.SINGLE_SELECTION
         templateList.visibleRowCount = 20
         // top,left,bottom,right
-        templateList.border = BorderFactory.createEmptyBorder(0, 10, 0, 10)
+        templateList.border = JBUI.Borders.empty(0, 10)
         val model = DefaultListModel<String>()
         model.addAll(templateData)
         templateList.model = model
@@ -119,13 +119,13 @@ class GitCommitLogDialog(val project: Project) : DialogWrapper(project, false) {
 
         val scrollPane = JBScrollPane(templateList)
         scrollPane.preferredSize = JBDimension(260, 400)
-        scrollPane.border = BorderFactory.createEmptyBorder()
+        scrollPane.border = JBUI.Borders.empty()
         rootPanel.add(scrollPane, BorderLayout.CENTER)
 
         val box = Box.createHorizontalBox()
-        box.border = BorderFactory.createCompoundBorder(
+        box.border = JBUI.Borders.compound(
             JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 0, 0),
-            BorderFactory.createEmptyBorder(0, 5, 0, 5)
+            JBUI.Borders.empty(0, 5)
         )
         rootPanel.add(box, BorderLayout.SOUTH)
 
@@ -141,8 +141,8 @@ class GitCommitLogDialog(val project: Project) : DialogWrapper(project, false) {
     private fun initLanguageTextField(): LanguageTextField {
         val languageTextField = PlainTextLanguageTextField(project, isUseSoftWraps = true)
         languageTextField.autoscrolls = false
-        languageTextField.border = BorderFactory.createEmptyBorder()
-        languageTextField.editor?.setBorder(BorderFactory.createEmptyBorder())
+        languageTextField.border = JBUI.Borders.empty()
+        languageTextField.editor?.setBorder(JBUI.Borders.empty())
         languageTextField.preferredSize = JBDimension(700, 400)
         return languageTextField
     }

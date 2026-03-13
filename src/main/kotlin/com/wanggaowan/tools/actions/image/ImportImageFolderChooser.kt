@@ -150,7 +150,7 @@ class ImportImageFolderChooser(
 
         mRenameFileMap.forEach {
             val type = JLabel((it.key.ifEmpty { "Other" }) + "：")
-            type.border = BorderFactory.createEmptyBorder(if (depth > 0) 10 else 0, 5, 5, 5)
+            type.border = JBUI.Borders.empty(if (depth > 0) 10 else 0, 5, 5, 5)
             val fontSize = (UIUtil.getFontSize(UIUtil.FontSize.NORMAL) + 2).toInt()
             type.font = Font(type.font.name, Font.BOLD, fontSize)
             c.gridy = depth++
@@ -162,7 +162,7 @@ class ImportImageFolderChooser(
 
             it.value.forEach { it2 ->
                 val panel = JPanel(GridBagLayout())
-                panel.border = BorderFactory.createEmptyBorder(0, 5, 5, 5)
+                panel.border = JBUI.Borders.empty(0, 5, 5, 5)
                 c.gridy = depth++
                 mJRenamePanel.add(panel, c)
 
@@ -176,7 +176,7 @@ class ImportImageFolderChooser(
                 }
                 imageView.preferredSize = JBUI.size(34)
                 imageView.maximumSize = JBUI.size(34)
-                imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
+                imageView.border = JBUI.Borders.empty(5)
                 box.add(imageView)
 
                 val rename = ExtensionTextField(it2.newName, placeHolder = it2.oldName)
@@ -185,7 +185,7 @@ class ImportImageFolderChooser(
 
                 val box2 = Box.createHorizontalBox()
                 cc.gridy = 1
-                box2.border = BorderFactory.createEmptyBorder(2, 0, 2, 0)
+                box2.border = JBUI.Borders.empty(2, 0)
                 panel.add(box2, cc)
 
                 val (existFile, isInMap) = isImageExist(it2)
@@ -196,7 +196,7 @@ class ImportImageFolderChooser(
                 existFileImageView.preferredSize = JBUI.size(34, 16)
                 existFileImageView.minimumSize = JBUI.size(34, 16)
                 existFileImageView.maximumSize = JBUI.size(34, 16)
-                existFileImageView.border = BorderFactory.createEmptyBorder(0, 9, 0, 9)
+                existFileImageView.border = JBUI.Borders.empty(0, 9)
                 existFileImageView.isVisible = existFile != null
                 box2.add(existFileImageView)
 
@@ -240,7 +240,7 @@ class ImportImageFolderChooser(
 
         val placeHolder = JLabel()
         c.weighty = 1.0
-        c.gridy = depth++
+        c.gridy = depth
         mJRenamePanel.add(placeHolder, c)
     }
 
@@ -298,11 +298,11 @@ class ImportImageFolderChooser(
      */
     private fun createAction(): JComponent {
         val bottomPane = Box.createHorizontalBox()
-        bottomPane.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        bottomPane.border = JBUI.Borders.empty(5)
         mJChosenFolder = MyLabel()
         mJChosenFolder.strictMode = true
         mJChosenFolder.ellipsize = MyLabel.TruncateAt.MIDDLE
-        mJChosenFolder.border = BorderFactory.createEmptyBorder(0, 0, 0, 10)
+        mJChosenFolder.border = JBUI.Borders.emptyRight(10)
         bottomPane.add(mJChosenFolder)
         val chooseFolderBtn = JButton("change")
         bottomPane.add(chooseFolderBtn)

@@ -19,6 +19,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.ui.JBColor
 import com.intellij.ui.LanguageTextField
+import com.intellij.ui.components.JBBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
@@ -28,6 +29,8 @@ import com.intellij.util.LocalTimeCounter
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
+import com.intellij.util.ui.components.BorderLayoutPanel
 import com.wanggaowan.tools.ui.UIColor
 import com.wanggaowan.tools.ui.language.DartLanguageTextField
 import com.wanggaowan.tools.ui.language.JsonLanguageTextField
@@ -55,7 +58,7 @@ import javax.swing.tree.*
  * @author Created by wanggaowan on 2023/9/4 13:31
  */
 class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, false) {
-    private val mRootPanel: JPanel
+    private val mRootPanel: BorderLayoutPanel
     private val templateList = JBList<String>()
     private val templateChildrenTree = Tree(MyMutableTreeNode())
     private var languageTextFieldRoot: JPanel = JPanel(BorderLayout())
@@ -113,32 +116,29 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
 
     override fun getPreferredFocusedComponent(): JComponent = templateList
 
-    private fun initPanel(): JPanel {
-        val rootPanel = JPanel()
-        rootPanel.layout = BorderLayout()
-        rootPanel.add(initTemplateList(), BorderLayout.WEST)
+    private fun initPanel(): BorderLayoutPanel {
+        val rootPanel = BorderLayoutPanel()
+        rootPanel.addToLeft(initTemplateList())
 
-        val centerRootPanel = JPanel()
-        centerRootPanel.layout = BorderLayout()
+        val centerRootPanel = BorderLayoutPanel()
         centerRootPanel.preferredSize = JBDimension(700, 400)
-        rootPanel.add(centerRootPanel, BorderLayout.CENTER)
+        rootPanel.addToCenter(centerRootPanel)
 
-        centerRootPanel.add(initTemplateChildrenList(), BorderLayout.WEST)
+        centerRootPanel.addToLeft(initTemplateChildrenList())
 
-        centerRootPanel.add(initLanguageTextField(), BorderLayout.CENTER)
+        centerRootPanel.addToCenter(initLanguageTextField())
 
         return rootPanel
     }
 
-    private fun initTemplateList(): JComponent {
-        val rootPanel = JPanel()
-        rootPanel.layout = BorderLayout()
+    private fun initTemplateList(): BorderLayoutPanel {
+        val rootPanel = BorderLayoutPanel()
         rootPanel.border = JBUI.Borders.customLine(UIColor.LINE_COLOR)
 
         templateList.selectionMode = ListSelectionModel.SINGLE_SELECTION
         templateList.visibleRowCount = 20
         // top,left,bottom,right
-        templateList.border = BorderFactory.createEmptyBorder(0, 10, 0, 10)
+        templateList.border = JBUI.Borders.empty(0, 10)
         val model = DefaultListModel<String>()
         model.addAll(templateData.map { it.name })
         templateList.model = model
@@ -179,15 +179,15 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
 
         val scrollPane = JBScrollPane(templateList)
         scrollPane.preferredSize = JBDimension(260, 400)
-        scrollPane.border = BorderFactory.createEmptyBorder()
-        rootPanel.add(scrollPane, BorderLayout.CENTER)
+        scrollPane.border = JBUI.Borders.empty()
+        rootPanel.addToCenter(scrollPane)
 
-        val box = Box.createHorizontalBox()
-        box.border = BorderFactory.createCompoundBorder(
+        val box = JBBox.createHorizontalBox()
+        box.border = JBUI.Borders.compound(
             JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 0, 0),
-            BorderFactory.createEmptyBorder(0, 5, 0, 5)
+            JBUI.Borders.empty(0, 5)
         )
-        rootPanel.add(box, BorderLayout.SOUTH)
+        rootPanel.addToBottom(box)
 
         importTemplateBtn.preferredSize = JBDimension(50, 40)
         importTemplateBtn.addActionListener {
@@ -211,7 +211,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         }
         box.add(exportAllTemplateBtn)
 
-        box.add(Box.createHorizontalGlue())
+        box.add(JBBox.createHorizontalGlue())
 
         addTemplateBtn.preferredSize = JBDimension(40, 40)
         addTemplateBtn.addActionListener {
@@ -222,9 +222,8 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         return rootPanel
     }
 
-    private fun initTemplateChildrenList(): JComponent {
-        val rootPanel = JPanel()
-        rootPanel.layout = BorderLayout()
+    private fun initTemplateChildrenList(): BorderLayoutPanel {
+        val rootPanel = BorderLayoutPanel()
         rootPanel.border = JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 1, 1)
 
         templateChildrenTree.cellRenderer = MyTreeCellRenderer()
@@ -275,17 +274,17 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
 
         val scrollPane = JBScrollPane(templateChildrenTree)
         scrollPane.preferredSize = JBDimension(200, 400)
-        scrollPane.border = BorderFactory.createEmptyBorder()
-        rootPanel.add(scrollPane, BorderLayout.CENTER)
+        scrollPane.border = JBUI.Borders.empty()
+        rootPanel.addToCenter(scrollPane)
 
-        val box = Box.createHorizontalBox()
-        box.border = BorderFactory.createCompoundBorder(
+        val box = JBBox.createHorizontalBox()
+        box.border = JBUI.Borders.compound(
             JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 0, 0),
-            BorderFactory.createEmptyBorder(0, 5, 0, 5)
+            JBUI.Borders.empty(0, 5)
         )
-        rootPanel.add(box, BorderLayout.SOUTH)
+        rootPanel.addToBottom(box)
 
-        box.add(Box.createHorizontalGlue())
+        box.add(JBBox.createHorizontalGlue())
 
         addTemplateChildBtn.preferredSize = JBDimension(40, 40)
         addTemplateChildBtn.addActionListener {
@@ -301,20 +300,19 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         return rootPanel
     }
 
-    private fun initLanguageTextField(): JComponent {
-        val rootPanel = JPanel()
-        rootPanel.layout = BorderLayout()
+    private fun initLanguageTextField(): BorderLayoutPanel {
+        val rootPanel = BorderLayoutPanel()
         rootPanel.border = JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 1, 1)
 
         languageTextFieldRoot.preferredSize = JBDimension(500, 400)
-        rootPanel.add(languageTextFieldRoot, BorderLayout.CENTER)
+        rootPanel.addToCenter(languageTextFieldRoot)
 
-        val box = Box.createHorizontalBox()
-        box.border = BorderFactory.createCompoundBorder(
+        val box = JBBox.createHorizontalBox()
+        box.border = JBUI.Borders.compound(
             JBUI.Borders.customLine(UIColor.LINE_COLOR, 1, 0, 0, 0),
-            BorderFactory.createEmptyBorder(0, 5, 0, 5)
+            JBUI.Borders.empty(0, 5)
         )
-        rootPanel.add(box, BorderLayout.SOUTH)
+        rootPanel.addToBottom(box)
 
         specialPlaceHolderDescBtn.preferredSize = JBDimension(120, 40)
         specialPlaceHolderDescBtn.addActionListener {
@@ -322,7 +320,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         }
         box.add(specialPlaceHolderDescBtn)
 
-        box.add(Box.createHorizontalGlue())
+        box.add(JBBox.createHorizontalGlue())
 
         applyLanguageTextBtn.preferredSize = JBDimension(50, 40)
         applyLanguageTextBtn.addActionListener {
@@ -349,8 +347,8 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
             }
 
         languageTextField.autoscrolls = false
-        languageTextField.border = BorderFactory.createEmptyBorder()
-        languageTextField.editor?.setBorder(BorderFactory.createEmptyBorder())
+        languageTextField.border = JBUI.Borders.empty()
+        languageTextField.editor?.setBorder(JBUI.Borders.empty())
         languageTextField.document.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
                 super.documentChanged(event)
@@ -826,7 +824,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
                     try {
                         val template = gson.fromJson(psiFile.text, TemplateEntity::class.java)
                         importList.add(template)
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         try {
                             val type = object : TypeToken<List<TemplateEntity>>() {}.type
                             val value: List<TemplateEntity>? = Gson().fromJson(text, type)
@@ -867,7 +865,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
             templateData.add(entity)
             val model = templateList.model as DefaultListModel<String>
             model.addElement(entity.name)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             NotificationUtils.showBalloonMsg(project, "复制失败", NotificationType.ERROR)
         }
     }
@@ -886,7 +884,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
                     project, "已导出到：${dir.path + File.separator + fileName}",
                     NotificationType.INFORMATION
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 NotificationUtils.showBalloonMsg(project, "导出失败", NotificationType.ERROR)
             }
         }
@@ -922,7 +920,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
                     project, "已导出到：${dir.path + File.separator + fileName}",
                     NotificationType.INFORMATION
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 NotificationUtils.showBalloonMsg(project, "导出失败", NotificationType.ERROR)
             }
         }
@@ -945,17 +943,16 @@ class InputNameDialog(val project: Project, private val defaultValue: String = "
     }
 
     private fun initPanel(): JComponent {
-        val rootPanel = JPanel()
-        rootPanel.layout = BorderLayout()
+        val rootPanel = BorderLayoutPanel()
 
         val label = JLabel("输入名称：")
-        label.border = BorderFactory.createEmptyBorder(0, 0, 10, 0)
-        rootPanel.add(label, BorderLayout.NORTH)
+        label.border = JBUI.Borders.emptyBottom(10)
+        rootPanel.addToTop(label)
 
-        textField.preferredSize = Dimension(180, 30)
-        textField.minimumSize = Dimension(180, 30)
+        textField.preferredSize = JBDimension(180, 30)
+        textField.minimumSize = JBDimension(180, 30)
         textField.text = defaultValue
-        rootPanel.add(textField, BorderLayout.CENTER)
+        rootPanel.addToCenter(textField)
 
         createFolder.text = hint
         if (!hint.isNullOrEmpty()) {
@@ -1047,7 +1044,7 @@ class SpecialPlaceHolderDescDialog(val project: Project) : DialogWrapper(project
         """.trimIndent()
 
         rootPanel = JTextArea(desc)
-        rootPanel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        rootPanel.border = JBUI.Borders.empty(10)
         init()
     }
 
@@ -1160,10 +1157,12 @@ class MyTreeCellRenderer : DefaultTreeCellRenderer() {
     }
 
     override fun getBackgroundSelectionColor(): Color {
+        // 设置透明色,根布局有选中色和非选中色
         return JBColor("bgSelect", Color(0x00ffffff, true))
     }
 
     override fun getBackgroundNonSelectionColor(): Color {
+        /// 设置透明色,根布局有选中色和非选中色
         return JBColor("bgUnSelect", Color(0x00ffffff, true))
     }
 }

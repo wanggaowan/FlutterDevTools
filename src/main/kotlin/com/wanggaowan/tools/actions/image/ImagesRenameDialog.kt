@@ -91,12 +91,12 @@ class ImagesRenameDialog(
         }
 
         mJRenamePanel = JPanel(GridBagLayout())
-        mJRenamePanel.border = BorderFactory.createEmptyBorder(0, 5, 0, 5)
+        mJRenamePanel.border = JBUI.Borders.empty(0, 5)
         initRenamePanel()
         val scrollPane = ScrollPaneFactory.createScrollPane(mJRenamePanel)
-        scrollPane.border = BorderFactory.createCompoundBorder(
+        scrollPane.border = JBUI.Borders.compound(
             JBUI.Borders.customLineBottom(UIColor.LINE_COLOR),
-            BorderFactory.createEmptyBorder(5, 0, 0, 0)
+            JBUI.Borders.emptyTop(5)
         )
         return scrollPane
     }
@@ -119,7 +119,7 @@ class ImagesRenameDialog(
             }
             imageView.preferredSize = JBUI.size(34)
             imageView.maximumSize = JBUI.size(34)
-            imageView.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
+            imageView.border = JBUI.Borders.empty(5)
             box.add(imageView)
 
             val rename = ExtensionTextField(it.newName, placeHolder = it.oldName)
@@ -128,7 +128,7 @@ class ImagesRenameDialog(
 
             val box2 = Box.createHorizontalBox()
             cc.gridy = depth++
-            box2.border = BorderFactory.createEmptyBorder(2, 0, 2, 0)
+            box2.border = JBUI.Borders.empty(2, 0)
             mJRenamePanel.add(box2, cc)
 
             val existFile = isImageExist(it)
@@ -139,7 +139,7 @@ class ImagesRenameDialog(
             existFileImageView.preferredSize = JBUI.size(34, 16)
             existFileImageView.minimumSize = JBUI.size(34, 16)
             existFileImageView.maximumSize = JBUI.size(34, 16)
-            existFileImageView.border = BorderFactory.createEmptyBorder(0, 9, 0, 9)
+            existFileImageView.border = JBUI.Borders.empty(0, 9)
             existFileImageView.isVisible = existFile != null
             box2.add(existFileImageView)
 
@@ -184,7 +184,7 @@ class ImagesRenameDialog(
 
         val placeHolder = JLabel()
         cc.weighty = 1.0
-        cc.gridy = depth++
+        cc.gridy = depth
         mJRenamePanel.add(placeHolder, cc)
     }
 
@@ -239,7 +239,7 @@ class ImagesRenameDialog(
      */
     private fun createAction(): JComponent {
         val bottomPane = Box.createHorizontalBox()
-        bottomPane.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        bottomPane.border = JBUI.Borders.empty(5)
         bottomPane.add(Box.createHorizontalGlue())
         val cancelBtn = JButton("cancel")
         bottomPane.add(cancelBtn)

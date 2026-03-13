@@ -47,7 +47,7 @@ class JsonToDartDialog(
         cc.gridx = 0
 
         val label = JLabel("类名称")
-        label.border = BorderFactory.createEmptyBorder(0, 0, 0, JBUI.scale(6))
+        label.border = JBUI.Borders.emptyRight(6)
         headRootPanel.add(label, cc)
 
         cc.weightx = 10.0
@@ -58,7 +58,7 @@ class JsonToDartDialog(
         cc.weightx = 0.0
         cc.gridx = 2
         val emptyLabel = JLabel()
-        emptyLabel.border = BorderFactory.createEmptyBorder(0,2,0,JBUI.scale(2))
+        emptyLabel.border = JBUI.Borders.empty(0,2,0,JBUI.scale(2))
         headRootPanel.add(emptyLabel, cc)
 
         cc.weightx = 1.0
@@ -78,9 +78,9 @@ class JsonToDartDialog(
         mRootPanel.add(bottomPanel,BorderLayout.SOUTH)
 
         val bottomRootPanel = Box.createHorizontalBox()
-        bottomRootPanel.border = BorderFactory.createEmptyBorder(JBUI.scale(4),0,0,0)
+        bottomRootPanel.border = JBUI.Borders.emptyTop(4)
         mCbCreateDoc.isSelected = true
-        mCbCreateDoc.border = BorderFactory.createEmptyBorder(0,0,0,JBUI.scale(6))
+        mCbCreateDoc.border = JBUI.Borders.emptyRight(6)
         bottomRootPanel.add(mCbCreateDoc)
         bottomRootPanel.add(mCbNullSafe)
         bottomRootPanel.add(Box.createHorizontalGlue())
@@ -88,11 +88,11 @@ class JsonToDartDialog(
 
         val bottomRootPanel2 = Box.createHorizontalBox()
         mCbGeneratorJsonSerializable.isSelected = true
-        mCbGeneratorJsonSerializable.border = BorderFactory.createEmptyBorder(0,0,0,JBUI.scale(6))
+        mCbGeneratorJsonSerializable.border = JBUI.Borders.emptyRight(6)
         bottomRootPanel2.add(mCbGeneratorJsonSerializable)
-        mCbGeneratorGFile.border = BorderFactory.createEmptyBorder(0,0,0,JBUI.scale(6))
+        mCbGeneratorGFile.border = JBUI.Borders.emptyRight(6)
         bottomRootPanel2.add(mCbGeneratorGFile)
-        mCbSetConverters.border = BorderFactory.createEmptyBorder(0,0,0,JBUI.scale(6))
+        mCbSetConverters.border = JBUI.Borders.emptyRight(6)
         bottomRootPanel2.add(mCbSetConverters)
         mConvertersValue.preferredSize = JBUI.size(220, 30)
         mConvertersValue.maximumSize = mConvertersValue.preferredSize

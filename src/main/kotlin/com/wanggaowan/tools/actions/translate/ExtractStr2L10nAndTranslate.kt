@@ -22,6 +22,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.ui.JBColor
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.LocalTimeCounter
@@ -612,9 +613,9 @@ class InputKeyDialog(
 
     private fun createRootPanel(): JComponent {
         val builder = FormBuilder.createFormBuilder()
-        builder.addComponent(JLabel("输入多语言key："))
+        builder.addComponent(JBLabel("输入多语言key："))
 
-        val existKeyHint = JLabel("已存在相同key")
+        val existKeyHint = JBLabel("已存在相同key")
         existKeyHint.foreground = JBColor.RED
         existKeyHint.font = UIUtil.getFont(UIUtil.FontSize.SMALL, existKeyHint.font)
         existKey = if (defaultValue.isNullOrEmpty()) false else isExistKey(defaultValue!!)
@@ -629,16 +630,16 @@ class InputKeyDialog(
 
         val jsp = JBScrollPane(content)
         jsp.minimumSize = Dimension(300, 40)
-        jsp.border = BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true),
-            BorderFactory.createEmptyBorder(2, 2, 2, 2)
+        jsp.border = JBUI.Borders.compound(
+            JBUI.Borders.customLine(UIUtil.getListSelectionBackground(false), 1),
+            JBUI.Borders.empty(2)
         )
 
         content.addFocusListener(object : FocusListener {
             override fun focusGained(p0: FocusEvent?) {
-                jsp.border = BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(UIColor.INPUT_FOCUS_COLOR, 2, true),
-                    BorderFactory.createEmptyBorder(2, 2, 2, 2)
+                jsp.border = JBUI.Borders.compound(
+                    JBUI.Borders.customLine(UIUtil.getListSelectionBackground(true), 2),
+                    JBUI.Borders.empty(2)
                 )
                 if (this@InputKeyDialog.defaultValue == null) {
                     contentTextField?.also {
@@ -649,9 +650,9 @@ class InputKeyDialog(
             }
 
             override fun focusLost(p0: FocusEvent?) {
-                jsp.border = BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true),
-                    BorderFactory.createEmptyBorder(2, 2, 2, 2)
+                jsp.border = JBUI.Borders.compound(
+                    JBUI.Borders.customLine(UIUtil.getListSelectionBackground(false), 1),
+                    JBUI.Borders.empty(2)
                 )
             }
         })
@@ -700,11 +701,11 @@ class InputKeyDialog(
         val arbFiles: MutableList<TranslateArbFile> = mutableListOf(defaultArbFile)
         arbFiles.addAll(otherArbFile)
         val label = JLabel("以下为翻译内容：")
-        label.border = BorderFactory.createEmptyBorder(10, 0, 0, 0)
+        label.border = JBUI.Borders.emptyTop(10)
         builder.addComponent(label)
         arbFiles.forEach {
             val box = Box.createHorizontalBox()
-            box.border = BorderFactory.createEmptyBorder(4, 0, 0, 0)
+            box.border = JBUI.Borders.emptyTop(4)
 
             var title = it.targetLanguage ?: ""
             if (!it.targetLanguageAlias.isNullOrEmpty()) {
@@ -716,8 +717,8 @@ class InputKeyDialog(
             label2.isEditable = false // 如果不需要编辑功能
             label2.lineWrap = true // 启用自动换行
             label2.wrapStyleWord = true // 确保单词不会被拆分到两行
-            label2.setBorder(BorderFactory.createEmptyBorder())
-            label2.background = Color(0, 0, 0, 0)
+            label2.border = JBUI.Borders.empty()
+            label2.background = UIColor.TRANSPARENT
             label2.preferredSize = Dimension(40, 60)
             label2.maximumSize = Dimension(80, 60)
             label2.minimumSize = Dimension(40, 60)
@@ -736,20 +737,24 @@ class InputKeyDialog(
 
             val jsp2 = JBScrollPane(textArea)
             jsp2.minimumSize = Dimension(260, 60)
+            jsp2.border = JBUI.Borders.compound(
+                JBUI.Borders.customLine(UIUtil.getListSelectionBackground(false), 1),
+                JBUI.Borders.empty(2)
+            )
             box.add(jsp2)
 
             textArea.addFocusListener(object : FocusListener {
                 override fun focusGained(p0: FocusEvent?) {
-                    jsp2.border = BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(UIColor.INPUT_FOCUS_COLOR, 2, true),
-                        BorderFactory.createEmptyBorder(2, 2, 2, 2)
+                    jsp2.border = JBUI.Borders.compound(
+                        JBUI.Borders.customLine(UIUtil.getListSelectionBackground(true), 2),
+                        JBUI.Borders.empty(2)
                     )
                 }
 
                 override fun focusLost(p0: FocusEvent?) {
-                    jsp2.border = BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(UIColor.INPUT_UN_FOCUS_COLOR, 1, true),
-                        BorderFactory.createEmptyBorder(2, 2, 2, 2)
+                    jsp2.border = JBUI.Borders.compound(
+                        JBUI.Borders.customLine(UIUtil.getListSelectionBackground(false), 1),
+                        JBUI.Borders.empty(2)
                     )
                 }
             })
@@ -782,7 +787,7 @@ class InputKeyDialog(
 
         val jb = JBScrollPane(rootPanel)
         jb.preferredSize = JBUI.size(300, 40 + 60 * (arbFiles.size).coerceAtMost(5))
-        jb.border = BorderFactory.createEmptyBorder()
+        jb.border = JBUI.Borders.empty()
         return jb
     }
 
