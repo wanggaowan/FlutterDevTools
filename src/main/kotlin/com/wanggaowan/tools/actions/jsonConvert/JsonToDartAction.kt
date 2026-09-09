@@ -15,7 +15,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
-import com.wanggaowan.tools.actions.GeneratorGFileAction
+import com.wanggaowan.tools.actions.addGeneratorGFileDependencies
 import com.wanggaowan.tools.utils.DocumentUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
@@ -168,7 +168,7 @@ class JsonToDartAction : DumbAwareAction() {
         val pubRoot = PubRoot.forPsiFile(psiFile) ?: return
         val module = pubRoot.getModule(project) ?: return
         ApplicationManager.getApplication().runReadAction {
-            GeneratorGFileAction.addGeneratorGFileDependencies(module, sdk, pubRoot) {
+            addGeneratorGFileDependencies(module, sdk, pubRoot) {
                 // 只生成当前文件的.g.dart
                 val virtualFile = psiFile.virtualFile
                 FlutterCommandUtils.startGeneratorJsonSerializable(
