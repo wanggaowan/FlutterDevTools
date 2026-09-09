@@ -1,7 +1,8 @@
 package com.wanggaowan.tools.listener
 
 import com.intellij.ide.actionsOnSave.impl.ActionsOnSaveFileDocumentManagerListener.ActionOnSave
-import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.readAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -21,6 +22,7 @@ import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
 import io.flutter.sdk.FlutterSdk
 import kotlinx.coroutines.*
 import org.jetbrains.kotlin.idea.util.projectStructure.getModule
+import kotlin.time.Duration.Companion.milliseconds
 
 private val fileDocumentManager = lazy { FileDocumentManager.getInstance() }
 private val documentListener = lazy {
@@ -102,10 +104,16 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
         val file: VirtualFile = event.oldFile ?: return
         if (needDoGenL10nMap[file.path] == true) {
             needDoGenL10nMap.remove(file.path)
-            WriteCommandAction.runWriteCommandAction(event.manager.project) {
-                val module =
-                    ModuleUtilCore.findModuleForFile(file, event.manager.project) ?: return@runWriteCommandAction
-                fileDocumentManager.value.saveAllDocuments()
+            // ModuleUtilCore.findModuleForFile属于耗时操作，EDT不允许慢速操作，因此放到线程执行
+            coroutineScope.value.launch {
+                val module = readAction {
+                    ModuleUtilCore.findModuleForFile(file, event.manager.project)
+                } ?: return@launch
+
+                withContext(Dispatchers.EDT) {
+                    // 保存文档与执行gen-l10n命令均不需要write action，gen-l10n命令会异步执行，不会阻塞当前线程
+                    fileDocumentManager.value.saveAllDocuments()
+                }
                 doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
             }
         }
@@ -121,7 +129,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
             }
 
             job = coroutineScope.value.launch {
-                delay(500)
+                delay(500.milliseconds)
                 val workDir = if (isExample) module.findChild("example") else module.rootDir
                 workDir?.also {
                     FlutterSdk.getFlutterSdk(module.project)?.also { sdk ->

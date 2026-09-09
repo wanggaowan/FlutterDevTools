@@ -8,7 +8,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
@@ -17,6 +16,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.actions.GeneratorGFileAction
+import com.wanggaowan.tools.utils.DocumentUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 import com.wanggaowan.tools.utils.StringUtils
@@ -130,6 +130,7 @@ class JsonToDartAction : DumbAwareAction() {
         PropertiesSerializeUtils.putBoolean(project, JsonToDartDialog.SET_CONVERTERS, config.setConverters)
         ProgressUtils.runBackground(project, "GsonFormat") { progressIndicator ->
             progressIndicator.isIndeterminate = true
+            // 只有Dart文件内容的修改需要write action
             WriteCommandAction.runWriteCommandAction(project) {
                 if (rootElement == null) {
                     addClass(project, psiFile, null, className, jsonValue, config)
@@ -148,11 +149,11 @@ class JsonToDartAction : DumbAwareAction() {
                 }
 
                 DartPsiUtils.reformatFile(project, psiFile)
+            }
 
-                flutterSdk?.also {
-                    FileDocumentManager.getInstance().saveAllDocuments()
-                    executeCommand(project, psiFile, it)
-                }
+            flutterSdk?.also {
+                DocumentUtils.saveAllDocuments()
+                executeCommand(project, psiFile, it)
             }
 
             progressIndicator.isIndeterminate = false

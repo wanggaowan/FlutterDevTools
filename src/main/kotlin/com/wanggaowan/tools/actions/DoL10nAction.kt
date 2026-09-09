@@ -51,6 +51,8 @@ open class DoL10nAction : FlutterSdkAction() {
     ) {
 
         val project = module.project
+        var pubspecChanged = false
+        // 只有pubspec.yaml的PSI修改需要write action
         WriteCommandAction.runWriteCommandAction(project) {
             pubRoot.pubspec.toPsiFile(project)?.also { psiFile ->
                 val packagesMap = pubRoot.packagesMap
@@ -114,9 +116,13 @@ open class DoL10nAction : FlutterSdkAction() {
                         flutterElement.add(child)
                     }
                 }
-
-                FlutterCommandUtils.genL10N(module, pubRoot, sdk, onDone)
+                pubspecChanged = true
             }
+        }
+
+        // 执行flutter命令耗时较长，不能放在write action中，否则会长时间占用EDT
+        if (pubspecChanged) {
+            FlutterCommandUtils.genL10N(module, pubRoot, sdk, onDone)
         }
     }
 }

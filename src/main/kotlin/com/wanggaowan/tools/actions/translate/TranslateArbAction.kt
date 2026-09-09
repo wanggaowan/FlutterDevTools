@@ -9,6 +9,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -17,16 +18,12 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.util.LocalTimeCounter
-import com.intellij.util.application
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.TranslateUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.flutter.YamlUtils
 import io.flutter.pub.PubRoot
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.yaml.psi.YAMLKeyValue
@@ -167,11 +164,13 @@ class TranslateArbAction : DumbAwareAction() {
             return
         }
 
+        // 翻译属于网络请求，在后台线程顺序执行，只有写入arb文件才进入write action
         ProgressUtils.runBackground(project, "Translate", true) { progressIndicator ->
             progressIndicator.isIndeterminate = false
             progressIndicator.text = "Count all strings that need to be translated"
             val needTranslateMap = mutableMapOf<String, Any?>()
-            application.invokeAndWait {
+            // 统计需要翻译的内容属于PSI读取，在后台线程需要持有read action
+            ReadAction.run<RuntimeException> {
                 tempJsonObject.propertyList.forEach {
                     val name = it.name
                     if (name.startsWith("@@")) {
@@ -201,55 +200,54 @@ class TranslateArbAction : DumbAwareAction() {
 
             progressIndicator.fraction = 0.05
             var existTranslateFailed = false
-            CoroutineScope(Dispatchers.IO).launch launch2@{
-                var count = 1.0
-                val total = needTranslateMap.size
-                needTranslateMap.forEach { (key, value) ->
-                    if (progressIndicator.isCanceled) {
-                        return@launch2
-                    }
+            var count = 1.0
+            val total = needTranslateMap.size
+            needTranslateMap.forEach { (key, value) ->
+                if (progressIndicator.isCanceled) {
+                    return@runBackground
+                }
 
-                    if (key.startsWith("@")) {
-                        // 这是描述文本，直接复制
-                        if (value != null) {
-                            writeResult(project, arbPsiFile, jsonObject, key, value)
-                        }
-                        count++
-                        return@forEach
-                    }
-
-                    progressIndicator.text = "${count.toInt()} / $total Translating: $key"
-
-                    // 目前发现IDE连续翻译大概300条内容后，速度会越来越慢，而Android Studio基本没有此问题
-                    // 目前不知道为何。此处暂时记录，以后 看看能不能优化。
-                    // 如果是翻译API有QPS等限制，那应该不管什么平台都会变慢。但是Android Studio基本不会变慢。
-                    // 但是如果我只是模拟翻译接口，不去实际调用接口，IDE也不会变慢，从这又感觉是翻译API的限制
-                    val content = value as String?
-                    var translateStr =
-                        if (content.isNullOrEmpty()) content else TranslateUtils.translate(content,
-                            sourceLanguage,
-                            targetLanguage)
-                    progressIndicator.fraction = count / total * 0.94 + 0.05
-                    if (translateStr == null) {
-                        existTranslateFailed = true
-                    } else {
-                        translateStr = TranslateUtils.fixTranslateError(translateStr, useEscaping, true)
-                        if (translateStr != null) {
-                            writeResult(project, arbPsiFile, jsonObject, key, translateStr)
-                        } else {
-                            existTranslateFailed = true
-                        }
+                if (key.startsWith("@")) {
+                    // 这是描述文本，直接复制
+                    if (value != null) {
+                        writeResult(project, arbPsiFile, jsonObject, key, value)
                     }
                     count++
+                    return@forEach
                 }
-                progressIndicator.fraction = 1.0
-                if (existTranslateFailed) {
-                    NotificationUtils.showBalloonMsg(
-                        project,
-                        "存在部分内容未翻译或插入成功，请重试",
-                        NotificationType.WARNING
-                    )
+
+                progressIndicator.text = "${count.toInt()} / $total Translating: $key"
+
+                // 目前发现IDE连续翻译大概300条内容后，速度会越来越慢，而Android Studio基本没有此问题
+                // 目前不知道为何。此处暂时记录，以后 看看能不能优化。
+                // 如果是翻译API有QPS等限制，那应该不管什么平台都会变慢。但是Android Studio基本不会变慢。
+                // 但是如果我只是模拟翻译接口，不去实际调用接口，IDE也不会变慢，从这又感觉是翻译API的限制
+                val content = value as String?
+                var translateStr =
+                    if (content.isNullOrEmpty()) content else TranslateUtils.translate(content,
+                        sourceLanguage,
+                        targetLanguage)
+                progressIndicator.fraction = count / total * 0.94 + 0.05
+                if (translateStr == null) {
+                    existTranslateFailed = true
+                } else {
+                    translateStr = TranslateUtils.fixTranslateError(translateStr, useEscaping, true)
+                    if (translateStr != null) {
+                        writeResult(project, arbPsiFile, jsonObject, key, translateStr)
+                    } else {
+                        existTranslateFailed = true
+                    }
                 }
+                count++
+            }
+
+            progressIndicator.fraction = 1.0
+            if (existTranslateFailed) {
+                NotificationUtils.showBalloonMsg(
+                    project,
+                    "存在部分内容未翻译或插入成功，请重试",
+                    NotificationType.WARNING
+                )
             }
         }
     }

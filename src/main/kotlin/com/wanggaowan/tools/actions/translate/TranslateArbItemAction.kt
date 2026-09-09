@@ -9,7 +9,6 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -18,6 +17,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.util.findParentOfType
 import com.intellij.util.LocalTimeCounter
+import com.wanggaowan.tools.utils.DocumentUtils
 import com.wanggaowan.tools.utils.EditorUtils
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.ProgressUtils
@@ -27,9 +27,6 @@ import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
 import com.wanggaowan.tools.utils.flutter.YamlUtils
 import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.yaml.psi.YAMLKeyValue
@@ -147,6 +144,7 @@ class TranslateArbItemAction : DumbAwareAction() {
         val useEscaping = isUseEscaping(project, psiFile)
         val rootDir = getRootDir(psiFile)
         val total = targets.sumOf { it.items.size }
+        // 翻译属于网络请求，在后台线程顺序执行；只有写入arb文件的操作才进入write action
         ProgressUtils.runBackground(project, "Translate", true) { indicator ->
             indicator.isIndeterminate = false
             var current = 0.0
@@ -154,99 +152,97 @@ class TranslateArbItemAction : DumbAwareAction() {
             var successFileCount = 0
             var failedItemCount = 0
             val failedFiles = mutableListOf<String>()
-            CoroutineScope(Dispatchers.IO).launch launch2@{
-                targets.forEach { target ->
+            targets.forEach { target ->
+                if (indicator.isCanceled) {
+                    return@runBackground
+                }
+
+                val values = mutableListOf<Pair<String, String>>()
+                target.items.forEach { item ->
                     if (indicator.isCanceled) {
-                        return@launch2
+                        return@runBackground
                     }
 
-                    val values = mutableListOf<Pair<String, String>>()
-                    target.items.forEach { item ->
-                        if (indicator.isCanceled) {
-                            return@launch2
+                    current++
+                    indicator.text = "${current.toInt()} / $total ${target.psiFile.name}: ${item.key}"
+                    indicator.fraction = current / total * 0.95
+
+                    val result =
+                        if (item.isMetadata || target.language == sourceLanguage || item.valueText.isNullOrEmpty()) {
+                            // 描述项或目标语言与源语言一致，直接复制内容
+                            item.valueText
+                        } else {
+                            translateValue(item.valueText, sourceLanguage, target.language, useEscaping)
                         }
 
-                        current++
-                        indicator.text = "${current.toInt()} / $total ${target.psiFile.name}: ${item.key}"
-                        indicator.fraction = current / total * 0.95
-
-                        val result =
-                            if (item.isMetadata || target.language == sourceLanguage || item.valueText.isNullOrEmpty()) {
-                                // 描述项或目标语言与源语言一致，直接复制内容
-                                item.valueText
-                            } else {
-                                translateValue(item.valueText, sourceLanguage, target.language, useEscaping)
-                            }
-
-                        if (result == null) {
-                            failedItemCount++
-                            return@forEach
-                        }
-
-                        values.add(item.key to result)
-                    }
-
-                    if (values.isEmpty()) {
-                        failedFiles.add(target.psiFile.name)
+                    if (result == null) {
+                        failedItemCount++
                         return@forEach
                     }
 
-                    val writeCount = writeResult(project, target, values)
-                    if (writeCount > 0) {
-                        successFileCount++
-                        successItemCount += writeCount
-                    }
-
-                    if (writeCount < values.size) {
-                        failedItemCount += values.size - writeCount
-                        failedFiles.add(target.psiFile.name)
-                    }
+                    values.add(item.key to result)
                 }
 
-                indicator.fraction = 1.0
-                if (successItemCount > 0) {
-                    // 生成新的多语言文件
-                    genL10n(project, rootDir)
+                if (values.isEmpty()) {
+                    failedFiles.add(target.psiFile.name)
+                    return@forEach
                 }
 
-                var msg = buildString {
-                    if (successItemCount > 0) {
-                        append("已写入${successItemCount}项到${successFileCount}个arb文件")
-                    }
-                    if (existItemCount > 0) {
-                        if (isNotEmpty()) {
-                            append("，")
-                        }
-                        append("${existItemCount}项已存在未处理")
-                    }
-                    if (failedItemCount > 0) {
-                        if (isNotEmpty()) {
-                            append("，")
-                        }
-                        append("${failedItemCount}项翻译失败")
-                    }
-                    if (failedFiles.isNotEmpty()) {
-                        if (isNotEmpty()) {
-                            append("，")
-                        }
-                        append("${failedFiles.distinct().joinToString("、")}写入失败，请重试")
-                    }
+                val writeCount = writeResult(project, target, values)
+                if (writeCount > 0) {
+                    successFileCount++
+                    successItemCount += writeCount
                 }
 
-                if (msg.isEmpty()) {
-                    msg = "翻译失败，请重试"
+                if (writeCount < values.size) {
+                    failedItemCount += values.size - writeCount
+                    failedFiles.add(target.psiFile.name)
                 }
-
-                NotificationUtils.showBalloonMsg(
-                    project,
-                    msg,
-                    if (failedItemCount > 0 || failedFiles.isNotEmpty()) {
-                        NotificationType.WARNING
-                    } else {
-                        NotificationType.INFORMATION
-                    }
-                )
             }
+
+            indicator.fraction = 1.0
+            if (successItemCount > 0) {
+                // 生成新的多语言文件
+                genL10n(project, rootDir)
+            }
+
+            var msg = buildString {
+                if (successItemCount > 0) {
+                    append("已写入${successItemCount}项到${successFileCount}个arb文件")
+                }
+                if (existItemCount > 0) {
+                    if (isNotEmpty()) {
+                        append("，")
+                    }
+                    append("${existItemCount}项已存在未处理")
+                }
+                if (failedItemCount > 0) {
+                    if (isNotEmpty()) {
+                        append("，")
+                    }
+                    append("${failedItemCount}项翻译失败")
+                }
+                if (failedFiles.isNotEmpty()) {
+                    if (isNotEmpty()) {
+                        append("，")
+                    }
+                    append("${failedFiles.distinct().joinToString("、")}写入失败，请重试")
+                }
+            }
+
+            if (msg.isEmpty()) {
+                msg = "翻译失败，请重试"
+            }
+
+            NotificationUtils.showBalloonMsg(
+                project,
+                msg,
+                if (failedItemCount > 0 || failedFiles.isNotEmpty()) {
+                    NotificationType.WARNING
+                } else {
+                    NotificationType.INFORMATION
+                }
+            )
         }
     }
 
@@ -280,6 +276,7 @@ class TranslateArbItemAction : DumbAwareAction() {
      */
     private fun writeResult(project: Project, target: TargetArbFile, values: List<Pair<String, String>>): Int {
         var count = 0
+        // 仅PSI修改需要write action
         WriteCommandAction.runWriteCommandAction(project) {
             values.forEach { (key, valueText) ->
                 val dummyFile = PsiFileFactory.getInstance(project).createFileFromText(
@@ -296,14 +293,11 @@ class TranslateArbItemAction : DumbAwareAction() {
                 JsonPsiUtil.addProperty(target.jsonObject, property, false)
                 count++
             }
-
-            val document = target.psiFile.viewProvider.document
-            if (document != null) {
-                FileDocumentManager.getInstance().saveDocument(document)
-            } else {
-                FileDocumentManager.getInstance().saveAllDocuments()
-            }
         }
+
+        // 仅PSI修改需要write action；保存不是写操作，必须放在write action外，
+        // 但保存API与PSI读取必须在EDT线程执行
+        DocumentUtils.saveDocument(target.psiFile)
         return count
     }
 

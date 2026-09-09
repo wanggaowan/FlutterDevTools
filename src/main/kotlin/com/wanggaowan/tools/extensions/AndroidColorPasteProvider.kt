@@ -6,9 +6,9 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.util.TextRange
+import com.wanggaowan.tools.utils.DocumentUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
@@ -31,6 +31,8 @@ class AndroidColorPasteProvider : PasteProvider {
         val text = copyString ?: return
         val editor = context.getData(CommonDataKeys.EDITOR) ?: return
         val project = context.getData(CommonDataKeys.PROJECT) ?: return
+        // 在EDT线程提前取出document，避免后台线程访问editor
+        val document = editor.document
 
         ProgressUtils.runBackground(project, "convert color string") { progressIndicator ->
             progressIndicator.isIndeterminate = false
@@ -89,7 +91,6 @@ class AndroidColorPasteProvider : PasteProvider {
                 val endIndex = editor.selectionModel.selectionEnd + replaceContent.length
                 // 将光标移动到结束位置
                 editor.caretModel.moveToOffset(endIndex)
-                FileDocumentManager.getInstance().saveDocument(editor.document)
                 context.getData(CommonDataKeys.PSI_FILE)?.also { file ->
                     DartPsiUtils.reformatFile(
                         project,
@@ -99,6 +100,7 @@ class AndroidColorPasteProvider : PasteProvider {
                 }
             }
 
+            DocumentUtils.saveDocument(document)
             progressIndicator.fraction = 1.0
         }
     }

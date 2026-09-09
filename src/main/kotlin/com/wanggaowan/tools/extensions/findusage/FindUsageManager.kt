@@ -8,7 +8,6 @@ import com.intellij.navigation.NavigationItem
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressIndicator
@@ -30,6 +29,7 @@ import com.intellij.usages.similarity.clustering.ClusteringSearchSession
 import com.intellij.util.ArrayUtil
 import com.intellij.util.CommonProcessors
 import com.intellij.util.Processor
+import com.wanggaowan.tools.utils.ProgressUtils
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Supplier
 
@@ -110,51 +110,56 @@ class FindUsageManager(val project: Project) {
         }
 
         val index = mySearchCount.incrementAndGet()
-        if (index < 0 || index >= totalCount) {
+        if (index !in 0..<totalCount) {
             return
         }
 
-        WriteCommandAction.runWriteCommandAction(project) {
-            val element = elements[index]
-            val searcher = createSearcher(element, searchScope, onlyFindOneUse, findProgress)
-            if (searcher == null) {
-                doSearch(
-                    elements,
-                    totalCount,
-                    mySearchCount,
-                    myUsageCount,
-                    searchScope,
-                    onlyFindOneUse,
-                    findProgress,
-                    progressTitle,
-                    parentIndicator
-                )
-                return@runWriteCommandAction
+        val element = elements[index]
+        // createSearcher内部调用的FindUsages相关API要求在EDT线程执行，
+        // 且此处仅为读取，使用read action即可，用write action会长时间占用写锁导致界面卡死
+        val searcher = ProgressUtils.computeInEdt {
+            ReadAction.compute<Searcher?, RuntimeException> {
+                createSearcher(element, searchScope, onlyFindOneUse, findProgress)
             }
-
-            ProgressManager.getInstance()
-                .run(object : Task.Backgroundable(project, progressTitle?.invoke(element) ?: "Find usages", true) {
-                    override fun run(indicator: ProgressIndicator) {
-                        try {
-                            searcher.search(myUsageCount, parentIndicator)
-                        } catch (_: Exception) {
-                            // 搜索被取消
-                        }
-
-                        doSearch(
-                            elements,
-                            totalCount,
-                            mySearchCount,
-                            myUsageCount,
-                            searchScope,
-                            onlyFindOneUse,
-                            findProgress,
-                            progressTitle,
-                            parentIndicator
-                        )
-                    }
-                })
         }
+
+        if (searcher == null) {
+            doSearch(
+                elements,
+                totalCount,
+                mySearchCount,
+                myUsageCount,
+                searchScope,
+                onlyFindOneUse,
+                findProgress,
+                progressTitle,
+                parentIndicator
+            )
+            return
+        }
+
+        ProgressManager.getInstance()
+            .run(object : Task.Backgroundable(project, progressTitle?.invoke(element) ?: "Find usages", true) {
+                override fun run(indicator: ProgressIndicator) {
+                    try {
+                        searcher.search(myUsageCount, parentIndicator)
+                    } catch (_: Exception) {
+                        // 搜索被取消
+                    }
+
+                    doSearch(
+                        elements,
+                        totalCount,
+                        mySearchCount,
+                        myUsageCount,
+                        searchScope,
+                        onlyFindOneUse,
+                        findProgress,
+                        progressTitle,
+                        parentIndicator
+                    )
+                }
+            })
     }
 
     /**

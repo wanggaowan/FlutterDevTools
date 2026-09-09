@@ -3,7 +3,6 @@ package com.wanggaowan.tools.actions.image
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
@@ -17,6 +16,7 @@ import com.intellij.psi.util.elementType
 import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.entity.Property
 import com.wanggaowan.tools.settings.PluginSettings
+import com.wanggaowan.tools.utils.DocumentUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
@@ -99,9 +99,10 @@ object GeneratorImageRefUtils {
 
         ProgressUtils.runBackground(projectWrapper, "Create images res ref") { progressIndicator ->
             progressIndicator.isIndeterminate = true
+            // 写入数据之前先对文件进行保存，否则可能抛出异常：对未保存的文件进行写入
+            // 保存不属于写操作，必须在write action外执行，但保存API必须在EDT线程调用
+            DocumentUtils.saveAllDocuments()
             WriteCommandAction.runWriteCommandAction(projectWrapper) {
-                // 写入数据之前先对文件进行保存，否则可能抛出异常：对未保存的文件进行写入
-                FileDocumentManager.getInstance().saveAllDocuments()
                 try {
                     createImageRefFile(
                         projectWrapper,
@@ -245,7 +246,7 @@ object GeneratorImageRefUtils {
                 }
 
                 if (manager.findFileByUrl("file://${moduleRootFile.path}/$value") == null) {
-                    val file= File("${moduleRootFile.path}/$value")
+                    val file = File("${moduleRootFile.path}/$value")
                     if (!file.exists()) {
                         it.delete()
                     }

@@ -5,7 +5,6 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.LangDataKeys
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
@@ -66,59 +65,63 @@ class CreateFileTemplateAction : DumbAwareAction() {
             return
         }
 
+        // 模板配置的存储不涉及PSI修改，不需要write action
+        if (dialog.dataChange) {
+            FileTemplateUtils.saveTemplateList(dialog.templateData)
+        }
+
+        val template = dialog.selectTemplate ?: return
+        val children = template.children
+        if (!template.createFolder && children.isNullOrEmpty()) {
+            return
+        }
+
+        // DataContext的数据读取必须在EDT线程执行，不能放到后台任务中
+        var virtualFile = event.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
+        if (!virtualFile.isDirectory) {
+            virtualFile = virtualFile.parent
+        }
+
         ProgressUtils.runBackground(project, "create file template") { progressIndicator ->
             progressIndicator.isIndeterminate = true
-            WriteCommandAction.runWriteCommandAction(project) {
-                if (dialog.dataChange) {
-                    FileTemplateUtils.saveTemplateList(dialog.templateData)
-                }
-
-                val template = dialog.selectTemplate ?: return@runWriteCommandAction
-                val children = template.children
-                if (!template.createFolder && children.isNullOrEmpty()) {
-                    return@runWriteCommandAction
-                }
-
-                var virtualFile = event.getData(CommonDataKeys.VIRTUAL_FILE) ?: return@runWriteCommandAction
-                if (!virtualFile.isDirectory) {
-                    virtualFile = virtualFile.parent
-                }
-
-                dialog.placeholderMap.keys.forEach {
-                    when (it) {
-                        "#DATE#" -> {
-                            dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd").format(Date())
-                        }
-
-                        "#TIME#" -> {
-                            dialog.placeholderMap[it] = SimpleDateFormat("HH:mm").format(Date())
-                        }
-
-                        "#DATETIME#" -> {
-                            dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())
-                        }
-
-                        "#USER#" -> {
-                            dialog.placeholderMap[it] = System.getenv("USER") ?: ""
-                        }
-                    }
-                }
-
-                try {
-                    var parent = File(virtualFile.path)
-                    if (template.createFolder) {
-                        parent = File(parent, template.name!!)
-                        if (!parent.exists()) {
-                            parent.createDirectory()
-                        }
+            dialog.placeholderMap.keys.forEach {
+                when (it) {
+                    "#DATE#" -> {
+                        dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd").format(Date())
                     }
 
-                    createFile(parent, children, dialog.placeholderMap, dialog.createFileCopy)
-                    virtualFile.refresh(false, false)
-                } catch (e: Exception) {
-                    NotificationUtils.showBalloonMsg(project, e.message ?: "文件创建失败", NotificationType.ERROR)
+                    "#TIME#" -> {
+                        dialog.placeholderMap[it] = SimpleDateFormat("HH:mm").format(Date())
+                    }
+
+                    "#DATETIME#" -> {
+                        dialog.placeholderMap[it] = SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())
+                    }
+
+                    "#USER#" -> {
+                        dialog.placeholderMap[it] = System.getenv("USER") ?: ""
+                    }
                 }
             }
+
+            // 通过java.io创建文件不属于PSI写入，不需要write action，
+            // 且文件IO耗时较长，放进write action会长时间占用EDT
+            try {
+                var parent = File(virtualFile.path)
+                if (template.createFolder) {
+                    parent = File(parent, template.name!!)
+                    if (!parent.exists()) {
+                        parent.createDirectory()
+                    }
+                }
+
+                createFile(parent, children, dialog.placeholderMap, dialog.createFileCopy)
+            } catch (e: Exception) {
+                NotificationUtils.showBalloonMsg(project, e.message ?: "文件创建失败", NotificationType.ERROR)
+            }
+
+            // 同步刷新VFS不能放在write action中执行
+            virtualFile.refresh(false, false)
             progressIndicator.isIndeterminate = false
             progressIndicator.fraction = 1.0
         }
@@ -204,10 +207,9 @@ class CreateFileTemplateAction : DumbAwareAction() {
     }
 
     private fun justSaveTemplateChange(project: Project, dialog: CreateFileTemplateDialog) {
-        WriteCommandAction.runWriteCommandAction(project) {
-            if (dialog.dataChange) {
-                FileTemplateUtils.saveTemplateList(dialog.templateData)
-            }
+        // 模板配置的存储不涉及PSI修改，不需要write action
+        if (dialog.dataChange) {
+            FileTemplateUtils.saveTemplateList(dialog.templateData)
         }
     }
 }

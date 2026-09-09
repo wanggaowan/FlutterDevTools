@@ -26,6 +26,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.LocalTimeCounter
+import com.intellij.util.application
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -35,6 +36,7 @@ import com.jetbrains.lang.dart.psi.DartShortTemplateEntry
 import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.ui.UIColor
+import com.wanggaowan.tools.utils.DocumentUtils
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.TranslateUtils
@@ -44,9 +46,6 @@ import com.wanggaowan.tools.utils.flutter.YamlUtils
 import com.wanggaowan.tools.utils.msg.Toast
 import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
@@ -336,23 +335,24 @@ object ExtractUtils {
                 replaceElement(selectedFile, selectedElement, dartTemplateEntryList, existKey)
             }
         } else {
-            ProgressUtils.runBackground(project, "Translate", true) { progressIndicator ->
+            ProgressUtils.runBackgroundAsync(project, "Translate", true) { progressIndicator, finish ->
                 progressIndicator.isIndeterminate = false
                 val totalCount = 1.0 + otherArbFile.size
-                CoroutineScope(Dispatchers.IO).launch launch2@{
-                    progressIndicator.text = "Translating key..."
+                progressIndicator.text = "Translating key..."
 
-                    val sourceLanguage = defaultArbFile.translateLanguage!!
-                    val enTranslate = TranslateUtils.translate(keyTranslateText, sourceLanguage, "en")
-                    val isFormat = dartTemplateEntryList.isNotEmpty()
-                    val key = TranslateUtils.mapStrToKey(enTranslate, isFormat)
-                    if (progressIndicator.isCanceled) {
-                        return@launch2
-                    }
+                val sourceLanguage = defaultArbFile.translateLanguage!!
+                val enTranslate = TranslateUtils.translate(keyTranslateText, sourceLanguage, "en")
+                val isFormat = dartTemplateEntryList.isNotEmpty()
+                val key = TranslateUtils.mapStrToKey(enTranslate, isFormat)
 
+                if (!progressIndicator.isCanceled) {
                     var current = 1.0
                     progressIndicator.fraction = current / totalCount * 0.95
                     otherArbFile.forEach { file ->
+                        if (progressIndicator.isCanceled) {
+                            return@forEach
+                        }
+
                         progressIndicator.text =
                             "${current.toInt()} / ${(totalCount - 1).toInt()} Translating: ${file.arbFile.name}"
 
@@ -367,19 +367,19 @@ object ExtractUtils {
                             file.translate = translate2
                         }
 
-                        if (progressIndicator.isCanceled) {
-                            return@launch2
-                        }
-
                         current++
                         progressIndicator.fraction = current / totalCount * 0.95
                     }
+                }
 
-                    if (progressIndicator.isCanceled) {
-                        return@launch2
-                    }
+                if (progressIndicator.isCanceled) {
+                    finish()
+                    return@runBackgroundAsync
+                }
 
-                    CoroutineScope(Dispatchers.EDT).launch {
+                // 重命名对话框及文件写入必须在EDT线程执行
+                application.invokeLater {
+                    try {
                         var showRename = false
                         if (key == null || PluginSettings.getExtractStr2L10nShowRenameDialog(project)) {
                             showRename = true
@@ -388,13 +388,13 @@ object ExtractUtils {
                         }
 
                         if (progressIndicator.isCanceled) {
-                            return@launch
+                            return@invokeLater
                         }
 
                         if (showRename) {
                             progressIndicator.fraction = 1.0
                             val newKey =
-                                renameKey(project, key, defaultArbFile, otherArbFile) ?: return@launch
+                                renameKey(project, key, defaultArbFile, otherArbFile) ?: return@invokeLater
                             insertElement(
                                 project,
                                 progressIndicator,
@@ -419,6 +419,8 @@ object ExtractUtils {
                                 otherArbFile,
                             )
                         }
+                    } finally {
+                        finish()
                     }
                 }
             }
@@ -440,7 +442,6 @@ object ExtractUtils {
         WriteCommandAction.runWriteCommandAction(project) {
             insertElement(
                 project,
-                rootDir,
                 defaultArbFile.arbFile,
                 defaultArbFile.jsonObject,
                 newKey,
@@ -454,12 +455,10 @@ object ExtractUtils {
                 if (!tl.isNullOrEmpty()) {
                     insertElement(
                         project,
-                        rootDir,
                         file.arbFile,
                         file.jsonObject,
                         newKey,
                         tl,
-                        false
                     )
                 } else if (file.translateLanguage.isNullOrEmpty()) {
                     existFailed = true
@@ -474,6 +473,14 @@ object ExtractUtils {
                     NotificationType.WARNING
                 )
             }
+        }
+
+        // 保存文档与执行flutter命令均不是写操作，且gen-l10n命令耗时较长，
+        // 放在write action中执行会长时间占用EDT导致界面卡死，因此必须在write action外执行
+        DocumentUtils.saveAllDocuments()
+        FlutterSdk.getFlutterSdk(project)?.also { sdk ->
+            val commandLine = FlutterCommandLine(sdk, rootDir, FlutterCommandLine.Type.GEN_L10N)
+            commandLine.start()
         }
     }
 
@@ -543,14 +550,15 @@ object ExtractUtils {
         document?.replaceString(selectedElement.startOffset, selectedElement.endOffset, content)
     }
 
+    /**
+     * 将[key]-[value]插入[arbPsiFile]的json对象中，仅做PSI修改，不做文档保存与命令执行
+     */
     private fun insertElement(
         project: Project,
-        rootDir: VirtualFile,
         arbPsiFile: PsiFile,
         jsonObject: JsonObject?,
         key: String,
         value: String,
-        doGenL10n: Boolean = true
     ) {
         val psiFile = PsiFileFactory.getInstance(project).createFileFromText(
             "dummy.${JsonFileType.INSTANCE.defaultExtension}",
@@ -570,21 +578,6 @@ object ExtractUtils {
             }
         } else {
             arbPsiFile.add(psiFile.firstChild)
-        }
-
-        val manager = FileDocumentManager.getInstance()
-        val document = manager.getDocument(arbPsiFile.virtualFile)
-        if (document != null) {
-            manager.saveDocument(document)
-        } else {
-            manager.saveAllDocuments()
-        }
-
-        if (doGenL10n) {
-            FlutterSdk.getFlutterSdk(project)?.also { sdk ->
-                val commandLine = FlutterCommandLine(sdk, rootDir, FlutterCommandLine.Type.GEN_L10N)
-                commandLine.start()
-            }
         }
     }
 }

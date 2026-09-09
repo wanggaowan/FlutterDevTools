@@ -12,6 +12,7 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.util.application
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.*
 import com.wanggaowan.tools.utils.ex.basePath
@@ -290,102 +291,108 @@ object ImportSameImageResUtils {
         importToFolder: VirtualFile, renameMap: Map<String, List<RenameEntity>>,
         doneCallback: (() -> Unit)? = null
     ) {
-        val progressHelper = ProgressHelper(project)
-        progressHelper.start("import image")
-        WriteCommandAction.runWriteCommandAction(project) {
-            val mapFiles = mapChosenFiles(importFiles)
-            val folders: LinkedHashSet<VirtualFile> = LinkedHashSet()
-            folders.add(importToFolder)
-            val importDstFolders = importToFolder.children
-            mapFiles.keys.forEach {
-                var exist = it == "1.0x"
-                if (!exist && importDstFolders != null) {
-                    for (importDstFolder in importDstFolders) {
-                        if (importDstFolder.isDirectory && importDstFolder.name == it) {
-                            exist = true
-                            folders.add(importDstFolder)
-                            break
-                        }
-                    }
-                }
-
-                if (!exist) {
-                    try {
-                        folders.add(importToFolder.createChildDirectory(project, it))
-                    } catch (_: Exception) {
-                        return@runWriteCommandAction
-                    }
-                }
-            }
-
+        // 图片复制属于文件IO，耗时较长，必须放到后台执行，否则会长时间阻塞EDT
+        ProgressUtils.runBackground(project, "import image") { indicator ->
+            indicator.isIndeterminate = true
             var existsException = false
             var fileName: String? = null
             var parent: VirtualFile? = null
-            folders.forEach { folder ->
-                val files = if (folder == importToFolder) {
-                    mapFiles["1.0x"]
-                } else {
-                    mapFiles[folder.name]
-                }
-                parent = folder
-
-                files?.let {
-                    it.forEach { child ->
-                        try {
-                            val parentName = child.parent?.name
-                            val mapFolder = if (parentName == null) ""
-                            else if (parentName.contains("drawable")) "Drawable"
-                            else if (parentName.contains("mipmap")) {
-                                "Mipmap"
-                            } else {
-                                ""
+            WriteCommandAction.runWriteCommandAction(project) {
+                val mapFiles = mapChosenFiles(importFiles)
+                val folders: LinkedHashSet<VirtualFile> = LinkedHashSet()
+                folders.add(importToFolder)
+                val importDstFolders = importToFolder.children
+                mapFiles.keys.forEach {
+                    var exist = it == "1.0x"
+                    if (!exist && importDstFolders != null) {
+                        for (importDstFolder in importDstFolders) {
+                            if (importDstFolder.isDirectory && importDstFolder.name == it) {
+                                exist = true
+                                folders.add(importDstFolder)
+                                break
                             }
+                        }
+                    }
 
-                            val renameList = renameMap[mapFolder]
-                            var renameEntity: RenameEntity? = null
-                            if (renameList != null) {
-                                for (rename in renameList) {
-                                    if (rename.oldName == child.name) {
-                                        renameEntity = rename
-                                        break
+                    if (!exist) {
+                        try {
+                            folders.add(importToFolder.createChildDirectory(project, it))
+                        } catch (_: Exception) {
+                            return@runWriteCommandAction
+                        }
+                    }
+                }
+
+                folders.forEach { folder ->
+                    val files = if (folder == importToFolder) {
+                        mapFiles["1.0x"]
+                    } else {
+                        mapFiles[folder.name]
+                    }
+                    parent = folder
+
+                    files?.let {
+                        it.forEach { child ->
+                            try {
+                                val parentName = child.parent?.name
+                                val mapFolder = if (parentName == null) ""
+                                else if (parentName.contains("drawable")) "Drawable"
+                                else if (parentName.contains("mipmap")) {
+                                    "Mipmap"
+                                } else {
+                                    ""
+                                }
+
+                                val renameList = renameMap[mapFolder]
+                                var renameEntity: RenameEntity? = null
+                                if (renameList != null) {
+                                    for (rename in renameList) {
+                                        if (rename.oldName == child.name) {
+                                            renameEntity = rename
+                                            break
+                                        }
                                     }
                                 }
-                            }
 
-                            if (renameEntity != null && renameEntity.existFile) {
-                                if (!renameEntity.coverExistFile) {
-                                    fileName = renameEntity.newName
-                                    return@forEach
+                                if (renameEntity != null && renameEntity.existFile) {
+                                    if (!renameEntity.coverExistFile) {
+                                        fileName = renameEntity.newName
+                                        return@forEach
+                                    }
+                                    // 删除已经存在的文件
+                                    folder.findChild(renameEntity.newName)?.delete(project)
                                 }
-                                // 删除已经存在的文件
-                                folder.findChild(renameEntity.newName)?.delete(project)
-                            }
 
-                            val name = renameEntity?.newName ?: child.name
-                            fileName = name
-                            child.copy(project, folder, name)
-                        } catch (e: Exception) {
-                            existsException = true
-                            LOG.error(e)
+                                val name = renameEntity?.newName ?: child.name
+                                fileName = name
+                                child.copy(project, folder, name)
+                            } catch (e: Exception) {
+                                existsException = true
+                                LOG.error(e)
+                            }
                         }
                     }
                 }
             }
 
-            if (existsException) {
-                NotificationUtils.showBalloonMsg(project, "图片已导入，部分图片导入失败", NotificationType.WARNING)
-            } else {
-                if (importFiles.size == 1) {
-                    // 导入的图片为单张时，自动创建图片的引用key到剪切板
-                    if (parent != null && fileName != null) {
-                        CopyImageRefKeyAction.copy(project, parent, fileName)
-                    }
-                }
-                NotificationUtils.showBalloonMsg(project, "图片已导入", NotificationType.INFORMATION)
-            }
-            progressHelper.done()
             TempFileUtils.clearUnZipCacheFolder(project)
-            doneCallback?.invoke()
+            // 剪贴板操作必须在EDT线程执行
+            application.invokeLater {
+                if (existsException) {
+                    NotificationUtils.showBalloonMsg(project, "图片已导入，部分图片导入失败", NotificationType.WARNING)
+                } else {
+                    if (importFiles.size == 1) {
+                        // 导入的图片为单张时，自动创建图片的引用key到剪切板
+                        if (parent != null && fileName != null) {
+                            CopyImageRefKeyAction.copy(project, parent, fileName)
+                        }
+                    }
+                    NotificationUtils.showBalloonMsg(project, "图片已导入", NotificationType.INFORMATION)
+                }
+                doneCallback?.invoke()
+            }
+
+            indicator.fraction = 1.0
         }
     }
 }

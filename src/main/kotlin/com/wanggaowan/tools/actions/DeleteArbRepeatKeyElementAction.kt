@@ -7,9 +7,9 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.psi.PsiElement
+import com.wanggaowan.tools.utils.DocumentUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
@@ -50,6 +50,7 @@ class DeleteArbRepeatKeyElementAction : DumbAwareAction() {
         val file = e.getData(CommonDataKeys.PSI_FILE) ?: return
         ProgressUtils.runBackground(project, "delete arb repeat key") { indicator ->
             indicator.isIndeterminate = true
+
             WriteCommandAction.runWriteCommandAction(project) {
                 val jsonObject = file.getChildOfType<JsonObject>() ?: return@runWriteCommandAction
                 val list = jsonObject.propertyList
@@ -77,10 +78,10 @@ class DeleteArbRepeatKeyElementAction : DumbAwareAction() {
                     }
                 }
                 getWithElementDeleteOtherNodePrev(jsonObject.lastChild)?.delete()
-
-                FileDocumentManager.getInstance().saveAllDocuments()
-                indicator.fraction = 1.0
             }
+
+            DocumentUtils.saveAllDocuments()
+            indicator.fraction = 1.0
         }
     }
 

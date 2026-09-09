@@ -4,6 +4,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.LangDataKeys
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.DumbAwareAction
@@ -60,15 +61,23 @@ class DeleteUnusedFilesAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.getData(LangDataKeys.PROJECT) ?: return
         val virtualFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY) ?: return
-        ProgressUtils.runBackground(project, "Count all need check delete files", true) {
-            WriteCommandAction.runWriteCommandAction(project) {
-                it.isIndeterminate = true
-                val allFiles = mutableListOf<PsiFile>()
+        ProgressUtils.runBackground(project, "Count all need check delete files", true) { indicator ->
+            indicator.isIndeterminate = true
+            // 收集待检查文件属于VFS/PSI读取，持有read action即可，不需要write action
+            val allFiles = mutableListOf<PsiFile>()
+            ReadAction.run<RuntimeException> {
                 getAllFiles(project, virtualFiles, allFiles)
-                it.isIndeterminate = false
-                it.fraction = 1.0
+            }
+            indicator.isIndeterminate = false
+            indicator.fraction = 1.0
 
-                val totalCount = allFiles.size
+            if (allFiles.isEmpty()) {
+                return@runBackground
+            }
+
+            val totalCount = allFiles.size
+            // findUsages内部会启动独立的后台任务并显示自己的进度，此处需要在EDT线程发起
+            ProgressUtils.computeInEdt {
                 FindUsageManager(project).findUsages(
                     allFiles.toTypedArray(),
                     onlyFindOneUse = true,
@@ -117,10 +126,12 @@ class DeleteUnusedFilesAction : DumbAwareAction() {
         val dirs = mutableListOf<VirtualFile>()
         virtualFiles.forEach {
             if (!it.isDirectory) {
-                it.toPsiFile(project)?.also { psiFile ->
-                    files.add(psiFile)
+                if(!it.name.lowercase().endsWith("arb")) {
+                    // arb文件不会被直接引用，因此直接跳过检查
+                    it.toPsiFile(project)?.also { psiFile ->
+                        files.add(psiFile)
+                    }
                 }
-
             } else {
                 dirs.add(it)
             }
