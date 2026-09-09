@@ -18,6 +18,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.util.findParentOfType
 import com.intellij.util.LocalTimeCounter
+import com.wanggaowan.tools.utils.EditorUtils
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.TranslateUtils
@@ -34,11 +35,13 @@ import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.yaml.psi.YAMLKeyValue
 
 /**
- * 将当前arb文件中选中的一项，翻译并写入其它语言arb文件
+ * 将当前arb文件中选中的一项或多项，翻译并写入其它语言arb文件
  *
  * 与[TranslateArbAction]差异：
  * [TranslateArbAction]是以文件为维度，将模板arb文件中所有内容翻译到指定arb文件；
- * 此处是以项为维度，仅将选中的一项翻译并写入同目录下所有其它arb文件，已存在相同key的文件不处理
+ * 此处是以项为维度，仅将选中的项翻译并写入同目录下所有其它arb文件，已存在相同key的文件不处理
+ *
+ * 支持一次选中多项：编辑器中选中一段包含多条json项的文本后执行即可
  *
  * @author Created by wanggaowan on 2026/9/8
  */
@@ -54,42 +57,39 @@ class TranslateArbItemAction : DumbAwareAction() {
             return
         }
 
+        val caret = e.getData(CommonDataKeys.CARET)
+        if (caret == null || !caret.hasSelection()) {
+            // 非选中区域
+            val element = e.getData(CommonDataKeys.PSI_ELEMENT)
+            if (element == null) {
+                e.presentation.isVisible = false
+                return
+            }
+        }
+
         val psiFile = e.getData(CommonDataKeys.PSI_FILE)
-        if (psiFile?.virtualFile?.name?.lowercase()?.endsWith(".arb") != true) {
+        if (psiFile?.name?.lowercase()?.endsWith(".arb") != true) {
             e.presentation.isVisible = false
             return
         }
 
-        val property = getJsonProperty(e)
-        if (property != null && property.name.startsWith("@@")) {
-            // @@locale、@@locale_alias等为文件级别配置，不需要翻译
-            e.presentation.isVisible = false
-            return
-        }
-
-        e.presentation.text = if (property?.name?.startsWith("@") == true) SYNC_TEXT else TRANSLATE_TEXT
         e.presentation.isVisible = true
     }
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val property = getJsonProperty(e)
-        if (property == null) {
+        val properties = getJsonProperties(e).filter { !it.name.startsWith("@@") }
+        if (properties.isEmpty()) {
             NotificationUtils.showBalloonMsg(
                 project,
-                "请将光标定位到需要翻译的项",
+                "请将光标定位到需要翻译的项，或选中需要翻译的多项",
                 NotificationType.WARNING
             )
             return
         }
 
-        val key = property.name
-        if (key.startsWith("@@")) {
-            return
-        }
-
-        val psiFile = property.containingFile ?: return
-        val jsonObject = property.findParentOfType<JsonObject>() ?: return
+        val psiFile = properties[0].containingFile ?: return
+        val jsonObject = properties[0].findParentOfType<JsonObject>() ?: return
         val sourceLanguage = getLocale(jsonObject)
         if (sourceLanguage == null) {
             NotificationUtils.showBalloonMsg(
@@ -100,18 +100,17 @@ class TranslateArbItemAction : DumbAwareAction() {
             return
         }
 
-        // 原始内容，字符串类型时包含前后双引号，如"xxx"，@key描述项时为json对象文本
-        val valueText = property.value?.text
-        if (valueText.isNullOrEmpty()) {
-            NotificationUtils.showBalloonMsg(project, "[$key]没有可翻译的内容", NotificationType.WARNING)
-            return
+        val items = mutableListOf<ArbItem>()
+        properties.forEach { property ->
+            val key = property.name
+            // 原始内容，字符串类型时包含前后双引号，如"xxx"，@key描述项时为json对象文本
+            val valueText = property.value?.text
+            // @key为描述项，不需要翻译，直接同步到其它arb文件
+            items.add(ArbItem(key, valueText, key.startsWith("@")))
         }
 
-        // @key为描述项，不需要翻译，直接同步到其它arb文件
-        val isMetadata = key.startsWith("@")
-
         val targets = mutableListOf<TargetArbFile>()
-        var existCount = 0
+        var existItemCount = 0
         var noLocaleCount = 0
         psiFile.parent?.files?.forEach { file ->
             if (file == psiFile || file.virtualFile?.name?.lowercase()?.endsWith(".arb") != true) {
@@ -119,38 +118,41 @@ class TranslateArbItemAction : DumbAwareAction() {
             }
 
             val json = file.getChildOfType<JsonObject>() ?: return@forEach
-            if (json.findProperty(key) != null) {
-                // 已存在相同key，不处理
-                existCount++
-                return@forEach
-            }
-
             val targetLanguage = getLocale(json)
             if (targetLanguage == null) {
                 noLocaleCount++
                 return@forEach
             }
 
-            targets.add(TargetArbFile(file, json, targetLanguage))
+            // 已存在相同key的项不处理
+            val needItems = items.filter { json.findProperty(it.key) == null }
+            existItemCount += items.size - needItems.size
+            if (needItems.isEmpty()) {
+                return@forEach
+            }
+
+            targets.add(TargetArbFile(file, json, targetLanguage, needItems))
         }
 
         if (targets.isEmpty()) {
             val msg = when {
                 noLocaleCount > 0 -> "存在${noLocaleCount}个arb文件未配置@@locale属性或@@locale_alias属性"
-                existCount > 0 -> "其它arb文件中已存在[$key]"
+                existItemCount > 0 -> "其它arb文件中已存在选中项"
                 else -> "未找到其它arb文件"
             }
-            NotificationUtils.showBalloonMsg(project, msg, NotificationType.INFORMATION)
+            NotificationUtils.showBalloonMsg(project, msg, NotificationType.WARNING)
             return
         }
 
         val useEscaping = isUseEscaping(project, psiFile)
         val rootDir = getRootDir(psiFile)
+        val total = targets.sumOf { it.items.size }
         ProgressUtils.runBackground(project, "Translate", true) { indicator ->
             indicator.isIndeterminate = false
-            val total = targets.size
             var current = 0.0
-            var successCount = 0
+            var successItemCount = 0
+            var successFileCount = 0
+            var failedItemCount = 0
             val failedFiles = mutableListOf<String>()
             CoroutineScope(Dispatchers.IO).launch launch2@{
                 targets.forEach { target ->
@@ -158,56 +160,91 @@ class TranslateArbItemAction : DumbAwareAction() {
                         return@launch2
                     }
 
-                    current++
-                    indicator.text = "${current.toInt()} / $total Translating: ${target.psiFile.name}"
-                    indicator.fraction = current / total * 0.95
+                    val values = mutableListOf<Pair<String, String>>()
+                    target.items.forEach { item ->
+                        if (indicator.isCanceled) {
+                            return@launch2
+                        }
 
-                    val result = if (isMetadata || target.language == sourceLanguage) {
-                        // 描述项或目标语言与源语言一致，直接复制内容
-                        valueText
-                    } else {
-                        translateValue(valueText, sourceLanguage, target.language, useEscaping)
+                        current++
+                        indicator.text = "${current.toInt()} / $total ${target.psiFile.name}: ${item.key}"
+                        indicator.fraction = current / total * 0.95
+
+                        val result =
+                            if (item.isMetadata || target.language == sourceLanguage || item.valueText.isNullOrEmpty()) {
+                                // 描述项或目标语言与源语言一致，直接复制内容
+                                item.valueText
+                            } else {
+                                translateValue(item.valueText, sourceLanguage, target.language, useEscaping)
+                            }
+
+                        if (result == null) {
+                            failedItemCount++
+                            return@forEach
+                        }
+
+                        values.add(item.key to result)
                     }
 
-                    if (result == null) {
+                    if (values.isEmpty()) {
                         failedFiles.add(target.psiFile.name)
                         return@forEach
                     }
 
-                    if (writeResult(project, target, key, result)) {
-                        successCount++
-                    } else {
+                    val writeCount = writeResult(project, target, values)
+                    if (writeCount > 0) {
+                        successFileCount++
+                        successItemCount += writeCount
+                    }
+
+                    if (writeCount < values.size) {
+                        failedItemCount += values.size - writeCount
                         failedFiles.add(target.psiFile.name)
                     }
                 }
 
                 indicator.fraction = 1.0
-                if (successCount > 0) {
+                if (successItemCount > 0) {
                     // 生成新的多语言文件
                     genL10n(project, rootDir)
                 }
 
-                val msg = buildString {
-                    if (successCount > 0) {
-                        append("[$key]已写入${successCount}个arb文件")
+                var msg = buildString {
+                    if (successItemCount > 0) {
+                        append("已写入${successItemCount}项到${successFileCount}个arb文件")
                     }
-                    if (existCount > 0) {
+                    if (existItemCount > 0) {
                         if (isNotEmpty()) {
                             append("，")
                         }
-                        append("${existCount}个arb文件已存在[$key]，未处理")
+                        append("${existItemCount}项已存在未处理")
+                    }
+                    if (failedItemCount > 0) {
+                        if (isNotEmpty()) {
+                            append("，")
+                        }
+                        append("${failedItemCount}项翻译失败")
                     }
                     if (failedFiles.isNotEmpty()) {
                         if (isNotEmpty()) {
                             append("，")
                         }
-                        append("${failedFiles.joinToString("、")}写入失败，请重试")
+                        append("${failedFiles.distinct().joinToString("、")}写入失败，请重试")
                     }
                 }
+
+                if (msg.isEmpty()) {
+                    msg = "翻译失败，请重试"
+                }
+
                 NotificationUtils.showBalloonMsg(
                     project,
                     msg,
-                    if (failedFiles.isEmpty()) NotificationType.INFORMATION else NotificationType.WARNING
+                    if (failedItemCount > 0 || failedFiles.isNotEmpty()) {
+                        NotificationType.WARNING
+                    } else {
+                        NotificationType.INFORMATION
+                    }
                 )
             }
         }
@@ -239,32 +276,35 @@ class TranslateArbItemAction : DumbAwareAction() {
     }
 
     /**
-     * 将[key]：[valueText]写入[target]对应的arb文件，返回是否写入成功
+     * 将[values]中的key-value写入[target]对应的arb文件，返回成功写入的项数
      */
-    private fun writeResult(project: Project, target: TargetArbFile, key: String, valueText: String): Boolean {
-        var success = false
+    private fun writeResult(project: Project, target: TargetArbFile, values: List<Pair<String, String>>): Int {
+        var count = 0
         WriteCommandAction.runWriteCommandAction(project) {
-            val dummyFile = PsiFileFactory.getInstance(project).createFileFromText(
-                "dummy.${JsonFileType.INSTANCE.defaultExtension}",
-                JsonFileType.INSTANCE,
-                "{\"$key\": $valueText}",
-                LocalTimeCounter.currentTime(),
-                false
-            )
+            values.forEach { (key, valueText) ->
+                val dummyFile = PsiFileFactory.getInstance(project).createFileFromText(
+                    "dummy.${JsonFileType.INSTANCE.defaultExtension}",
+                    JsonFileType.INSTANCE,
+                    "{\"$key\": $valueText}",
+                    LocalTimeCounter.currentTime(),
+                    false
+                )
 
-            val property =
-                dummyFile.getChildOfType<JsonObject>()?.propertyList?.firstOrNull() ?: return@runWriteCommandAction
+                val property = dummyFile.getChildOfType<JsonObject>()?.propertyList?.firstOrNull()
+                    ?: return@forEach
 
-            JsonPsiUtil.addProperty(target.jsonObject, property, false)
+                JsonPsiUtil.addProperty(target.jsonObject, property, false)
+                count++
+            }
+
             val document = target.psiFile.viewProvider.document
             if (document != null) {
                 FileDocumentManager.getInstance().saveDocument(document)
             } else {
                 FileDocumentManager.getInstance().saveAllDocuments()
             }
-            success = true
         }
-        return success
+        return count
     }
 
     /**
@@ -316,39 +356,54 @@ class TranslateArbItemAction : DumbAwareAction() {
         }
     }
 
-    private fun getJsonProperty(element: PsiElement?): JsonProperty? {
-        if (element == null) {
-            return null
-        }
-        return element.findParentOfType<JsonProperty>(false)
-    }
-
     /**
-     * 获取当前选中的json项
+     * 获取光标所在的json项，需在EDT线程执行，不能在update中调用
      */
     private fun getJsonProperty(e: AnActionEvent): JsonProperty? {
-        getJsonProperty(e.getData(CommonDataKeys.PSI_ELEMENT))?.let {
+        e.getData(CommonDataKeys.PSI_ELEMENT)?.findParentOfType<JsonProperty>(false)?.let {
             return it
         }
 
-        // 从光标位置查找，此方式需在EDT线程执行，仅在actionPerformed中生效
         val editor = e.getData(CommonDataKeys.EDITOR)
         val psiFile = e.getData(CommonDataKeys.PSI_FILE)
         if (editor != null && psiFile != null) {
-            return getJsonProperty(psiFile.findElementAt(editor.caretModel.offset))
+            return psiFile.findElementAt(editor.caretModel.offset)?.findParentOfType<JsonProperty>(false)
         }
 
         return null
     }
 
+    /**
+     * 获取选中的json项，支持一次选中多项，需在EDT线程执行
+     *
+     * 编辑器存在选区时，取所有与选区有交集的json项，否则取光标所在项
+     */
+    private fun getJsonProperties(e: AnActionEvent): List<JsonProperty> {
+        val editor = e.getData(CommonDataKeys.EDITOR)
+        if (editor != null) {
+            val properties = EditorUtils.getSelectionAreaPsiElement(editor) {
+                it.findParentOfType<JsonProperty>(false)
+            }
+            if (!properties.isNullOrEmpty()) {
+                return properties
+            }
+        }
+
+        return getJsonProperty(e)?.let { listOf(it) } ?: emptyList()
+    }
+
+    private class ArbItem(
+        val key: String,
+        val valueText: String?,
+        // @key描述项不需要翻译
+        val isMetadata: Boolean,
+    )
+
     private class TargetArbFile(
         val psiFile: PsiFile,
         val jsonObject: JsonObject,
         val language: String,
+        // 当前文件中不存在，需要写入的项
+        val items: List<ArbItem>,
     )
-
-    companion object {
-        private const val TRANSLATE_TEXT = "翻译此项到其它arb文件"
-        private const val SYNC_TEXT = "同步此项到其它arb文件"
-    }
 }

@@ -48,7 +48,7 @@
                 id="FlutterDevTools.TranslateArbItemAction"
                 class="com.wanggaowan.tools.actions.translate.TranslateArbItemAction"
                 text="翻译此项到其它arb文件"
-                description="将当前选中项翻译并写入同目录下其它语言arb文件，已存在相同key的文件不处理"/>
+                description="将选中的一项或多项翻译并写入同目录下其它语言arb文件，支持一次选中多项，已存在相同key的文件不处理"/>
 
             <action
                 id="FlutterDevTools.DeleteArbSameKeyElementAction"
@@ -128,6 +128,8 @@
             <reference ref="FlutterDevTools.Images.EditMenuGroup"/>
             <separator/>
             <add-to-group group-id="Images.EditorPopupMenu" anchor="first"/>
+            <add-to-group group-id="Images.EditorToolbar" anchor="first"/>
+            <add-to-group group-id="EditorTabPopupMenu" anchor="first"/>
         </group>
 
         <group id="FlutterDevTools.EditorPopupMenuGroup"

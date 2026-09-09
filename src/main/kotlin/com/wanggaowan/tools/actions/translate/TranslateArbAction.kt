@@ -140,7 +140,7 @@ class TranslateArbAction : DumbAwareAction() {
         val tempJsonObject = tempArbPsiFile.getChildOfType<JsonObject>() ?: return
         val jsonObject = arbPsiFile.getChildOfType<JsonObject>()
         var targetLanguage = jsonObject?.findProperty("@@locale_alias")?.value?.text?.replace("\"", "")
-        if (targetLanguage == null || targetLanguage.isEmpty()) {
+        if (targetLanguage.isNullOrEmpty()) {
             targetLanguage = jsonObject?.findProperty("@@locale")?.value?.text?.replace("\"", "")
         }
 
@@ -154,7 +154,7 @@ class TranslateArbAction : DumbAwareAction() {
         }
 
         var sourceLanguage = tempJsonObject.findProperty("@@locale_alias")?.value?.text?.replace("\"", "")
-        if (sourceLanguage == null || sourceLanguage.isEmpty()) {
+        if (sourceLanguage.isNullOrEmpty()) {
             sourceLanguage = tempJsonObject.findProperty("@@locale")?.value?.text?.replace("\"", "")
         }
 

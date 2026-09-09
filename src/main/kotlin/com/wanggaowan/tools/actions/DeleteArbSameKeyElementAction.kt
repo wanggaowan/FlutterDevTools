@@ -3,6 +3,7 @@ package com.wanggaowan.tools.actions
 import com.intellij.json.JsonElementTypes
 import com.intellij.json.psi.JsonObject
 import com.intellij.json.psi.JsonProperty
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
@@ -13,6 +14,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.findParentOfType
+import com.wanggaowan.tools.utils.EditorUtils
+import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
@@ -29,25 +32,23 @@ class DeleteArbSameKeyElementAction : DumbAwareAction() {
     }
 
     override fun update(e: AnActionEvent) {
-        val project = e.project
-        if (project == null) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        val element = e.getData(CommonDataKeys.PSI_ELEMENT)
-        if (element == null) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        val file = element.containingFile
-        if (file?.name?.lowercase()?.endsWith(".arb") != true) {
-            e.presentation.isVisible = false
-            return
-        }
-
         if (!e.isFlutterProject) {
+            e.presentation.isVisible = false
+            return
+        }
+
+        val caret = e.getData(CommonDataKeys.CARET)
+        if (caret == null || !caret.hasSelection()) {
+            // 非选中区域
+            val element = e.getData(CommonDataKeys.PSI_ELEMENT)
+            if (element == null) {
+                e.presentation.isVisible = false
+                return
+            }
+        }
+
+        val psiFile = e.getData(CommonDataKeys.PSI_FILE)
+        if (psiFile?.name?.lowercase()?.endsWith(".arb") != true) {
             e.presentation.isVisible = false
             return
         }
@@ -56,38 +57,92 @@ class DeleteArbSameKeyElementAction : DumbAwareAction() {
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        val element = e.getData(CommonDataKeys.PSI_ELEMENT) ?: return
-        if (element !is JsonProperty) {
+        val project = e.project ?: return
+        val properties = getJsonProperties(e)
+        if (properties.isEmpty()) {
+            NotificationUtils.showBalloonMsg(
+                project,
+                "请将光标定位到需要删除的项",
+                NotificationType.WARNING
+            )
             return
         }
 
-        val project = element.project
         ProgressUtils.runBackground(project, "delete arb same key") { indicator ->
-            indicator.isIndeterminate = true
+            indicator.isIndeterminate = false
+            indicator.fraction = 0.0
+            val total = properties.size
+            var index = 0
+            for (property in properties) {
+                index++
+                indicator.text = "Deleting $index / $total"
+                indicator.fraction = (index - 1) * 1.0 / total * 0.9
+
+                // 收集及删除操作必须持有写锁，此操作耗时很短
+                // PSI相关访问（findParentOfType、containingFile等）必须在持有锁的write action内执行
+                WriteCommandAction.runWriteCommandAction(project) {
+                    val results = mutableListOf<PsiElement>()
+                    results.add(property)
+                    val jsonObject = property.findParentOfType<JsonObject>()
+                    if (isLastChild(jsonObject, property)) {
+                        getWithElementDeleteOtherNodePrev(property, results)
+                    } else {
+                        getWithElementDeleteOtherNode(property, results)
+                    }
+
+                    val name = property.name
+                    val file = property.containingFile?.virtualFile
+                    val parent = file?.parent
+                    if (parent != null && parent.isDirectory) {
+                        getOtherArbSameElement(project, parent, file, name, results)
+                    }
+                    results.forEach {
+                        it.delete()
+                    }
+                }
+            }
+
             WriteCommandAction.runWriteCommandAction(project) {
-                val results = mutableListOf<PsiElement>()
-                results.add(element)
-                val jsonObject = element.findParentOfType<JsonObject>()
-                if (isLastChild(jsonObject, element)) {
-                    getWithElementDeleteOtherNodePrev(element, results)
-                } else {
-                    getWithElementDeleteOtherNode(element, results)
-                }
-
-                val name = element.name
-                val file = element.containingFile?.virtualFile
-                val parent = file?.parent
-                if (parent != null && parent.isDirectory) {
-                    getOtherArbSameElement(project, parent, file, name, results)
-                }
-
-                results.forEach {
-                    it.delete()
-                }
                 FileDocumentManager.getInstance().saveAllDocuments()
-                indicator.fraction = 1.0
+            }
+            indicator.fraction = 1.0
+        }
+    }
+
+    /**
+     * 获取光标所在的json项，需在EDT线程执行，不能在update中调用
+     */
+    private fun getJsonProperty(e: AnActionEvent): JsonProperty? {
+        e.getData(CommonDataKeys.PSI_ELEMENT)?.findParentOfType<JsonProperty>(false)?.let {
+            return it
+        }
+
+        val editor = e.getData(CommonDataKeys.EDITOR)
+        val psiFile = e.getData(CommonDataKeys.PSI_FILE)
+        if (editor != null && psiFile != null) {
+            return psiFile.findElementAt(editor.caretModel.offset)?.findParentOfType<JsonProperty>(false)
+        }
+
+        return null
+    }
+
+    /**
+     * 获取选中的json项，支持一次选中多项，需在EDT线程执行
+     *
+     * 编辑器存在选区时，取所有与选区有交集的json项，否则取光标所在项
+     */
+    private fun getJsonProperties(e: AnActionEvent): List<JsonProperty> {
+        val editor = e.getData(CommonDataKeys.EDITOR)
+        if (editor != null) {
+            val properties = EditorUtils.getSelectionAreaPsiElement(editor) {
+                it.findParentOfType<JsonProperty>(false)
+            }
+            if (!properties.isNullOrEmpty()) {
+                return properties
             }
         }
+
+        return getJsonProperty(e)?.let { listOf(it) } ?: emptyList()
     }
 
     // 获取与指定element需要一起删除的其它节点，如换行，','等
