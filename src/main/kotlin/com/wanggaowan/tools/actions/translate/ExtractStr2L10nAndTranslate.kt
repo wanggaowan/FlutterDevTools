@@ -336,9 +336,13 @@ object ExtractUtils {
             }
         } else {
             ProgressUtils.runBackgroundAsync(project, "Translate", true) { progressIndicator, finish ->
-                progressIndicator.isIndeterminate = false
-                val totalCount = 1.0 + otherArbFile.size
-                progressIndicator.text = "Translating key..."
+                val totalCount = 1 + otherArbFile.size
+                progressIndicator.isIndeterminate = totalCount <= 1
+                var current = 1
+                if (totalCount > 1) {
+                    progressIndicator.fraction = current * 1.0 / totalCount * 0.95
+                    progressIndicator.text = "$current / $totalCount ${defaultArbFile.arbFile.name}"
+                }
 
                 val sourceLanguage = defaultArbFile.translateLanguage!!
                 val enTranslate = TranslateUtils.translate(keyTranslateText, sourceLanguage, "en")
@@ -346,15 +350,10 @@ object ExtractUtils {
                 val key = TranslateUtils.mapStrToKey(enTranslate, isFormat)
 
                 if (!progressIndicator.isCanceled) {
-                    var current = 1.0
-                    progressIndicator.fraction = current / totalCount * 0.95
                     otherArbFile.forEach { file ->
-                        if (progressIndicator.isCanceled) {
-                            return@forEach
-                        }
-
-                        progressIndicator.text =
-                            "${current.toInt()} / ${(totalCount - 1).toInt()} Translating: ${file.arbFile.name}"
+                        current++
+                        progressIndicator.fraction = current * 1.0 / totalCount * 0.95
+                        progressIndicator.text = "$current / $totalCount ${file.arbFile.name}"
 
                         val targetLanguage = file.translateLanguage
                         if (targetLanguage == "en" && !isFormat) {
@@ -367,8 +366,9 @@ object ExtractUtils {
                             file.translate = translate2
                         }
 
-                        current++
-                        progressIndicator.fraction = current / totalCount * 0.95
+                        if (progressIndicator.isCanceled) {
+                            return@forEach
+                        }
                     }
                 }
 

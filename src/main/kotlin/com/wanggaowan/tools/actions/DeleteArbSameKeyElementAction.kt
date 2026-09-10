@@ -133,7 +133,7 @@ class DeleteArbSameKeyElementAction : DumbAwareAction() {
         val editor = e.getData(CommonDataKeys.EDITOR)
         if (editor != null) {
             val properties = EditorUtils.getSelectionAreaPsiElement(editor) {
-                it.findParentOfType<JsonProperty>(false)
+                it as? JsonProperty ?: it.findParentOfType<JsonProperty>(false)
             }
             if (!properties.isNullOrEmpty()) {
                 return properties

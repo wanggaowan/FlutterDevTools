@@ -45,10 +45,12 @@ object EditorUtils {
             if (range.startOffset < end && range.endOffset > start) {
                 properties.add(property)
             }
+            // 此逻辑避免了同一个父类对象被多次添加进来
             offset = range.endOffset
         }
 
-        return properties
+        // 为了保险，还是在最后一步去重
+        return properties.distinct()
     }
 
     /**
