@@ -19,7 +19,7 @@ import io.flutter.pub.PubRoot
 // <editor-fold desc="project">
 
 fun Project?.getModules(): Array<Module>? {
-    if (this == null) {
+    if (this == null || this.isDisposed) {
         return null
     }
     return ModuleManager.getInstance(this).modules
@@ -31,7 +31,7 @@ fun Project?.getModules(): Array<Module>? {
  */
 val Project?.isFlutterProject: Boolean
     get() {
-        if (this == null) {
+        if (this == null || this.isDisposed) {
             return false
         }
 
@@ -97,7 +97,7 @@ val Project.flutterModules: List<Module>?
  */
 val Module?.isFlutterProject: Boolean
     get() {
-        if (this == null) {
+        if (this == null || this.isDisposed) {
             return false
         }
 
@@ -110,7 +110,7 @@ val Module?.isFlutterProject: Boolean
 
 val Module?.rootDir: VirtualFile?
     get() {
-        if (this == null) {
+        if (this == null || this.isDisposed) {
             return null
         }
 

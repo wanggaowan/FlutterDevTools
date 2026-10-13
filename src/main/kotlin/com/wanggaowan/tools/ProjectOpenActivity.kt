@@ -18,7 +18,6 @@ import com.wanggaowan.tools.actions.replace.ReplaceGitCommitAndPushExecutorActio
 import com.wanggaowan.tools.extensions.complete.CodeAnalysisService
 import com.wanggaowan.tools.extensions.toolwindow.resourcePreview.ResourcePreviewToolWindowFactory
 import com.wanggaowan.tools.utils.ex.isFlutterProject
-import io.flutter.bazel.WorkspaceCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -36,39 +35,42 @@ class ProjectOpenActivity : ProjectActivity, DumbAware {
 
     override suspend fun execute(project: Project) {
         // 项目打开
-        val isFlutterProject = project.isFlutterProject
-        if (isFlutterProject || WorkspaceCache.getInstance(project).isBazel) {
-            SwingUtilities.invokeLater {
-                init(project)
-            }
-            CodeAnalysisService.startAnalysisModules(project, project.modules.toList())
-        } else {
-            project.messageBus.connect().subscribe(ModuleListener.TOPIC, object : ModuleListener {
-                override fun modulesAdded(project: Project, modules: List<Module>) {
-                    for (module in modules) {
-                        if (!toolWindowsInitialized && module.isFlutterProject) {
-                            toolWindowsInitialized = true
-                            SwingUtilities.invokeLater {
-                                init(project)
-                            }
-                            break
-                        }
-                    }
-                    CodeAnalysisService.startAnalysisModules(project, modules)
-                }
-            })
+        if (project.isDisposed) {
+            return
         }
+
+        val isFlutterProject = project.isFlutterProject
+        if (isFlutterProject) {
+            init(project)
+            CodeAnalysisService.startAnalysisModules(project, project.modules.toList())
+        }
+
+        project.messageBus.connect().subscribe(ModuleListener.TOPIC, object : ModuleListener {
+            override fun modulesAdded(project: Project, modules: List<Module>) {
+                CodeAnalysisService.startAnalysisModules(project, modules)
+                for (module in modules) {
+                    if (!toolWindowsInitialized && module.isFlutterProject) {
+                        init(project)
+                        break
+                    }
+                }
+            }
+        })
 
         // disposeGitCommit(project)
-
-        if (isFlutterProject) {
-            CoroutineScope(Dispatchers.Default).launch {
-                FileTemplateUtils.initDefaultTemplate()
-            }
-        }
     }
 
     private fun init(project: Project) {
+        toolWindowsInitialized = true
+        SwingUtilities.invokeLater {
+            initLater(project)
+        }
+        CoroutineScope(Dispatchers.Default).launch {
+            FileTemplateUtils.initDefaultTemplate()
+        }
+    }
+
+    private fun initLater(project: Project) {
         val window = ToolWindowManager.getInstance(project).getToolWindow(ResourcePreviewToolWindowFactory.WINDOW_ID)
         if (window != null) {
             window.isAvailable = true
