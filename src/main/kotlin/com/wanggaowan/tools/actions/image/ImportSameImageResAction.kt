@@ -362,7 +362,7 @@ object ImportSameImageResUtils {
                                 if (renameEntity != null && renameEntity.existFile) {
                                     if (renameEntity.hasBatchConflict) {
                                         // 即将导入数据组内冲突
-                                        val index = batchConflictMap[renameEntity.newName]
+                                        val index = batchConflictMap["${folder.name}/${renameEntity.newName}"]
                                         if (!renameEntity.coverExistFile) {
                                             // 不勾选，冲突时导入第一个
                                             if (index != null) {
@@ -371,7 +371,7 @@ object ImportSameImageResUtils {
                                             }
                                         }
                                         // 其它情况则删除之前导入数据，用新数据覆盖
-                                        batchConflictMap[renameEntity.newName] = (index ?: 0) + 1
+                                        batchConflictMap["${folder.name}/${renameEntity.newName}"] = (index ?: 0) + 1
                                     } else if (renameEntity.coverExistFile) {
                                         return@forEach
                                     }
