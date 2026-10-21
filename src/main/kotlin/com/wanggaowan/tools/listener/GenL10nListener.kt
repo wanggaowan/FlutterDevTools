@@ -17,11 +17,11 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.findChild
 import com.wanggaowan.tools.utils.ex.isFlutterProject
+import com.wanggaowan.tools.utils.ex.module
 import com.wanggaowan.tools.utils.ex.rootDir
 import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
 import io.flutter.sdk.FlutterSdk
 import kotlinx.coroutines.*
-import org.jetbrains.kotlin.idea.util.projectStructure.getModule
 import kotlin.time.Duration.Companion.milliseconds
 
 private val fileDocumentManager = lazy { FileDocumentManager.getInstance() }
@@ -57,7 +57,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
             for (document in documents) {
                 val file = fileDocumentManager.value.getFile(document)
                 if (file != null && file.name.endsWith(".arb")) {
-                    val module = file.getModule(project) ?: continue
+                    val module = file.module ?: continue
                     doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
                 }
             }
@@ -94,7 +94,7 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
         }
 
         needDoGenL10nMap.remove(file.path)
-        val module = file.getModule(source.project) ?: return
+        val module = file.module ?: return
         fileDocumentManager.value.saveAllDocuments()
         doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
     }

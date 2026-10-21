@@ -9,7 +9,7 @@ import com.intellij.openapi.vcs.changes.CommitSession
 import com.intellij.openapi.vcs.changes.actions.BaseCommitExecutorAction
 import com.intellij.vcs.commit.CommitWorkflowHandler
 import com.intellij.vcs.commit.commitExecutorProperty
-import com.wanggaowan.tools.actions.log.SaveGitCommitLogAction
+import com.wanggaowan.tools.actions.log.GitCommitLogUtils
 
 /**
  * 实现系统Commit功能并将当前提交message记录到每日工作日志
@@ -32,7 +32,7 @@ class GitCommitExecutorAction : BaseCommitExecutorAction() {
     override fun actionPerformed(e: AnActionEvent) {
         super.actionPerformed(e)
         // 此处存在一个问题，就是无论commit成功还是失败，都会被记录
-        SaveGitCommitLogAction.saveLog(e.dataContext)
+        GitCommitLogUtils.saveLog(e.dataContext)
     }
 }
 

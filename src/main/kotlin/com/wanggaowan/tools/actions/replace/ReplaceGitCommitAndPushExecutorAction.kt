@@ -3,7 +3,7 @@ package com.wanggaowan.tools.actions.replace
 import com.intellij.dvcs.ui.DvcsBundle
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
-import com.wanggaowan.tools.actions.log.SaveGitCommitLogAction
+import com.wanggaowan.tools.actions.log.GitCommitLogUtils
 
 /**
  * 替换系统默认的GitCommitAndPushExecutorAction
@@ -22,6 +22,6 @@ class ReplaceGitCommitAndPushExecutorAction(val project: Project) :
     override fun actionPerformed(e: AnActionEvent) {
         super.actionPerformed(e)
         // 此处存在一个问题，就是无论commit成功还是失败，都会被记录
-        SaveGitCommitLogAction.saveLog(e.dataContext)
+        GitCommitLogUtils.saveLog(e.dataContext)
     }
 }

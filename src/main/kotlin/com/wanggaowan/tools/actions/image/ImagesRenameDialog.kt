@@ -16,6 +16,7 @@ import com.intellij.ui.ScrollPaneFactory
 import com.intellij.usages.Usage
 import com.intellij.usages.UsageViewManager
 import com.intellij.usages.UsageViewPresentation
+import com.intellij.util.application
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.jetbrains.lang.dart.DartBundle
@@ -335,8 +336,8 @@ class ImagesRenameDialog(
     }
 
     private fun findUsages(isPreview: Boolean) {
-        FindUsageManager(project).findUsages(
-            mRenameFileList.mapNotNull {
+        application.runReadAction {
+            val list: Array<PsiElement> = mRenameFileList.mapNotNull {
                 if (it.existFile && !it.coverExistFile) {
                     return@mapNotNull null
                 } else if (!renameSameNameOtherFiles) {
@@ -345,42 +346,46 @@ class ImagesRenameDialog(
                     }
                 }
                 it.oldFile.toPsiFile(project)
-            }.toTypedArray(),
-            progressTitle = {
-                when (it) {
-                    null -> {
-                        "Find rename files usages"
-                    }
+            }.toTypedArray()
 
-                    is PsiNamedElement -> {
-                        "Find rename file:${it.name} usages"
-                    }
+            FindUsageManager(project).findUsages(
+                list,
+                progressTitle = {
+                    when (it) {
+                        null -> {
+                            "Find rename files usages"
+                        }
 
-                    else -> {
-                        "Find usages"
-                    }
-                }
-            },
-            findProgress = object : FindProgress() {
-                override fun find(target: PsiElement, usage: Usage) {
-                    mRenameFileList.forEach {
-                        if (target is PsiFile && target.virtualFile == it.oldFile) {
-                            it.usages.add(usage)
-                            return@forEach
+                        is PsiNamedElement -> {
+                            "Find rename file:${it.name} usages"
+                        }
+
+                        else -> {
+                            "Find usages"
                         }
                     }
-                }
-
-                override fun end(indicator: ProgressIndicator) {
-                    if (isPreview) {
-                        ApplicationManager.getApplication().invokeLater {
-                            previewRefactoring()
+                },
+                findProgress = object : FindProgress() {
+                    override fun find(target: PsiElement, usage: Usage) {
+                        mRenameFileList.forEach {
+                            if (target is PsiFile && target.virtualFile == it.oldFile) {
+                                it.usages.add(usage)
+                                return@forEach
+                            }
                         }
-                    } else {
-                        mOkActionListener?.invoke()
                     }
-                }
-            })
+
+                    override fun end(indicator: ProgressIndicator) {
+                        if (isPreview) {
+                            ApplicationManager.getApplication().invokeLater {
+                                previewRefactoring()
+                            }
+                        } else {
+                            mOkActionListener?.invoke()
+                        }
+                    }
+                })
+        }
     }
 
     private fun previewRefactoring() {

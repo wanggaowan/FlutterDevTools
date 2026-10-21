@@ -10,7 +10,10 @@ import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
+import com.jetbrains.lang.dart.flutter.FlutterUtil
 import io.flutter.pub.PubRoot
+import io.flutter.pub.PubRoots
+import io.flutter.sdk.FlutterSdkUtil
 
 /*
  * Project扩展
@@ -25,6 +28,7 @@ fun Project?.getModules(): Array<Module>? {
     return ModuleManager.getInstance(this).modules
 }
 
+private val flutterProjectMap: MutableMap<Project, Boolean> = mutableMapOf()
 
 /**
  * 是否是Flutter项目
@@ -35,25 +39,35 @@ val Project?.isFlutterProject: Boolean
             return false
         }
 
+        val isFlutter = flutterProjectMap[this]
+        if (isFlutter != null) {
+            return isFlutter
+        }
+
         val isFP = isFlutterProjectInner(this.basePath)
         if (isFP) {
+            flutterProjectMap[this] = true
             return true
         }
 
         val modules = getModules()
         if (modules.isNullOrEmpty()) {
+            flutterProjectMap[this] = false
             return false
         }
 
         for (module in modules) {
             if (module.isFlutterProject) {
+                flutterProjectMap[this] = true
                 return true
             }
         }
+
+        flutterProjectMap[this] = false
         return false
     }
 
-fun isFlutterProjectInner(basePath: String?): Boolean {
+private fun isFlutterProjectInner(basePath: String?): Boolean {
     if (basePath.isNullOrEmpty()) {
         return false
     }
@@ -92,6 +106,9 @@ val Project.flutterModules: List<Module>?
 
 
 // <editor-fold desc="Module">
+
+private val flutterModuleMap: MutableMap<Module, Boolean> = mutableMapOf()
+
 /**
  * 是否是Flutter项目
  */
@@ -101,11 +118,20 @@ val Module?.isFlutterProject: Boolean
             return false
         }
 
+        var isFlutter = flutterModuleMap[this]
+        if (isFlutter != null) {
+            return isFlutter
+        }
+
         val files = ModuleRootManager.getInstance(this).contentRoots
         if (files.isEmpty()) {
+            flutterModuleMap[this] = false
             return false
         }
-        return isFlutterProjectInner(files[0].path)
+
+        isFlutter = isFlutterProjectInner(files[0].path)
+        flutterModuleMap[this] = isFlutter
+        return isFlutter
     }
 
 val Module?.rootDir: VirtualFile?

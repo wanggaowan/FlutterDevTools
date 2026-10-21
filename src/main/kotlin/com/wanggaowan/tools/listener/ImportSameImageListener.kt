@@ -3,6 +3,7 @@ package com.wanggaowan.tools.listener
 import com.intellij.ide.PasteProvider
 import com.intellij.ide.dnd.FileCopyPasteUtil
 import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.ide.CopyPasteManager
@@ -20,7 +21,6 @@ import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.idea.base.util.module
-import org.jetbrains.kotlin.idea.refactoring.project
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
@@ -42,7 +42,10 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
     // <editor-fold desc="复制粘贴监听">
     override fun performPaste(dataContext: DataContext) {
         files?.also {
-            ImportSameImageResUtils.import(dataContext.project, it, importToFile)
+            val project = dataContext.getData(CommonDataKeys.PROJECT)
+            if (project != null) {
+                ImportSameImageResUtils.import(project, it, importToFile)
+            }
         }
         importToFile = null
         files = null

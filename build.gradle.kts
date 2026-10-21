@@ -2,8 +2,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.1.0"
-    id("org.jetbrains.intellij.platform") version "2.2.1"
+    id("org.jetbrains.kotlin.jvm") version "2.4.21"
+    id("org.jetbrains.intellij.platform") version "2.19.0"
 }
 
 repositories {
@@ -24,10 +24,10 @@ intellijPlatform {
     pluginConfiguration {
         group = "com.wanggaowan"
         name = "FlutterDevTools"
-        version = "4.8"
+        version = "4.9"
 
         ideaVersion {
-            sinceBuild = "243"
+            sinceBuild = "260"
             untilBuild = "10000.*"
         }
     }
@@ -65,7 +65,7 @@ dependencies {
         // androidStudio("2024.2.2", useInstaller = true)
         local("/Users/wgw/Documents/develop/project/ide plugin/test ide/Android Studio.app")
         bundledPlugins("org.jetbrains.kotlin","org.jetbrains.plugins.yaml", "Git4Idea")
-        plugins("Dart:243.23654.44", "io.flutter:85.3.1")
+        plugins("Dart:510.0.0", "io.flutter:97.0.0")
     }
 
     //     implementation("com.aliyun:alimt20181012:1.2.0") {
