@@ -40,13 +40,6 @@ class ImageOperationActionGroup : DefaultActionGroup() {
             return
         }
 
-        for (file in virtualFiles) {
-            if (file.isDirectory) {
-                e.presentation.isVisible = false
-                return
-            }
-        }
-
         e.presentation.isVisible = true
     }
 }

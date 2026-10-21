@@ -9,6 +9,7 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.JBColor
 import com.intellij.ui.ScrollPaneFactory
+import com.intellij.ui.layout.selected
 import com.intellij.usages.Usage
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -206,13 +207,29 @@ class ImportImageFolderChooser(
                 hint.foreground = JBColor.RED
                 hint.font = UIUtil.getFont(UIUtil.FontSize.MINI, rename.font)
                 it2.existFile = existFile != null
+                it2.hasBatchConflict = isInMap
                 hint.isVisible = existFile != null
                 hint.minimumSize = JBUI.size(400, 22)
                 box2.add(hint)
                 box2.add(Box.createHorizontalGlue())
 
-                hint.addChangeListener {
+                hint.addItemListener {
                     it2.coverExistFile = hint.isSelected
+                    var needRefresh = false
+                    mRenameFileMap.forEach { folderMap ->
+                        folderMap.value.forEach { entity ->
+                            if (entity.hasBatchConflict && entity.newName == it2.newName) {
+                                if (entity.coverExistFile != it2.coverExistFile) {
+                                    entity.coverExistFile = it2.coverExistFile
+                                    needRefresh = true
+                                }
+                            }
+                        }
+                    }
+
+                    if (needRefresh) {
+                        refreshRenamePanel()
+                    }
                 }
 
                 // 文本改变监听
@@ -221,18 +238,21 @@ class ImportImageFolderChooser(
                         val str = rename.text.trim()
                         it2.newName = str.ifEmpty { it2.oldName }
                         refreshRenamePanel()
+                        setDefaultHasBatchConflictValue(it2, hint)
                     }
 
                     override fun removeUpdate(p0: DocumentEvent?) {
                         val str = rename.text.trim()
                         it2.newName = str.ifEmpty { it2.oldName }
                         refreshRenamePanel()
+                        setDefaultHasBatchConflictValue(it2, hint)
                     }
 
                     override fun changedUpdate(p0: DocumentEvent?) {
                         val str = rename.text.trim()
                         it2.newName = str.ifEmpty { it2.oldName }
                         refreshRenamePanel()
+                        setDefaultHasBatchConflictValue(it2, hint)
                     }
                 })
             }
@@ -242,6 +262,19 @@ class ImportImageFolderChooser(
         c.weighty = 1.0
         c.gridy = depth
         mJRenamePanel.add(placeHolder, c)
+    }
+
+    // 设置renameEntity hasBatchConflict的默认值
+    private fun setDefaultHasBatchConflictValue(entity: RenameEntity, checkbox: JCheckBox) {
+        mRenameFileMap.forEach outer@{ folderMap ->
+            folderMap.value.forEach {
+                if (entity != it && it.newName == entity.newName && entity.hasBatchConflict && it.hasBatchConflict) {
+                    entity.coverExistFile = it.coverExistFile
+                    checkbox.isSelected = entity.coverExistFile
+                    return@outer
+                }
+            }
+        }
     }
 
     private fun refreshRenamePanel() {
@@ -275,11 +308,20 @@ class ImportImageFolderChooser(
     ) {
         val (existFile2, isInMap) = isImageExist(entity)
         entity.existFile = existFile2 != null
+        if (!entity.existFile) {
+            entity.coverExistFile = false
+        }
+        entity.hasBatchConflict = isInMap
+
         val hintStr =
             if (isInMap) "导入的文件存在相同文件，勾选则导入最后一个同名文件，否则导入第一个同名文件" else "已存在同名文件,是否覆盖原文件？不勾选则跳过导入"
         hint?.text = hintStr
         val preVisible = hint?.isVisible
         val visible = existFile2 != null
+        if (hint != null && hint.isSelected != entity.coverExistFile) {
+            hint.isSelected = entity.coverExistFile
+        }
+
         if (preVisible != visible) {
             hint?.isVisible = visible
             if (existFile2 != null) {
@@ -440,6 +482,10 @@ data class RenameEntity(
      * 存在同名文件
      */
     var existFile: Boolean = false,
+    /**
+     * 当[existFile]为true，此值表示是与当前批次数据冲突还是与项目中存在数据冲突
+     */
+    var hasBatchConflict: Boolean = false,
     /**
      * 如果存在同名文件，是否覆盖同名文件
      */

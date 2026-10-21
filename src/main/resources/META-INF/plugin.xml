@@ -21,6 +21,10 @@
 
         <group id="FlutterDevTools.ImageOperationActionGroup"
                class="com.wanggaowan.tools.actions.image.ImageOperationActionGroup">
+            <action id="FlutterDevTools.ImportSameImageResAction2"
+                    class="com.wanggaowan.tools.actions.image.ImportSameImageResAction2"
+                    text="导入 Android 图片资源"
+                    description="导入android drawable/mipmap目录结构不同分辨率下的多张图片，支持压缩包"/>
             <action id="FlutterDevTools.CopyMultiSameNameFileAction"
                     class="com.wanggaowan.tools.actions.image.CopyMultiSameNameImageAction"
                     text="复制不同分辨率下的相同图片"
@@ -189,8 +193,8 @@
             <separator/>
             <action id="FlutterDevTools.ImportSameImageResAction"
                     class="com.wanggaowan.tools.actions.image.ImportSameImageResAction"
-                    text="导入不同分辨率下的相同图片"
-                    description="导入 android drawable目录结构不同分辨率下的多张图片"/>
+                    text="导入 Android 图片资源"
+                    description="导入android drawable/mipmap目录结构不同分辨率下的多张图片，支持压缩包"/>
             <action id="FlutterDevTools.GeneratorImageRefAction"
                     class="com.wanggaowan.tools.actions.image.GeneratorImageRefAction"
                     text="生成图片资源引用文件并配置yaml assets节点"

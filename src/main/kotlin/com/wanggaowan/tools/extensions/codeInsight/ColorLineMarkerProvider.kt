@@ -15,7 +15,7 @@ import java.awt.Color
 import java.awt.event.MouseEvent
 
 /**
- * 在代码行数栏展示当前行包含的图片文件
+ * 在代码行数栏展示当前行包含的颜色
  *
  * @author Created by wanggaowan on 2023/3/6 22:19
  */

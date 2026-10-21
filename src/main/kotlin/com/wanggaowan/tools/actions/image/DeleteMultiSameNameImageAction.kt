@@ -23,6 +23,23 @@ import org.jetbrains.kotlin.idea.core.util.toPsiFile
  */
 class DeleteMultiSameNameImageAction : DumbAwareAction() {
 
+    override fun update(e: AnActionEvent) {
+        val virtualFiles = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
+        if (virtualFiles.isNullOrEmpty()) {
+            e.presentation.isVisible = false
+            return
+        }
+
+        for (file in virtualFiles) {
+            if (file.isDirectory) {
+                e.presentation.isVisible = false
+                return
+            }
+        }
+
+        e.presentation.isVisible = true
+    }
+
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
     }

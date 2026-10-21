@@ -27,7 +27,9 @@ private val LOG = logger<ImportSameImageResUtils>()
  *
  * @author Created by wanggaowan on 2022/7/12 09:42
  */
-class ImportSameImageResAction : DumbAwareAction() {
+open class ImportSameImageResAction : DumbAwareAction() {
+    protected var importToFolder: VirtualFile? = null
+
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val descriptor = FileChooserDescriptor(true, true, true, true, false, true)
@@ -48,9 +50,10 @@ class ImportSameImageResAction : DumbAwareAction() {
                     }
                 }
 
-                val importToFolder = if (module == null) null else
-                    VirtualFileManager.getInstance()
-                        .findFileByUrl("file://${module.basePath}/${PluginSettings.getImagesFileDir(project)}")
+                val importToFolder =
+                    if (this.importToFolder != null) this.importToFolder else if (module == null) null else
+                        VirtualFileManager.getInstance()
+                            .findFileByUrl("file://${module.basePath}/${PluginSettings.getImagesFileDir(project)}")
                 ImportSameImageResUtils.import(project, files, importToFolder)
             }
         }
@@ -323,6 +326,8 @@ object ImportSameImageResUtils {
                     }
                 }
 
+                // 记录当前批次冲突图片当前处理的位置
+                val batchConflictMap = mutableMapOf<String, Int>()
                 folders.forEach { folder ->
                     val files = if (folder == importToFolder) {
                         mapFiles["1.0x"]
@@ -355,8 +360,19 @@ object ImportSameImageResUtils {
                                 }
 
                                 if (renameEntity != null && renameEntity.existFile) {
-                                    if (!renameEntity.coverExistFile) {
-                                        fileName = renameEntity.newName
+                                    if (renameEntity.hasBatchConflict) {
+                                        // 即将导入数据组内冲突
+                                        val index = batchConflictMap[renameEntity.newName]
+                                        if (!renameEntity.coverExistFile) {
+                                            // 不勾选，冲突时导入第一个
+                                            if (index != null) {
+                                                // 当前不是第一个
+                                                return@forEach
+                                            }
+                                        }
+                                        // 其它情况则删除之前导入数据，用新数据覆盖
+                                        batchConflictMap[renameEntity.newName] = (index ?: 0) + 1
+                                    } else if (renameEntity.coverExistFile) {
                                         return@forEach
                                     }
                                     // 删除已经存在的文件

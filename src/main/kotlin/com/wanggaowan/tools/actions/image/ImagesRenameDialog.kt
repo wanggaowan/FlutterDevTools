@@ -131,7 +131,9 @@ class ImagesRenameDialog(
             box2.border = JBUI.Borders.empty(2, 0)
             mJRenamePanel.add(box2, cc)
 
-            val existFile = isImageExist(it)
+            val (existFile, inMap) = isImageExist(it)
+            it.existFile = existFile != null
+            it.hasBatchConflict = inMap
             val existFileImageView = ChessBoardPanel().apply {
                 val iconPanel = IconPanel(existFile?.path, true)
                 add(iconPanel)
@@ -143,41 +145,36 @@ class ImagesRenameDialog(
             existFileImageView.isVisible = existFile != null
             box2.add(existFileImageView)
 
-            val hintStr = "已存在同名文件,是否继续重命名？不勾选则跳过重命名"
-            val hint = JCheckBox(hintStr)
+            val hintStr = "已存在同名文件"
+            val hint = JLabel(hintStr)
             hint.foreground = JBColor.RED
             hint.font = UIUtil.getFont(UIUtil.FontSize.MINI, rename.font)
-            it.existFile = existFile != null
             hint.isVisible = existFile != null
             box2.add(hint)
 
             box2.add(Box.createHorizontalGlue())
-
-            hint.addChangeListener { _ ->
-                it.coverExistFile = hint.isSelected
-            }
 
             // 文本改变监听
             rename.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(p0: DocumentEvent?) {
                     val str = rename.text.trim()
                     it.newName = str.ifEmpty { it.oldName }
-                    checkBtnEnable()
                     refreshRenamePanel()
+                    checkBtnEnable()
                 }
 
                 override fun removeUpdate(p0: DocumentEvent?) {
                     val str = rename.text.trim()
                     it.newName = str.ifEmpty { it.oldName }
-                    checkBtnEnable()
                     refreshRenamePanel()
+                    checkBtnEnable()
                 }
 
                 override fun changedUpdate(p0: DocumentEvent?) {
                     val str = rename.text.trim()
                     it.newName = str.ifEmpty { it.oldName }
-                    checkBtnEnable()
                     refreshRenamePanel()
+                    checkBtnEnable()
                 }
             })
         }
@@ -189,13 +186,11 @@ class ImagesRenameDialog(
     }
 
     private fun checkBtnEnable() {
-        var enable = false
+        var enable = true
         mRenameFileList.forEach {
-            if (it.oldName != it.newName) {
-                if (!it.existFile || it.coverExistFile) {
-                    enable = true
-                    return@forEach
-                }
+            if (it.existFile) {
+                enable = false
+                return@forEach
             }
         }
         mBtnPreview.isEnabled = enable
@@ -207,18 +202,17 @@ class ImagesRenameDialog(
         for (index in 0 until ((components.size - 1) / 2)) {
             val hintRoot = components[index * 2 + 1] as Box?
             val imageView = hintRoot?.getComponent(0) as? ChessBoardPanel
-            val checkBox = hintRoot?.getComponent(1) as? JCheckBox
+            val checkBox = hintRoot?.getComponent(1) as? JLabel
             refreshHintVisible(mRenameFileList[index], checkBox, imageView)
         }
     }
 
     private fun refreshHintVisible(
-        entity: RenameEntity, hint: JCheckBox?, imageView: ChessBoardPanel?
+        entity: RenameEntity, hint: JLabel?, imageView: ChessBoardPanel?
     ) {
-        val existFile2 = isImageExist(entity)
+        val (existFile2, inMap) = isImageExist(entity)
         entity.existFile = existFile2 != null
-        val hintStr = "已存在同名文件,是否继续重命名？不勾选则跳过重命名"
-        hint?.text = hintStr
+        entity.hasBatchConflict = inMap
         val preVisible = hint?.isVisible
         val visible = existFile2 != null
         if (preVisible != visible) {
@@ -289,9 +283,14 @@ class ImagesRenameDialog(
     /**
      * 判断指定图片是否已存在,存在则返回同名文件
      */
-    private fun isImageExist(entity: RenameEntity): VirtualFile? {
+    private fun isImageExist(entity: RenameEntity): Pair<VirtualFile?, Boolean> {
         if (entity.oldName == entity.newName) {
-            return null
+            for (value in mRenameFileList) {
+                if (value != entity && entity.newName == value.newName) {
+                    return Pair(value.oldFile, true)
+                }
+            }
+            return Pair(null, false)
         }
 
         var rootDir = entity.oldFile.parent.path
@@ -303,30 +302,36 @@ class ImagesRenameDialog(
 
         var selectFile = VirtualFileManager.getInstance().findFileByUrl("file://${rootDir}/${entity.newName}")
         if (selectFile != null) {
-            return selectFile
+            return Pair(selectFile, false)
         }
 
         selectFile = VirtualFileManager.getInstance().findFileByUrl("file://${rootDir}/1.5x/${entity.newName}")
         if (selectFile != null) {
-            return selectFile
+            return Pair(selectFile, false)
         }
 
         selectFile = VirtualFileManager.getInstance().findFileByUrl("file://${rootDir}/2.0x/${entity.newName}")
         if (selectFile != null) {
-            return selectFile
+            return Pair(selectFile, false)
         }
 
         selectFile = VirtualFileManager.getInstance().findFileByUrl("file://${rootDir}/3.0x/${entity.newName}")
         if (selectFile != null) {
-            return selectFile
+            return Pair(selectFile, false)
         }
 
         selectFile = VirtualFileManager.getInstance().findFileByUrl("file://${rootDir}/4.0x/${entity.newName}")
         if (selectFile != null) {
-            return selectFile
+            return Pair(selectFile, false)
         }
 
-        return null
+        for (value in mRenameFileList) {
+            if (value != entity && entity.newName == value.newName) {
+                return Pair(value.oldFile, true)
+            }
+        }
+
+        return Pair(null, false)
     }
 
     private fun findUsages(isPreview: Boolean) {
