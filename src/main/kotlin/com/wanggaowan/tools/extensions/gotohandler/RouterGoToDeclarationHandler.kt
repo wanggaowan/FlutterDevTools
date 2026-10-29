@@ -1,6 +1,5 @@
 package com.wanggaowan.tools.extensions.gotohandler
 
-import com.intellij.openapi.module.Module
 import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
@@ -16,7 +15,7 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
  * @author Created by wanggaowan on 2023/5/26 10:00
  */
 object RouterGoToDeclarationHandler {
-    fun getGotoDeclarationTargets(module: Module, sourceElement: PsiElement): Array<PsiElement>? {
+    fun getGotoDeclarationTargets(sourceElement: PsiElement): Array<PsiElement>? {
         if (sourceElement !is LeafPsiElement) {
             return null
         }

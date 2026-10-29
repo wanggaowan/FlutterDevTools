@@ -2,15 +2,14 @@ package com.wanggaowan.tools.extensions.gotohandler
 
 import com.intellij.json.psi.JsonObject
 import com.intellij.json.psi.JsonProperty
-import com.intellij.openapi.module.Module
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.jetbrains.lang.dart.psi.DartId
 import com.jetbrains.lang.dart.psi.DartReferenceExpression
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.extensions.lang.getTranslateFile
 import com.wanggaowan.tools.utils.dart.NameWrapperPsiElement
-import com.wanggaowan.tools.utils.ex.basePath
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 
 /**
@@ -19,7 +18,7 @@ import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
  * @author Created by wanggaowan on 2023/3/4 23:56
  */
 object I18nGoToDeclarationHandler {
-    fun getGotoDeclarationTargets(module: Module, sourceElement: PsiElement): Array<PsiElement>? {
+    fun getGotoDeclarationTargets(sourceElement: PsiElement): Array<PsiElement>? {
         if (sourceElement !is LeafPsiElement) {
             return null
         }
@@ -52,15 +51,9 @@ object I18nGoToDeclarationHandler {
             return null
         }
 
-        val psiFile = sourceElement.containingFile
-        val isExample = if (psiFile == null) {
-            false
-        } else {
-            val path = psiFile.virtualFile?.path
-            path != null && path.startsWith("${module.basePath}/example/")
-        }
-
-        val file = getTranslateFile(module, isExample) ?: return null
+        val containingFile = sourceElement.containingFile.virtualFile ?: return null
+        val pubRoot = Sdk.getInstance(sourceElement.project).getPubRoot(containingFile) ?: return null
+        val file = getTranslateFile(sourceElement.project, pubRoot) ?: return null
         val allFiles = mutableListOf(file)
         file.parent?.children?.forEach {
             if (it !is PsiFile) {

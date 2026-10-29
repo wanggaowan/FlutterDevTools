@@ -3,7 +3,6 @@ package com.wanggaowan.tools.extensions.refactoring
 import com.intellij.ide.TitledHandler
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
-import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -11,10 +10,10 @@ import com.intellij.psi.PsiFile
 import com.intellij.refactoring.rename.RenameHandler
 import com.jetbrains.lang.dart.DartBundle
 import com.jetbrains.lang.dart.ide.refactoring.DartServerRenameHandler
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.actions.image.RenameImageHandel
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.XUtils
-import com.wanggaowan.tools.utils.ex.basePath
 
 /**
  * 对[DartServerRenameHandler]的扩展，兼容dart文件重命名及更新引用位置内容
@@ -38,50 +37,45 @@ class ExtensionDartServerRenameHandler : RenameHandler, TitledHandler {
         val editor = CommonDataKeys.EDITOR.getData(dataContext)
         isAllDartFile = true
         isAllImageFile = true
-        if (editor == null) {
-            val files = CommonDataKeys.VIRTUAL_FILE_ARRAY.getData(dataContext) ?: return false
-            for (file2 in files) {
-                if (file2.isDirectory) {
-                    isAllDartFile = false
-                    isAllImageFile = false
-                    break
-                }
-
-                val name = file2.name.lowercase()
-                if (name.endsWith(".dart")) {
-                    isAllImageFile = false
-                } else {
-                    isAllDartFile = false
-                }
-
-                if (XUtils.isImage(name)) {
-                    isAllDartFile = false
-                } else {
-                    isAllImageFile = false
-                }
-            }
-
-            if (isAllDartFile) {
-                return files.size == 1
-            }
-
-            if (!isAllImageFile) {
-                return false
-            }
-
-            val module = LangDataKeys.MODULE.getData(dataContext)
-            if (module == null) {
-                isAllImageFile = false
-                return false
-            }
-
-            val basePath = module.basePath
-            val imageDir = PluginSettings.getImagesFileDir(module.project)
-            val file = files[0]
-            return !(!file.path.startsWith("$basePath/$imageDir") && !file.path.startsWith("$basePath/example/$imageDir"))
+        if (editor != null) {
+            return dartServerRenameHandler.isAvailableOnDataContext(dataContext)
         }
 
-        return dartServerRenameHandler.isAvailableOnDataContext(dataContext)
+        val files = CommonDataKeys.VIRTUAL_FILE_ARRAY.getData(dataContext) ?: return false
+        for (file2 in files) {
+            if (file2.isDirectory) {
+                isAllDartFile = false
+                isAllImageFile = false
+                break
+            }
+
+            val name = file2.name.lowercase()
+            if (name.endsWith(".dart")) {
+                isAllImageFile = false
+            } else {
+                isAllDartFile = false
+            }
+
+            if (XUtils.isImage(name)) {
+                isAllDartFile = false
+            } else {
+                isAllImageFile = false
+            }
+        }
+
+        if (isAllDartFile) {
+            return files.size == 1
+        }
+
+        if (!isAllImageFile) {
+            return false
+        }
+
+        val project = CommonDataKeys.PROJECT.getData(dataContext) ?: return false
+        val file = files[0]
+        val pubRoot = Sdk.getInstance(project).getPubRoot(file) ?: return false
+        val imageDir = PluginSettings.getImagesFileDir(project)
+        return file.path.startsWith("${pubRoot.path}/$imageDir")
     }
 
     override fun invoke(project: Project, elements: Array<out PsiElement>, context: DataContext?) {

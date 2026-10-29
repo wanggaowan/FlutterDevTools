@@ -1,9 +1,10 @@
 package com.wanggaowan.tools.actions.image
 
-import com.intellij.openapi.actionSystem.*
-import com.wanggaowan.tools.settings.PluginSettings
-import com.wanggaowan.tools.utils.ex.basePath
-import com.wanggaowan.tools.utils.ex.isFlutterProject
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.wanggaowan.tools.Sdk
 
 /**
  * 图片操作分组
@@ -16,13 +17,8 @@ class ImageOperationActionGroup : DefaultActionGroup() {
     }
 
     override fun update(e: AnActionEvent) {
-        val module = e.getData(LangDataKeys.MODULE)
-        if (module == null) {
-            e.presentation.isVisible = false
-            return
-        }
-
-        if (!module.isFlutterProject) {
+        val project = e.project
+        if (project == null) {
             e.presentation.isVisible = false
             return
         }
@@ -33,9 +29,9 @@ class ImageOperationActionGroup : DefaultActionGroup() {
             return
         }
 
-        val basePath = module.basePath
-        val imageDir = PluginSettings.getImagesFileDir(module.project)
-        if (!virtualFiles[0].path.startsWith("$basePath/$imageDir") && !virtualFiles[0].path.startsWith("$basePath/example/$imageDir")) {
+        val sdk = Sdk.getInstance(project)
+        val filePath = virtualFiles[0].path
+        if (sdk.getPubRoot(filePath) == null) {
             e.presentation.isVisible = false
             return
         }

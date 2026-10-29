@@ -2,9 +2,9 @@ package com.wanggaowan.tools.utils
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.ex.findChild
-import io.flutter.pub.PubRoot
 
 /**
  * 提供通用工具方法
@@ -63,21 +63,12 @@ object XUtils {
         fileName: String,
         isCallStyle: Boolean = false
     ): String? {
-        val pubRoot = PubRoot.forFile(parent) ?: return null
-        val example = pubRoot.exampleDir
-
-        val isExample = example != null && parent.path.startsWith(example.path)
+        val pubRoot = Sdk.getInstance(project).getPubRoot(parent) ?: return null
 
         // 生成图片资源引用文件类名称
-        val imageRefClassName: String
+        val imageRefClassName: String = PluginSettings.getImagesRefClassName(project)
         // 图片资源在项目中的相对路径
-        val imagesRelDirPath: String = if (isExample) {
-            imageRefClassName = PluginSettings.getExampleImagesRefClassName(project)
-            "example/" + PluginSettings.getExampleImagesFileDir(project)
-        } else {
-            imageRefClassName = PluginSettings.getImagesRefClassName(project)
-            PluginSettings.getImagesFileDir(project)
-        }
+        val imagesRelDirPath: String = PluginSettings.getImagesFileDir(project)
 
         val dirName = parent.name
         var path = if (isImageVariantsFolder(dirName)) {

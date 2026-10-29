@@ -32,8 +32,7 @@ class SafeDeleteImageFileProcessorDelegate : SafeDeleteProcessorDelegateBase() {
         }
 
         val imagesDir = PluginSettings.getImagesFileDir(element.project)
-        val exampleImagesDir = PluginSettings.getExampleImagesFileDir(element.project)
-        return !(!file.path.contains(imagesDir) && !file.path.contains(exampleImagesDir))
+        return file.path.contains(imagesDir)
     }
 
     override fun findUsages(

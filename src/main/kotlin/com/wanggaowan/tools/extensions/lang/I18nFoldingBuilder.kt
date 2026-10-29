@@ -5,18 +5,17 @@ import com.intellij.lang.ASTNode
 import com.intellij.lang.folding.FoldingBuilderEx
 import com.intellij.lang.folding.FoldingDescriptor
 import com.intellij.openapi.editor.Document
-import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbAware
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.*
-import com.wanggaowan.tools.utils.ex.basePath
-import com.wanggaowan.tools.utils.ex.findChild
-import com.wanggaowan.tools.utils.ex.findModule
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.utils.ex.isFlutterProject
+import io.flutter.pub.PubRoot
 import org.jetbrains.kotlin.idea.base.util.module
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
@@ -140,17 +139,9 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
             element = element.children[0]
         }
 
-        val module = element.findModule() ?: return null
-
-        val psiFile = element.containingFile
-        val isExample = if (psiFile == null) {
-            false
-        } else {
-            val path = psiFile.virtualFile?.path
-            path != null && path.startsWith("${module.basePath}/example/")
-        }
-
-        val translateFile = getTranslateFile(module, isExample) ?: return null
+        val file = element.containingFile ?: return null
+        val pubRoot = Sdk.getInstance(element.project).getPubRoot(file) ?: return null
+        val translateFile = getTranslateFile(element.project, pubRoot) ?: return null
         try {
             val args: Array<PsiElement>?
             val key: String = if (element is DartCallExpression) {
@@ -194,7 +185,7 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
                         if (element != null) {
                             getPlaceholderText(element) ?: ""
                         } else if (arg.getChildrenOfType<DartReferenceExpression>().isNotEmpty()) {
-                            "\${${arg.text}}"
+                            $$"${$${arg.text}}"
                         } else {
                             "$${arg.text}"
                         }
@@ -223,13 +214,8 @@ class I18nFoldingBuilder : FoldingBuilderEx(), DumbAware {
 /**
  * 查找多语言引用的字段翻译文件对象
  */
-internal fun getTranslateFile(module: Module, isExample: Boolean = false): PsiFile? {
-    val basePath = module.basePath ?: return null
-    val l10nFile = if (isExample) {
-        module.findChild("example")?.findChild("l10n.yaml")?.toPsiFile(module.project)
-    } else {
-        module.findChild("l10n.yaml")?.toPsiFile(module.project)
-    }
+internal fun getTranslateFile(project: Project, pubRoot: PubRoot): PsiFile? {
+    val l10nFile = pubRoot.root.findChild("l10n.yaml")?.toPsiFile(project)
     var transientFilePath: String
     if (l10nFile != null) {
         val elements = PsiTreeUtil.collectElementsOfType(l10nFile, YAMLKeyValue::class.java)
@@ -260,11 +246,6 @@ internal fun getTranslateFile(module: Module, isExample: Boolean = false): PsiFi
         transientFilePath = "lib/l10n/app_en.arb"
     }
 
-    if (isExample) {
-        return VirtualFileManager.getInstance()
-            .findFileByUrl("file://$basePath/example/$transientFilePath")?.toPsiFile(module.project)
-    }
-
-    return VirtualFileManager.getInstance().findFileByUrl("file://$basePath/$transientFilePath")
-        ?.toPsiFile(module.project)
+    return VirtualFileManager.getInstance().findFileByUrl("file://${pubRoot.path}/$transientFilePath")
+        ?.toPsiFile(project)
 }

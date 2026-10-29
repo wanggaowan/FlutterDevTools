@@ -8,8 +8,8 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -18,12 +18,12 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.util.LocalTimeCounter
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.utils.NotificationUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.TranslateUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.flutter.YamlUtils
-import io.flutter.pub.PubRoot
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.yaml.psi.YAMLKeyValue
@@ -72,12 +72,8 @@ class TranslateArbAction : DumbAwareAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val selectedFile = file ?: return
         val project = event.project ?: return
-        val pubRoot = PubRoot.forFile(selectedFile) ?: return
-        var rootDir = pubRoot.root
-        val example = pubRoot.exampleDir
-        if (example != null && selectedFile.path.startsWith(example.path)) {
-            rootDir = example
-        }
+        val pubRoot = Sdk.getInstance(project).getPubRoot(selectedFile) ?: return
+        val rootDir = pubRoot.root
 
         var rootDirPath = rootDir.path
         var resDirPath = "lib/l10n"
@@ -170,7 +166,7 @@ class TranslateArbAction : DumbAwareAction() {
             progressIndicator.text = "Count all strings that need to be translated"
             val needTranslateMap = mutableMapOf<String, Any?>()
             // 统计需要翻译的内容属于PSI读取，在后台线程需要持有read action
-            ReadAction.run<RuntimeException> {
+            ApplicationManager.getApplication().runReadAction {
                 tempJsonObject.propertyList.forEach {
                     val name = it.name
                     if (name.startsWith("@@")) {

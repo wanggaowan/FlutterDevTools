@@ -1,12 +1,12 @@
 package com.wanggaowan.tools.extensions.description
 
 import com.intellij.lang.documentation.DocumentationProvider
+import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.extensions.gotohandler.ImagesGoToDeclarationHandler
-import com.wanggaowan.tools.utils.ex.basePath
-import com.wanggaowan.tools.utils.ex.findModule
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import java.io.File
 import javax.imageio.ImageIO
@@ -33,6 +33,13 @@ class ImageDocumentDescriptionProvider : DocumentationProvider {
         return getDoc(element, originalElement)
     }
 
+    override fun getCustomDocumentationElement(editor: Editor,
+                                               file: PsiFile,
+                                               contextElement: PsiElement?,
+                                               targetOffset: Int): PsiElement? {
+        return super.getCustomDocumentationElement(editor, file, contextElement, targetOffset)
+    }
+
     /**
      * 生成DOC
      */
@@ -41,9 +48,8 @@ class ImageDocumentDescriptionProvider : DocumentationProvider {
             return null
         }
 
-        val module = element.findModule() ?: return null
         val imageFiles =
-            ImagesGoToDeclarationHandler.getGotoDeclarationTargets(module, originalElement, true)
+            ImagesGoToDeclarationHandler.getGotoDeclarationTargets(originalElement, true)
         if (imageFiles.isNullOrEmpty()) {
             return null
         }
@@ -65,7 +71,7 @@ class ImageDocumentDescriptionProvider : DocumentationProvider {
                 imgPath
             }
 
-        val modulePath = module.basePath ?: ""
+        val modulePath = Sdk.getInstance(element.project).getPubRoot(imgPath)?.path ?: ""
         val read = try {
             ImageIO.read(File(imgPath).inputStream())
         } catch (_: Exception) {

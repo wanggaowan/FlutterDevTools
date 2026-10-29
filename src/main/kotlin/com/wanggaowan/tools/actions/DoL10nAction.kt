@@ -1,13 +1,13 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.module.Module
-import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.DumbAwareAction
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.utils.flutter.FlutterCommandUtils
 import com.wanggaowan.tools.utils.flutter.YamlUtils
-import io.flutter.actions.FlutterSdkAction
 import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
@@ -21,26 +21,18 @@ import org.jetbrains.yaml.psi.YAMLMapping
  *
  * @author Created by wanggaowan on 2023/2/6 15:44
  */
-open class DoL10nAction : FlutterSdkAction() {
-    override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
-        if (root == null) {
-            return
-        }
-
-        val module = root.getModule(project) ?: return
-        doGenL10n(module, sdk, root) {
-            val exampleDir = root.exampleDir
-            if (exampleDir != null) {
-                val examplePubRoot = PubRoot.forDirectory(exampleDir)
-                if (examplePubRoot != null) {
-                    doGenL10n(module, sdk, examplePubRoot)
-                }
-            }
-        }
-    }
-
+open class DoL10nAction : DumbAwareAction() {
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
+    }
+
+    override fun actionPerformed(event: AnActionEvent) {
+        val project = event.project?:return
+        val fluterSdk = FlutterSdk.getFlutterSdk(project)?:return
+        Sdk.getInstance(project).pubRoots.forEach {
+            val module = it.getModule(project)?:return
+            doGenL10n(module, fluterSdk, it)
+        }
     }
 
     protected fun doGenL10n(

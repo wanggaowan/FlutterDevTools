@@ -8,7 +8,6 @@ import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.wanggaowan.tools.ui.JLine
 import com.wanggaowan.tools.ui.UIColor
-import io.flutter.pub.PubRoot
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JLabel
@@ -17,18 +16,11 @@ import javax.swing.JPanel
 /**
  * 插件设置界面
  */
-class PluginSettingsView(pubRoot: PubRoot?) {
+class PluginSettingsView() {
     val panel: JPanel
     val imagesDir = JBTextField()
     val imagesRefFilePath = JBTextField()
-    val imagesRefFileName = JBTextField()
     val imagesRefClassName = JBTextField()
-
-    // example项目，一般是写插件的项目会存在example目录
-    val exampleImagesDir = JBTextField()
-    val exampleImagesRefFilePath = JBTextField()
-    val exampleImagesRefFileName = JBTextField()
-    val exampleImagesRefClassName = JBTextField()
 
     val copyAndroidStrUseSimpleMode = JBCheckBox("复制 android <string/> 转为为flutter多语言采用简易模式")
     val extractStr2L10nShowRenameDialog = JBCheckBox("展示重命名弹窗")
@@ -46,16 +38,8 @@ class PluginSettingsView(pubRoot: PubRoot?) {
             .addComponent(createCategoryTitle("生成资源配置"))
             .addLabeledComponent(createItemLabel("图片资源路径: "), imagesDir, 1, false)
             .addLabeledComponent(createItemLabel("图片引用文件路径: "), imagesRefFilePath, 1, false)
-            .addLabeledComponent(createItemLabel("图片引用文件名称: "), imagesRefFileName, 1, false)
             .addLabeledComponent(createItemLabel("图片引用文件类名称: "), imagesRefClassName, 1, false)
-        if (pubRoot != null && pubRoot.exampleDir != null) {
-            val example = createCategoryTitle("Example项目", 10, marginLeft = 10)
-            builder = builder.addComponent(example)
-                .addLabeledComponent(createItemLabel("图片资源路径: ", marginLeft = 20), exampleImagesDir, 1, false)
-                .addLabeledComponent(createItemLabel("图片引用文件路径: ", marginLeft = 20), exampleImagesRefFilePath, 1, false)
-                .addLabeledComponent(createItemLabel("图片引用文件名称: ", marginLeft = 20), exampleImagesRefFileName, 1, false)
-                .addLabeledComponent(createItemLabel("图片引用文件类名称: ", marginLeft = 20), exampleImagesRefClassName, 1, false)
-        }
+
 
         builder = builder.addComponent(createCategoryTitle("提取多语言设置", marginTop = 10), 1)
             .addLabeledComponent(createItemLabel("阿里翻译AK: ", marginLeft = 20), aliAk, 1, false)

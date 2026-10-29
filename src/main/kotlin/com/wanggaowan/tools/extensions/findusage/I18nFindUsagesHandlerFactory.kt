@@ -14,8 +14,8 @@ import com.jetbrains.lang.dart.ide.findUsages.DartServerFindUsagesHandler
 import com.jetbrains.lang.dart.psi.DartClass
 import com.jetbrains.lang.dart.psi.DartComponentName
 import com.jetbrains.lang.dart.psi.DartId
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.utils.flutter.YamlUtils
-import io.flutter.pub.PubRoot
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.yaml.psi.YAMLKeyValue
@@ -34,7 +34,6 @@ class I18nFindUsagesHandlerFactory : FindUsagesHandlerFactory() {
         if (element.containingFile?.name?.endsWith(".arb") != true) {
             return false
         }
-
 
         return true
     }
@@ -57,14 +56,9 @@ class I18nUsagesHandler(psiElement: PsiElement) : FindUsagesHandler(psiElement) 
 
         ApplicationManager.getApplication().runReadAction {
             val project = element.project
-            val selectedFile = element.containingFile ?: return@runReadAction
-            val pubRoot = PubRoot.forPsiFile(selectedFile) ?: return@runReadAction
-
-            var rootDir = pubRoot.root
-            val example = pubRoot.exampleDir
-            if (example != null && selectedFile.virtualFile.path.startsWith(example.path)) {
-                rootDir = example
-            }
+            val selectedFile = element.containingFile.virtualFile ?: return@runReadAction
+            val pubRoot = Sdk.getInstance(project).getPubRoot(selectedFile) ?: return@runReadAction
+            val rootDir = pubRoot.root
 
             val rootDirPath = rootDir.path
             var outputDir = ".dart_tool/flutter_gen/gen_l10n"
@@ -96,7 +90,8 @@ class I18nUsagesHandler(psiElement: PsiElement) : FindUsagesHandler(psiElement) 
             val psiFile = file.toPsiFile(project) ?: return@runReadAction
             val clazz = psiFile.getChildOfType<DartClass>() ?: return@runReadAction
             val member = clazz.findMemberByName(element.name) ?: return@runReadAction
-            val child = member.getChildOfType<DartComponentName>()?.getChildOfType<DartId>()?.firstChild?:return@runReadAction
+            val child =
+                member.getChildOfType<DartComponentName>()?.getChildOfType<DartId>()?.firstChild ?: return@runReadAction
             DartServerFindUsagesHandler(child).processElementUsages(child, processor, options)
         }
         return true

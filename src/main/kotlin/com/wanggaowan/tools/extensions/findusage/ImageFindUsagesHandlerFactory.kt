@@ -4,7 +4,6 @@ import com.intellij.find.findUsages.FindUsagesHandler
 import com.intellij.find.findUsages.FindUsagesHandlerFactory
 import com.intellij.find.findUsages.FindUsagesOptions
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -12,6 +11,7 @@ import com.intellij.usageView.UsageInfo
 import com.intellij.util.Processor
 import com.jetbrains.lang.dart.ide.findUsages.DartServerFindUsagesHandler
 import com.jetbrains.lang.dart.psi.*
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.XUtils
 import io.flutter.pub.PubRoot
@@ -36,8 +36,7 @@ class ImageFindUsagesHandlerFactory : FindUsagesHandlerFactory() {
         }
 
         val imagesDir = PluginSettings.getImagesFileDir(element.project)
-        val exampleImagesDir = PluginSettings.getExampleImagesFileDir(element.project)
-        return !(!file.path.contains(imagesDir) && !file.path.contains(exampleImagesDir))
+        return file.path.contains(imagesDir)
     }
 
     override fun createFindUsagesHandler(element: PsiElement, forHighlightUsages: Boolean): FindUsagesHandler {
@@ -61,22 +60,15 @@ class ImageUsagesHandler(psiElement: PsiElement, private val findDefined: Boolea
 
         ApplicationManager.getApplication().runReadAction {
             val file = element.virtualFile
-            val pubRoot = PubRoot.forFile(file) ?: return@runReadAction
+            val pubRoot = Sdk.getInstance(element.project).getPubRoot(file) ?: return@runReadAction
             var parent = file.parent ?: return@runReadAction
             if (XUtils.isImageVariantsFolder(parent.name)) {
                 parent = parent.parent ?: return@runReadAction
             }
 
-            val exampleDir = pubRoot.exampleDir
-            val isExample = exampleDir != null && file.path.startsWith("${exampleDir.path}/")
-            val dartClass: DartClass = findImagesClass(pubRoot, isExample, exampleDir) ?: return@runReadAction
-
+            val dartClass: DartClass = findImagesClass(pubRoot) ?: return@runReadAction
             val filePath = "${parent.path}/${file.name}"
-            val fileRelativePath = if (isExample) {
-                filePath.replace("${exampleDir.path}/", "")
-            } else {
-                filePath.replace("${pubRoot.root.path}/", "")
-            }
+            val fileRelativePath = filePath.replace("${pubRoot.path}/", "")
 
             val member = findImageFileKey(dartClass, fileRelativePath) ?: return@runReadAction
             val child =
@@ -103,30 +95,11 @@ class ImageUsagesHandler(psiElement: PsiElement, private val findDefined: Boolea
         return null
     }
 
-    private fun findImagesClass(pubRoot: PubRoot, isExample: Boolean, exampleDir: VirtualFile?): DartClass? {
-        if (isExample) {
-            val path = PluginSettings.getExampleImagesRefFilePath(project)
-            val fileName = PluginSettings.getExampleImagesRefFileName(project)
-            val className = PluginSettings.getExampleImagesRefClassName(project)
-            val file = VirtualFileManager.getInstance().findFileByUrl("file://${exampleDir!!.path}/$path/$fileName")
-                ?: return null
-            val psiFile = file.toPsiFile(project) ?: return null
-
-            var dartClazz: DartClass? = null
-            psiFile.getChildrenOfType<DartClass>().forEach {
-                if (it.name == className) {
-                    dartClazz = it
-                    return@forEach
-                }
-            }
-            return dartClazz
-        }
-
+    private fun findImagesClass(pubRoot: PubRoot): DartClass? {
         val path = PluginSettings.getImagesRefFilePath(project)
-        val fileName = PluginSettings.getImagesRefFileName(project)
-        val className = PluginSettings.getExampleImagesRefClassName(project)
+        val className = PluginSettings.getImagesRefClassName(project)
         val file =
-            VirtualFileManager.getInstance().findFileByUrl("file://${pubRoot.root.path}/$path/$fileName") ?: return null
+            VirtualFileManager.getInstance().findFileByUrl("file://${pubRoot.root.path}/$path") ?: return null
         val psiFile = file.toPsiFile(project) ?: return null
 
         var dartClazz: DartClass? = null

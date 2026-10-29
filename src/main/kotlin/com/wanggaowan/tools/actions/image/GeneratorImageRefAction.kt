@@ -3,7 +3,6 @@ package com.wanggaowan.tools.actions.image
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -14,14 +13,13 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.jetbrains.lang.dart.psi.*
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.entity.Property
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.DocumentUtils
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.XUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
-import com.wanggaowan.tools.utils.ex.flutterModules
-import com.wanggaowan.tools.utils.ex.rootDir
 import com.wanggaowan.tools.utils.flutter.YamlUtils
 import io.flutter.pub.PubRoot
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
@@ -42,9 +40,8 @@ class GeneratorImageRefAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        project.flutterModules?.forEach {
-            GeneratorImageRefUtils.generate(it)
-            GeneratorImageRefUtils.generate(it, true)
+        Sdk.getInstance(project).pubRoots.forEach {
+            GeneratorImageRefUtils.generate(project, it)
         }
     }
 
@@ -55,66 +52,41 @@ class GeneratorImageRefAction : DumbAwareAction() {
 
 object GeneratorImageRefUtils {
     /**
-     * 生成图片引用文件，[isExampleModule]表示当前是否为项目中example模块生成
+     * 生成图片引用文件
      */
-    fun generate(module: Module?, isExampleModule: Boolean = false) {
-        val projectWrapper = module?.project ?: return
-        val pubRoot = PubRoot.forDirectory(module.rootDir) ?: return
-        val exampleDir = pubRoot.exampleDir
-        if (isExampleModule && (exampleDir == null || pubRoot.exampleLibMain == null)) {
-            return
-        }
-
+    fun generate(project: Project, pubRoot: PubRoot) {
         val virtualFileManager = VirtualFileManager.getInstance()
         // 图片资源在项目中的相对路径
-        val imagesRelDirPath: String
-        // 图片资源目录
-        val imagesDir: VirtualFile?
+        val imagesRelDirPath: String = PluginSettings.getImagesFileDir(project)
         // 生成图片资源引用文件路径
-        val imageRefFilePath: String
-        // 生成图片资源引用文件名称
-        val imageRefFileName: String
+        val imageRefFilePath: String = PluginSettings.getImagesRefFilePath(project)
         // 生成图片资源引用文件类名称
-        val imageRefClassName: String
-        val moduleRootFile: VirtualFile
-        if (isExampleModule) {
-            imagesRelDirPath = PluginSettings.getExampleImagesFileDir(projectWrapper)
-            imageRefFilePath = PluginSettings.getExampleImagesRefFilePath(projectWrapper)
-            imageRefFileName = PluginSettings.getExampleImagesRefFileName(projectWrapper)
-            imageRefClassName = PluginSettings.getExampleImagesRefClassName(projectWrapper)
-            imagesDir = virtualFileManager.findFileByUrl("file://${exampleDir!!.path}/${imagesRelDirPath}")
-            moduleRootFile = exampleDir
-        } else {
-            imagesRelDirPath = PluginSettings.getImagesFileDir(projectWrapper)
-            imageRefFilePath = PluginSettings.getImagesRefFilePath(projectWrapper)
-            imageRefFileName = PluginSettings.getImagesRefFileName(projectWrapper)
-            imageRefClassName = PluginSettings.getImagesRefClassName(projectWrapper)
-            imagesDir = virtualFileManager.findFileByUrl("file://${pubRoot.path}/${imagesRelDirPath}")
-            moduleRootFile = pubRoot.root
-        }
+        val imageRefClassName: String = PluginSettings.getImagesRefClassName(project)
+        // 图片资源目录
+        val imagesDir = virtualFileManager.findFileByUrl("file://${pubRoot.path}/${imagesRelDirPath}")
+        val moduleRootFile: VirtualFile = pubRoot.root
 
         if (imagesDir == null) {
             return
         }
 
-        ProgressUtils.runBackground(projectWrapper, "Create images res ref") { progressIndicator ->
+        ProgressUtils.runBackground(project, "Create images res ref") { progressIndicator ->
             progressIndicator.isIndeterminate = true
             // 写入数据之前先对文件进行保存，否则可能抛出异常：对未保存的文件进行写入
             // 保存不属于写操作，必须在write action外执行，但保存API必须在EDT线程调用
             DocumentUtils.saveAllDocuments()
-            WriteCommandAction.runWriteCommandAction(projectWrapper) {
+            WriteCommandAction.runWriteCommandAction(project) {
                 try {
                     createImageRefFile(
-                        projectWrapper,
+                        project,
                         moduleRootFile,
                         imagesDir,
                         imagesRelDirPath,
                         imageRefFilePath,
-                        imageRefFileName,
                         imageRefClassName
                     )
                     progressIndicator.fraction = 0.5
-                    insertAssets(projectWrapper, moduleRootFile, imagesDir, imagesRelDirPath)
+                    insertAssets(project, moduleRootFile, imagesDir, imagesRelDirPath)
                 } catch (e: Exception) {
                     // 有时候由于编辑未保存的文件而报错
                     e.printStackTrace()
@@ -136,11 +108,10 @@ object GeneratorImageRefUtils {
         imagesDir: VirtualFile,
         imageDirRelPath: String,
         imageRefFilePath: String,
-        imageRefFileName: String,
         imageRefClassName: String
     ) {
         val imagesPsiFile =
-            findOrCreateResourcesDir(project, moduleRootFile, imageRefFilePath, imageRefFileName).toPsiFile(project)
+            findOrCreateResourcesDir(project, moduleRootFile, imageRefFilePath).toPsiFile(project)
                 ?: return
         val classMember = findOrCreateClass(project, imagesPsiFile, imageRefClassName) ?: return
         val allImages = getDeDuplicationList(imagesDir, basePath = imageDirRelPath)
@@ -180,11 +151,10 @@ object GeneratorImageRefUtils {
      */
     private fun findOrCreateResourcesDir(
         project: Project, parent: VirtualFile,
-        imageRefFilePath: String, imageRefFileName: String
+        imageRefFilePath: String
     ): VirtualFile {
-        val path = "$imageRefFilePath/$imageRefFileName"
         var virtualFile: VirtualFile = parent
-        val nodes = path.split("/")
+        val nodes = imageRefFilePath.split("/")
         nodes.indices.forEach { index ->
             val dirName = nodes[index]
             virtualFile = virtualFile.findChild(dirName)

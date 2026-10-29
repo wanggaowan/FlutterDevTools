@@ -12,11 +12,11 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.util.findParentOfType
 import com.intellij.util.LocalTimeCounter
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.utils.DocumentUtils
 import com.wanggaowan.tools.utils.EditorUtils
 import com.wanggaowan.tools.utils.NotificationUtils
@@ -25,7 +25,6 @@ import com.wanggaowan.tools.utils.TranslateUtils
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
 import com.wanggaowan.tools.utils.flutter.YamlUtils
-import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
@@ -330,13 +329,9 @@ class TranslateArbItemAction : DumbAwareAction() {
      * 获取执行flutter命令的根目录
      */
     private fun getRootDir(psiFile: PsiFile): VirtualFile? {
-        val pubRoot = PubRoot.forPsiFile(psiFile) ?: return null
-        var rootDir = pubRoot.root
-        val example = pubRoot.exampleDir
-        if (example != null && psiFile.virtualFile.path.startsWith(example.path)) {
-            rootDir = example
-        }
-        return rootDir
+        val file = psiFile.virtualFile?:return null
+        val pubRoot = Sdk.getInstance(psiFile.project).getPubRoot(file) ?: return null
+        return pubRoot.root
     }
 
     private fun genL10n(project: Project, rootDir: VirtualFile?) {

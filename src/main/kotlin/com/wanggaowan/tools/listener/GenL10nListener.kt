@@ -1,8 +1,6 @@
 package com.wanggaowan.tools.listener
 
 import com.intellij.ide.actionsOnSave.impl.ActionsOnSaveFileDocumentManagerListener.ActionOnSave
-import com.intellij.openapi.application.EDT
-import com.intellij.openapi.application.readAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -10,16 +8,12 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
-import com.intellij.openapi.module.Module
-import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.wanggaowan.tools.utils.ex.basePath
-import com.wanggaowan.tools.utils.ex.findChild
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.utils.ex.isFlutterProject
-import com.wanggaowan.tools.utils.ex.module
-import com.wanggaowan.tools.utils.ex.rootDir
 import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
+import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
 import kotlinx.coroutines.*
 import kotlin.time.Duration.Companion.milliseconds
@@ -57,8 +51,8 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
             for (document in documents) {
                 val file = fileDocumentManager.value.getFile(document)
                 if (file != null && file.name.endsWith(".arb")) {
-                    val module = file.module ?: continue
-                    doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
+                    val pubRoot = Sdk.getInstance(project).getPubRoot(file) ?: continue
+                    doGenL10n(project, pubRoot)
                 }
             }
         }
@@ -74,7 +68,9 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
             return
         }
 
-        fileDocumentManager.value.getDocument(file)?.addDocumentListener(documentListener.value)
+        fileDocumentManager.value.getDocument(file)?.addDocumentListener(documentListener.value) {
+
+        }
     }
 
     override fun fileClosed(source: FileEditorManager, file: VirtualFile) {
@@ -83,64 +79,49 @@ class GenL10nListener : ActionOnSave(), FileEditorManagerListener {
             return
         }
 
-        if (!source.project.isFlutterProject) {
-            return
-        }
-
+        val pubRoot = Sdk.getInstance(source.project).getPubRoot(file) ?: return
         fileDocumentManager.value.getDocument(file)?.removeDocumentListener(documentListener.value)
-
         if (needDoGenL10nMap[file.path] != true) {
             return
         }
 
         needDoGenL10nMap.remove(file.path)
-        val module = file.module ?: return
         fileDocumentManager.value.saveAllDocuments()
-        doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
+        doGenL10n(source.project, pubRoot)
     }
 
     override fun selectionChanged(event: FileEditorManagerEvent) {
         super.selectionChanged(event)
         val file: VirtualFile = event.oldFile ?: return
-        if (needDoGenL10nMap[file.path] == true) {
-            needDoGenL10nMap.remove(file.path)
-            // ModuleUtilCore.findModuleForFile属于耗时操作，EDT不允许慢速操作，因此放到线程执行
-            coroutineScope.value.launch {
-                val module = readAction {
-                    ModuleUtilCore.findModuleForFile(file, event.manager.project)
-                } ?: return@launch
-
-                withContext(Dispatchers.EDT) {
-                    // 保存文档与执行gen-l10n命令均不需要write action，gen-l10n命令会异步执行，不会阻塞当前线程
-                    fileDocumentManager.value.saveAllDocuments()
-                }
-                doGenL10n(module, file.path.startsWith("${module.basePath}/example/"))
-            }
+        val path = file.path
+        if (needDoGenL10nMap[path] == true) {
+            needDoGenL10nMap.remove(path)
+            val project = event.manager.project
+            val pubRoot = Sdk.getInstance(project).getPubRoot(path) ?: return
+            // 保存文档与执行gen-l10n命令均不需要write action，gen-l10n命令会异步执行，不会阻塞当前线程
+            fileDocumentManager.value.saveAllDocuments()
+            doGenL10n(project, pubRoot)
         }
     }
 
-    private fun doGenL10n(module: Module, isExample: Boolean = false) {
-        module.basePath?.also { basePath ->
-            val path = if (isExample) "$basePath/Example" else basePath
-            var job = jobMap[path]
-            // 仅仅最后一次文本变更时执行,如果多个项目都有文本变化，则只处理最后一个项目
-            if (job?.isActive == true) {
-                job.cancel()
-            }
-
-            job = coroutineScope.value.launch {
-                delay(500.milliseconds)
-                val workDir = if (isExample) module.findChild("example") else module.rootDir
-                workDir?.also {
-                    FlutterSdk.getFlutterSdk(module.project)?.also { sdk ->
-                        val commandLine = FlutterCommandLine(sdk, it, FlutterCommandLine.Type.GEN_L10N)
-                        commandLine.start()
-                    }
-                }
-            }
-
-            jobMap[path] = job
+    private fun doGenL10n(project: Project, pubRoot: PubRoot) {
+        val path = pubRoot.path
+        var job = jobMap[path]
+        // 仅仅最后一次文本变更时执行,如果多个项目都有文本变化，则只处理最后一个项目
+        if (job?.isActive == true) {
+            job.cancel()
         }
+
+        job = coroutineScope.value.launch {
+            delay(500.milliseconds)
+            val workDir = pubRoot.root
+            FlutterSdk.getFlutterSdk(project)?.also { sdk ->
+                val commandLine = FlutterCommandLine(sdk, workDir, FlutterCommandLine.Type.GEN_L10N)
+                commandLine.start()
+            }
+        }
+
+        jobMap[path] = job
     }
 
 }

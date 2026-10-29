@@ -21,6 +21,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p>5.0</p>
+    <ul>
+      <li>对一个项目下多个Flutter模块的支持进行重构，之前只支持example子模块，现在可支持项目中所有Flutter模块</li>
+    </ul>
+
     <p>4.9</p>
     <ul>
       <li>最低兼容版本升级到260</li>

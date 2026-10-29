@@ -1,11 +1,9 @@
 package com.wanggaowan.tools.actions
 
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.LangDataKeys
-import com.intellij.openapi.project.Project
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.utils.ex.isFlutterProject
-import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
 
 /**
@@ -23,23 +21,12 @@ class DoL10nAction2 : DoL10nAction() {
         e.presentation.isVisible = true
     }
 
-    override fun startCommand(project: Project, sdk: FlutterSdk, root: PubRoot?, context: DataContext) {
-        if (root == null) {
-            return
-        }
-
-        val module = root.getModule(project) ?: return
-
-        val virtualFile = context.getData(LangDataKeys.VIRTUAL_FILE) ?: return
-        val exampleDir = root.exampleDir
-        if (exampleDir != null && virtualFile.path.startsWith(exampleDir.path)) {
-            val examplePubRoot = PubRoot.forDirectory(exampleDir)
-            if (examplePubRoot != null) {
-                doGenL10n(module, sdk, examplePubRoot)
-            }
-            return
-        }
-
-        doGenL10n(module, sdk, root)
+    override fun actionPerformed(event: AnActionEvent) {
+        val project = event.project ?: return
+        val virtualFile = event.getData(LangDataKeys.VIRTUAL_FILE) ?: return
+        val pubRoot = Sdk.getInstance(project).getPubRoot(virtualFile) ?: return
+        val module = pubRoot.getModule(project) ?: return
+        val fluterSdk = FlutterSdk.getFlutterSdk(project) ?: return
+        doGenL10n(module, fluterSdk, pubRoot)
     }
 }

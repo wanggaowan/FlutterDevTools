@@ -3,7 +3,6 @@ package com.wanggaowan.tools.extensions.gotohandler
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
-import com.wanggaowan.tools.utils.ex.findModule
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 
 /**
@@ -20,22 +19,22 @@ class FlutterGoToDeclarationHandler : GotoDeclarationHandler {
             return null
         }
 
-        val module = sourceElement.findModule() ?: return null
-        if (!module.isFlutterProject) {
+        val project = sourceElement.project
+        if (!project.isFlutterProject) {
             return null
         }
 
-        var targets = I18nGoToDeclarationHandler.getGotoDeclarationTargets(module, sourceElement)
+        var targets = I18nGoToDeclarationHandler.getGotoDeclarationTargets(sourceElement)
         if (targets != null) {
             return targets
         }
 
-        targets = ImagesGoToDeclarationHandler.getGotoDeclarationTargets(module, sourceElement)
+        targets = ImagesGoToDeclarationHandler.getGotoDeclarationTargets(sourceElement)
         if (targets != null) {
             return targets
         }
 
-        targets = RouterGoToDeclarationHandler.getGotoDeclarationTargets(module, sourceElement)
+        targets = RouterGoToDeclarationHandler.getGotoDeclarationTargets(sourceElement)
         if (targets != null) {
             return targets
         }

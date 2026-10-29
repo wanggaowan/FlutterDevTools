@@ -5,15 +5,12 @@ import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
-import com.jetbrains.lang.dart.flutter.FlutterUtil
+import com.wanggaowan.tools.Sdk
 import io.flutter.pub.PubRoot
-import io.flutter.pub.PubRoots
-import io.flutter.sdk.FlutterSdkUtil
 
 /*
  * Project扩展
@@ -154,42 +151,6 @@ fun Module.findChild(name: String) = rootDir?.findChild(name)
 // </editor-fold>
 
 
-// <editor-fold desc="VirtualFile">
-
-/**
- * 通过文件获取所属的模块
- */
-val VirtualFile.module: Module?
-    get() {
-        // ModuleUtilCore.findModuleForFile()
-        var inModule: Module? = null
-        var inModuleBasePath: String? = null
-        for (project in ProjectManager.getInstance().openProjects) {
-            val modules = project.getModules()
-            if (modules.isNullOrEmpty()) {
-                continue
-            }
-
-            for (module in modules) {
-                val basePath = module.basePath
-                if (basePath != null && path.startsWith(basePath)) {
-                    // 此处不能找到第一个就返回，因为可能path路径上存在多个module，
-                    // 需要匹配最长路径的module
-                    if (inModuleBasePath == null) {
-                        inModule = module
-                        inModuleBasePath = basePath
-                    } else if (inModuleBasePath.length < basePath.length) {
-                        inModule = module
-                        inModuleBasePath = basePath
-                    }
-                }
-            }
-        }
-        return inModule
-    }
-
-// </editor-fold>
-
 // <editor-fold desc="AnActionEvent">
 
 val AnActionEvent?.isFlutterProject: Boolean
@@ -217,12 +178,12 @@ fun PubRoot.haveDependencies(name: String): Boolean {
 
 // </editor-fold>
 
-fun PsiElement?.findModule(): Module? {
+fun PsiElement?.findPubRoot(): PubRoot? {
     if (this == null) {
         return null
     }
 
-    val parent = containingFile ?: return null
-    return parent.virtualFile?.module
+    val file = containingFile ?: return null
+    return Sdk.getInstance(this.project).getPubRoot(file)
 }
 

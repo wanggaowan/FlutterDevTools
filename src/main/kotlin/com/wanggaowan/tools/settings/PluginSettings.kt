@@ -11,13 +11,7 @@ import com.wanggaowan.tools.utils.PropertiesSerializeUtils
 object PluginSettings {
     private const val IMAGE_DIR = "imageDir"
     private const val IMAGES_REF_FILE_PATH = "imagesRefFilePath"
-    private const val IMAGES_REF_FILE_NAME = "imagesRefFileName"
     private const val IMAGES_REF_CLASS_NAME = "imagesRefClassName"
-
-    private const val EXAMPLE_IMAGE_DIR = "exampleImageDir"
-    private const val EXAMPLE_IMAGES_REF_FILE_PATH = "exampleImagesRefFilePath"
-    private const val EXAMPLE_IMAGES_REF_FILE_NAME = "exampleImagesRefFileName"
-    private const val EXAMPLE_IMAGES_REF_CLASS_NAME = "exampleImagesRefClassName"
 
     private const val COPY_ANDROID_STR_USE_SIMPLE_MODE = "copyAndroidStrUseSimpleMode"
     private const val EXTRACT_STR_2_L10N_SHOW_RENAME_DIALOG = "extractStr2L10nShowRenameDialog"
@@ -32,8 +26,7 @@ object PluginSettings {
     private const val ALI_SK = "aliSk"
 
     const val DEFAULT_IMAGE_DIR = "assets/images"
-    const val DEFAULT_IMAGES_REF_FILE_PATH = "lib/resources"
-    const val DEFAULT_IMAGES_REF_FILE_NAME = "images.dart"
+    const val DEFAULT_IMAGES_REF_FILE_PATH = "lib/resources/images.dart"
     const val DEFAULT_IMAGES_REF_CLASS_NAME = "Images"
 
     fun getImagesFileDir(project: Project? = null): String {
@@ -63,52 +56,12 @@ object PluginSettings {
         setValue(project, IMAGES_REF_FILE_PATH, value)
     }
 
-    fun getImagesRefFileName(project: Project? = null): String {
-        return getValue(project, IMAGES_REF_FILE_NAME, DEFAULT_IMAGES_REF_FILE_NAME)
-    }
-
-    fun setImagesRefFileName(project: Project? = null, value: String) {
-        setValue(project, IMAGES_REF_FILE_NAME, value)
-    }
-
     fun getImagesRefClassName(project: Project? = null): String {
         return getValue(project, IMAGES_REF_CLASS_NAME, DEFAULT_IMAGES_REF_CLASS_NAME)
     }
 
     fun setImagesRefClassName(project: Project? = null, value: String) {
         setValue(project, IMAGES_REF_CLASS_NAME, value)
-    }
-
-    fun getExampleImagesFileDir(project: Project? = null): String {
-        return formatPath(getValue(project, EXAMPLE_IMAGE_DIR, DEFAULT_IMAGE_DIR))
-    }
-
-    fun setExampleImagesFileDir(project: Project? = null, value: String) {
-        setValue(project, EXAMPLE_IMAGE_DIR, value)
-    }
-
-    fun getExampleImagesRefFilePath(project: Project? = null): String {
-        return formatPath(getValue(project, EXAMPLE_IMAGES_REF_FILE_PATH, DEFAULT_IMAGES_REF_FILE_PATH))
-    }
-
-    fun setExampleImagesRefFilePath(project: Project? = null, value: String) {
-        setValue(project, EXAMPLE_IMAGES_REF_FILE_PATH, value)
-    }
-
-    fun getExampleImagesRefFileName(project: Project? = null): String {
-        return getValue(project, EXAMPLE_IMAGES_REF_FILE_NAME, DEFAULT_IMAGES_REF_FILE_NAME)
-    }
-
-    fun setExampleImagesRefFileName(project: Project? = null, value: String) {
-        setValue(project, EXAMPLE_IMAGES_REF_FILE_NAME, value)
-    }
-
-    fun getExampleImagesRefClassName(project: Project? = null): String {
-        return getValue(project, EXAMPLE_IMAGES_REF_CLASS_NAME, DEFAULT_IMAGES_REF_CLASS_NAME)
-    }
-
-    fun setExampleImagesRefClassName(project: Project? = null, value: String) {
-        setValue(project, EXAMPLE_IMAGES_REF_CLASS_NAME, value)
     }
 
     fun getCopyAndroidStrUseSimpleMode(project: Project? = null): Boolean {
@@ -152,7 +105,7 @@ object PluginSettings {
     }
 
     fun getAliAk(): String {
-        return getValue(null, ALI_AK,"")
+        return getValue(null, ALI_AK, "")
     }
 
     fun setAliAk(value: String) {
@@ -160,7 +113,7 @@ object PluginSettings {
     }
 
     fun getAliSk(): String {
-        return getValue(null, ALI_SK,"")
+        return getValue(null, ALI_SK, "")
     }
 
     fun setAliSk(value: String) {

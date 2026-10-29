@@ -15,10 +15,10 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFileSystemItem
 import com.intellij.refactoring.move.MoveCallback
 import com.intellij.refactoring.move.MoveHandlerDelegate
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.actions.image.ImportSameImageResUtils
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.XUtils
-import com.wanggaowan.tools.utils.ex.basePath
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.idea.base.util.module
 import java.io.File
@@ -81,15 +81,11 @@ class ImportSameImageListener : MoveHandlerDelegate(), PasteProvider {
         }
 
         if (targetElement is PsiDirectory) {
-            val module = targetElement.module
-            if (module != null) {
-                val targetVirtualFile = targetElement.virtualFile
-                val filePath = targetVirtualFile.path
-                val imageRootPath = if (filePath.contains("/example/")) {
-                    "${module.basePath}/${PluginSettings.getExampleImagesFileDir(module.project)}"
-                } else {
-                    "${module.basePath}/${PluginSettings.getImagesFileDir(module.project)}"
-                }
+            val targetVirtualFile = targetElement.virtualFile
+            val filePath = targetVirtualFile.path
+            val pubRoot = Sdk.getInstance(targetElement.project).getPubRoot(filePath)
+            if (pubRoot != null) {
+                val imageRootPath = "${pubRoot.path}/${PluginSettings.getImagesFileDir(targetElement.project)}"
                 if (filePath.startsWith(imageRootPath)) {
                     importToFile = targetVirtualFile
                 }

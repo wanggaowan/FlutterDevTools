@@ -2,20 +2,20 @@ package com.wanggaowan.tools.listener
 
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.*
 import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.file.PsiDirectoryImpl
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.actions.image.GeneratorImageRefUtils
+import com.wanggaowan.tools.listener.GeneratorImageRefListener.Companion.CHANGE
+import com.wanggaowan.tools.listener.GeneratorImageRefListener.Companion.NO_CHANGE
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.utils.XUtils
-import com.wanggaowan.tools.utils.ex.basePath
-import com.wanggaowan.tools.utils.ex.flutterModules
-import com.wanggaowan.tools.utils.ex.rootDir
 import io.flutter.pub.PubRoot
 import kotlinx.coroutines.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 生成图片资源引用，并在pubspec.yaml中生成图片位置声明监听
@@ -23,20 +23,13 @@ import kotlinx.coroutines.*
  * @author Created by wanggaowan on 2023/3/2 22:34
  */
 class GeneratorImageRefListener : BulkFileListener {
-    override fun before(events: MutableList<out VFileEvent>) {
-        super.before(events)
-    }
 
     override fun after(events: MutableList<out VFileEvent>) {
         super.after(events)
         coroutineScope.value.launch {
             val changeDataList = parseFileEvent(events)
             changeDataList.forEach {
-                if (it.imageChangeType == CHANGE) {
-                    runJob(it.module, false)
-                } else if (it.imageChangeType == CHANGE_EXAMPLE) {
-                    runJob(it.module, true)
-                }
+                runJob(it.project, it.pubRoot)
             }
         }
     }
@@ -44,22 +37,20 @@ class GeneratorImageRefListener : BulkFileListener {
     /**
      * 执行生成图片引用文件和配置Assets节点命令
      */
-    private fun runJob(module: Module, isExample: Boolean) {
-        module.basePath?.also { basePath ->
-            val path = if (isExample) "$basePath/Example" else basePath
-            var job = jobMap[path]
-            // 仅仅最后一次图片变更时执行
-            if (job?.isActive == true) {
-                job.cancel()
-            }
-
-            job = coroutineScope.value.launch {
-                delay(500)
-                GeneratorImageRefUtils.generate(module, isExample)
-            }
-
-            jobMap[path] = job
+    private fun runJob(project: Project, pubRoot: PubRoot) {
+        val path = pubRoot.path
+        var job = jobMap[path]
+        // 仅仅最后一次图片变更时执行
+        if (job?.isActive == true) {
+            job.cancel()
         }
+
+        job = coroutineScope.value.launch {
+            delay(500.milliseconds)
+            GeneratorImageRefUtils.generate(project, pubRoot)
+        }
+
+        jobMap[path] = job
     }
 
     /**
@@ -69,40 +60,41 @@ class GeneratorImageRefListener : BulkFileListener {
         val changeData = mutableListOf<ChangeData>()
         for (event in events) {
             val file = event.file ?: continue
+            val project = getProject(event) ?: continue
 
             if (event is VFileCopyEvent) {
-                val module = getModule(event, event.path) ?: continue
-                val imageChange = isImageChange(1, module, file, event.path)
-                if (imageChange != 0) {
-                    changeData.add(ChangeData(module, imageChange))
+                val pubRoot = Sdk.getInstance(project).getPubRoot(event.path) ?: continue
+                val imageChange = isImageChange(1, project, pubRoot, file, event.path)
+                if (imageChange != NO_CHANGE) {
+                    changeData.add(ChangeData(project, pubRoot))
                 }
                 continue
             }
 
             if (event is VFileCreateEvent || event is VFileDeleteEvent) {
-                val module = getModule(event, file.path) ?: continue
-                val imageChange = isImageChange(0, module, file, "")
-                if (imageChange != 0) {
-                    changeData.add(ChangeData(module, imageChange))
+                val pubRoot = Sdk.getInstance(project).getPubRoot(file) ?: continue
+                val imageChange = isImageChange(0, project, pubRoot, file, "")
+                if (imageChange != NO_CHANGE) {
+                    changeData.add(ChangeData(project, pubRoot))
                 }
 
                 continue
             }
 
             if (event is VFileMoveEvent) {
-                var module = getModule(event, event.oldPath)
-                if (module != null) {
-                    val imageChange = isImageChange(1, module, file, event.oldPath)
-                    if (imageChange != 0) {
-                        changeData.add(ChangeData(module, imageChange))
+                var pubRoot = Sdk.getInstance(project).getPubRoot(event.oldPath)
+                if (pubRoot != null) {
+                    val imageChange = isImageChange(1, project, pubRoot, file, event.oldPath)
+                    if (imageChange != NO_CHANGE) {
+                        changeData.add(ChangeData(project, pubRoot))
                     }
                 }
 
-                module = getModule(event, event.newPath)
-                if (module != null) {
-                    val imageChange = isImageChange(1, module, file, event.newPath)
-                    if (imageChange != 0) {
-                        changeData.add(ChangeData(module, imageChange))
+                pubRoot = Sdk.getInstance(project).getPubRoot(event.newPath)
+                if (pubRoot != null) {
+                    val imageChange = isImageChange(1, project, pubRoot, file, event.newPath)
+                    if (imageChange != NO_CHANGE) {
+                        changeData.add(ChangeData(project, pubRoot))
                     }
                 }
 
@@ -111,10 +103,10 @@ class GeneratorImageRefListener : BulkFileListener {
 
             if (event is VFilePropertyChangeEvent) {
                 if (event.propertyName == "name") {
-                    val module = getModule(event, file.path) ?: continue
-                    val imageChange = isImageChange(0, module, file, "")
-                    if (imageChange != 0) {
-                        changeData.add(ChangeData(module, imageChange))
+                    val pubRoot = Sdk.getInstance(project).getPubRoot(file) ?: continue
+                    val imageChange = isImageChange(0, project, pubRoot, file, "")
+                    if (imageChange != NO_CHANGE) {
+                        changeData.add(ChangeData(project, pubRoot))
                     }
                 }
                 continue
@@ -125,28 +117,15 @@ class GeneratorImageRefListener : BulkFileListener {
 
     /**
      * 图片是否变更，[type]为0表示通过[file]判断文件变更，[type]为1表示通过[path]判断文件变更。
-     * 返回[NO_CHANGE]、[CHANGE]或[CHANGE_EXAMPLE]
+     * 返回[NO_CHANGE]、[CHANGE]
      */
-    private fun isImageChange(type: Int, module: Module, file: VirtualFile?, path: String): Int {
-        val pubRoot = PubRoot.forDirectory(module.rootDir) ?: return NO_CHANGE
-        val exampleDir = pubRoot.exampleDir
-        val exampleImagesDir =
-            if (exampleDir == null) null else "${exampleDir.path}/${PluginSettings.getExampleImagesFileDir(module.project)}"
-        val imagesDir = "${pubRoot.path}/${PluginSettings.getImagesFileDir(module.project)}"
+    private fun isImageChange(type: Int, project: Project, pubRoot: PubRoot, file: VirtualFile?, path: String): Int {
+        if (file == null) {
+            return NO_CHANGE
+        }
 
+        val imagesDir = "${pubRoot.path}/${PluginSettings.getImagesFileDir(project)}"
         if (type == 0) {
-            if (file == null) {
-                return NO_CHANGE
-            }
-
-            if (exampleImagesDir != null && file.path.startsWith(exampleImagesDir)) {
-                if (isFileInDir(exampleImagesDir, file)) {
-                    return CHANGE_EXAMPLE
-                }
-
-                return NO_CHANGE
-            }
-
             if (isFileInDir(imagesDir, file)) {
                 return CHANGE
             }
@@ -154,14 +133,7 @@ class GeneratorImageRefListener : BulkFileListener {
             return NO_CHANGE
         }
 
-        if (exampleImagesDir != null && path.startsWith(exampleImagesDir)) {
-            if (file != null && isImage(file)) {
-                return CHANGE_EXAMPLE
-            }
-            return NO_CHANGE
-        }
-
-        if (file != null && isImage(file) && path.startsWith(imagesDir)) {
+        if (isImage(file) && path.startsWith(imagesDir)) {
             return CHANGE
         }
 
@@ -171,57 +143,24 @@ class GeneratorImageRefListener : BulkFileListener {
     /**
      * 获取文件时间所处的模块
      */
-    private fun getModule(event: VFileEvent, filePath: String): Module? {
+    private fun getProject(event: VFileEvent): Project? {
         val requestor = event.requestor
         if (requestor is PsiManager) {
-            return getModuleByProject(requestor.project, filePath)
+            return requestor.project
         }
 
         if (requestor is PsiDirectoryImpl) {
-            return getModuleByProject(requestor.project, filePath)
+            return requestor.project
         }
 
         if (requestor is Project) {
-            return getModuleByProject(requestor, filePath)
-        }
-
-        if (requestor is Module) {
             return requestor
         }
 
-        if (filePath.isEmpty()) {
-            return null
+        if (requestor is Module) {
+            return requestor.project
         }
 
-        for (project in ProjectManager.getInstance().openProjects) {
-            val module = getModuleByProject(project, filePath)
-            if (module != null) {
-                return module
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * 根据文件路径获取项目中对应的模块
-     */
-    private fun getModuleByProject(project: Project, filePath: String): Module? {
-        if (filePath.isEmpty()) {
-            return null
-        }
-
-        val modules = project.flutterModules
-        if (modules.isNullOrEmpty()) {
-            return null
-        }
-
-        for (module in modules) {
-            val basePath = module.basePath
-            if (basePath != null && filePath.startsWith(basePath)) {
-                return module
-            }
-        }
         return null
     }
 
@@ -281,11 +220,6 @@ class GeneratorImageRefListener : BulkFileListener {
          * Flutter项目图片发生变更
          */
         const val CHANGE = 1
-
-        /**
-         * Flutter项目内Example项目图片发生变更
-         */
-        const val CHANGE_EXAMPLE = 2
     }
 }
 
@@ -293,7 +227,7 @@ class GeneratorImageRefListener : BulkFileListener {
  * 需要处理的数据
  */
 data class ChangeData(
-    val module: Module,
-    val imageChangeType: Int
+    val project: Project,
+    val pubRoot: PubRoot
 )
 

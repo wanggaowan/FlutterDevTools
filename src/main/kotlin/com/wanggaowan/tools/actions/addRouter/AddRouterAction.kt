@@ -17,7 +17,6 @@ import com.jetbrains.lang.dart.psi.*
 import com.wanggaowan.tools.extensions.gotohandler.RouterGoToDeclarationHandler
 import com.wanggaowan.tools.utils.ProgressUtils
 import com.wanggaowan.tools.utils.dart.DartPsiUtils
-import com.wanggaowan.tools.utils.ex.findModule
 import com.wanggaowan.tools.utils.ex.isFlutterProject
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
@@ -344,17 +343,14 @@ class AddRouterAction : DumbAwareAction() {
                         val leafPsiElement =
                             element.getChildOfType<DartStringLiteralExpression>()?.firstChild?.nextSibling
                         if (leafPsiElement != null) {
-                            element.findModule()?.also { module ->
-                                val elements = RouterGoToDeclarationHandler.getGotoDeclarationTargets(
-                                    module,
-                                    leafPsiElement
-                                )
-                                if (!elements.isNullOrEmpty()) {
-                                    for (element2 in elements) {
-                                        if (element2 is DartElement) {
-                                            insertAnchorList = element2
-                                            break
-                                        }
+                            val elements = RouterGoToDeclarationHandler.getGotoDeclarationTargets(
+                                leafPsiElement
+                            )
+                            if (!elements.isNullOrEmpty()) {
+                                for (element2 in elements) {
+                                    if (element2 is DartElement) {
+                                        insertAnchorList = element2
+                                        break
                                     }
                                 }
                             }
@@ -372,18 +368,15 @@ class AddRouterAction : DumbAwareAction() {
                                 val leafPsiElement =
                                     namedArgument.getChildOfType<DartStringLiteralExpression>()?.firstChild?.nextSibling
                                 if (leafPsiElement != null) {
-                                    namedArgument.findModule()?.also { module ->
-                                        val elements =
-                                            RouterGoToDeclarationHandler.getGotoDeclarationTargets(
-                                                module,
-                                                leafPsiElement
-                                            )
-                                        if (!elements.isNullOrEmpty()) {
-                                            for (element2 in elements) {
-                                                if (element2 is DartMethodDeclaration) {
-                                                    insertAnchorMethod = element2
-                                                    break
-                                                }
+                                    val elements =
+                                        RouterGoToDeclarationHandler.getGotoDeclarationTargets(
+                                            leafPsiElement
+                                        )
+                                    if (!elements.isNullOrEmpty()) {
+                                        for (element2 in elements) {
+                                            if (element2 is DartMethodDeclaration) {
+                                                insertAnchorMethod = element2
+                                                break
                                             }
                                         }
                                     }

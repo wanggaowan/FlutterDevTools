@@ -10,9 +10,8 @@ import com.intellij.util.ui.JBUI
 import com.jetbrains.lang.dart.psi.DartFunctionBody
 import com.jetbrains.lang.dart.psi.DartGetterDeclaration
 import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.extensions.gotohandler.ImagesGoToDeclarationHandler
-import com.wanggaowan.tools.utils.ex.basePath
-import com.wanggaowan.tools.utils.ex.findModule
 import icons.FlutterDevToolsIcons
 
 /**
@@ -21,9 +20,9 @@ import icons.FlutterDevToolsIcons
  * @author Created by wanggaowan on 2023/3/6 22:19
  */
 class ImageLineMarkerProvider : LineMarkerProvider {
-    override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? { // 查找Images.homeIcSaoma类型节点引用的图片文件
-        val module = element.findModule() ?: return null
-        val files = ImagesGoToDeclarationHandler.getGotoDeclarationTargets(module, element, true)
+    override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
+        // 查找Images.homeIcSaoma类型节点引用的图片文件
+        val files = ImagesGoToDeclarationHandler.getGotoDeclarationTargets(element, true)
         if (!files.isNullOrEmpty()) {
             return createLineMarkerInfo(element, files[0])
         }
@@ -37,8 +36,9 @@ class ImageLineMarkerProvider : LineMarkerProvider {
         val leafElement = element.firstChild?.nextSibling ?: return null
         val path = leafElement.text
         if (!path.isNullOrEmpty() && element.parent is DartFunctionBody && element.parent.parent is DartGetterDeclaration) {
-            val isExample = element.containingFile?.virtualFile?.path?.startsWith("${module.basePath}/example/")
-            val fileList = ImagesGoToDeclarationHandler.findFile(module, path, isExample == true, true)
+            val file = element.containingFile?.virtualFile ?: return null
+            val pubRoot = Sdk.getInstance(element.project).getPubRoot(file) ?: return null
+            val fileList = ImagesGoToDeclarationHandler.findFile(element.project, pubRoot, path, true)
             if (fileList.isNotEmpty()) {
                 return createLineMarkerInfo(leafElement, fileList[0])
             }

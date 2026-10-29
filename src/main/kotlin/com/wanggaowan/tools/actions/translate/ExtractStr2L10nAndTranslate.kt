@@ -7,7 +7,6 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.application.EDT
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.progress.ProgressIndicator
@@ -34,6 +33,7 @@ import com.jetbrains.lang.dart.psi.DartLongTemplateEntry
 import com.jetbrains.lang.dart.psi.DartPsiCompositeElement
 import com.jetbrains.lang.dart.psi.DartShortTemplateEntry
 import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
+import com.wanggaowan.tools.Sdk
 import com.wanggaowan.tools.settings.PluginSettings
 import com.wanggaowan.tools.ui.UIColor
 import com.wanggaowan.tools.utils.DocumentUtils
@@ -44,7 +44,6 @@ import com.wanggaowan.tools.utils.ex.isFlutterProject
 import com.wanggaowan.tools.utils.flutter.FlutterCommandLine
 import com.wanggaowan.tools.utils.flutter.YamlUtils
 import com.wanggaowan.tools.utils.msg.Toast
-import io.flutter.pub.PubRoot
 import io.flutter.sdk.FlutterSdk
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
@@ -52,7 +51,6 @@ import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.yaml.psi.YAMLKeyValue
-import java.awt.Color
 import java.awt.Dimension
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
@@ -136,12 +134,8 @@ object ExtractUtils {
         val project = event.project ?: return
         val selectedFile = selectedPsiFile ?: return
         val selectedElement = selectedPsiElement ?: return
-        val pubRoot = PubRoot.forPsiFile(selectedFile) ?: return
-        var rootDir = pubRoot.root
-        val example = pubRoot.exampleDir
-        if (example != null && selectedFile.virtualFile.path.startsWith(example.path)) {
-            rootDir = example
-        }
+        val pubRoot = Sdk.getInstance(project).getPubRoot(selectedFile) ?: return
+        val rootDir = pubRoot.root
 
         var rootDirPath = rootDir.path
         var resDirPath = "lib/l10n"

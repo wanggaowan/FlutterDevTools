@@ -5,8 +5,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.modules
 import com.wanggaowan.tools.extensions.complete.CodeAnalysisService
 import com.wanggaowan.tools.utils.ex.isFlutterProject
-import com.wanggaowan.tools.utils.ex.rootDir
-import io.flutter.pub.PubRoot
 import javax.swing.JComponent
 
 /**
@@ -16,7 +14,6 @@ import javax.swing.JComponent
  */
 class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
     private var mSettingsView: PluginSettingsView? = null
-    private val pubRoot: PubRoot? = PubRoot.forDirectory(project.rootDir)
 
     override fun getDisplayName(): String {
         return "FlutterDevTools"
@@ -27,7 +24,7 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
     }
 
     override fun createComponent(): JComponent {
-        mSettingsView = PluginSettingsView(pubRoot)
+        mSettingsView = PluginSettingsView()
         return mSettingsView!!.panel
     }
 
@@ -50,20 +47,8 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
     private fun isCreateResourceModified(): Boolean {
         val modified = PluginSettings.getImagesFileDir(getProjectWrapper()) != mSettingsView?.imagesDir?.text
             || PluginSettings.getImagesRefFilePath(getProjectWrapper()) != mSettingsView?.imagesRefFilePath?.text
-            || PluginSettings.getImagesRefFileName(getProjectWrapper()) != mSettingsView?.imagesRefFileName?.text
             || PluginSettings.getImagesRefClassName(getProjectWrapper()) != mSettingsView?.imagesRefClassName?.text
-        if (modified) {
-            return true
-        }
-
-        if (pubRoot?.exampleDir == null) {
-            return false
-        }
-
-        return PluginSettings.getExampleImagesFileDir(getProjectWrapper()) != mSettingsView?.exampleImagesDir?.text
-            || PluginSettings.getExampleImagesRefFilePath(getProjectWrapper()) != mSettingsView?.exampleImagesRefFilePath?.text
-            || PluginSettings.getExampleImagesRefFileName(getProjectWrapper()) != mSettingsView?.exampleImagesRefFileName?.text
-            || PluginSettings.getExampleImagesRefClassName(getProjectWrapper()) != mSettingsView?.exampleImagesRefClassName?.text
+        return modified
     }
 
     private fun isExtractStr2L10nModified(): Boolean {
@@ -118,37 +103,9 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
             getProjectWrapper(),
             mSettingsView?.imagesRefFilePath?.text ?: PluginSettings.DEFAULT_IMAGES_REF_FILE_PATH
         )
-        PluginSettings.setImagesRefFileName(
-            getProjectWrapper(),
-            mSettingsView?.imagesRefFileName?.text ?: PluginSettings.DEFAULT_IMAGES_REF_FILE_NAME
-        )
         PluginSettings.setImagesRefClassName(
             getProjectWrapper(),
             mSettingsView?.imagesRefClassName?.text ?: PluginSettings.DEFAULT_IMAGES_REF_CLASS_NAME
-        )
-
-        if (pubRoot?.exampleDir == null) {
-            return
-        }
-
-        PluginSettings.setExampleImagesFileDir(
-            getProjectWrapper(),
-            mSettingsView?.exampleImagesDir?.text ?: PluginSettings.DEFAULT_IMAGE_DIR
-        )
-        PluginSettings.setExampleImagesRefFilePath(
-            getProjectWrapper(),
-            mSettingsView?.exampleImagesRefFilePath?.text
-                ?: PluginSettings.DEFAULT_IMAGES_REF_FILE_PATH
-        )
-        PluginSettings.setExampleImagesRefFileName(
-            getProjectWrapper(),
-            mSettingsView?.exampleImagesRefFileName?.text
-                ?: PluginSettings.DEFAULT_IMAGES_REF_FILE_NAME
-        )
-        PluginSettings.setExampleImagesRefClassName(
-            getProjectWrapper(),
-            mSettingsView?.exampleImagesRefClassName?.text
-                ?: PluginSettings.DEFAULT_IMAGES_REF_CLASS_NAME
         )
     }
 
@@ -190,18 +147,7 @@ class ProjectPluginSettingsConfigurable(val project: Project) : Configurable {
     private fun resetCreateResource() {
         mSettingsView?.imagesDir?.text = PluginSettings.getImagesFileDir(getProjectWrapper())
         mSettingsView?.imagesRefFilePath?.text = PluginSettings.getImagesRefFilePath(getProjectWrapper())
-        mSettingsView?.imagesRefFileName?.text = PluginSettings.getImagesRefFileName(getProjectWrapper())
         mSettingsView?.imagesRefClassName?.text = PluginSettings.getImagesRefClassName(getProjectWrapper())
-
-        if (pubRoot?.exampleDir == null) {
-            return
-        }
-
-        mSettingsView?.exampleImagesDir?.text = PluginSettings.getExampleImagesFileDir(getProjectWrapper())
-        mSettingsView?.exampleImagesRefFilePath?.text = PluginSettings.getExampleImagesRefFilePath(getProjectWrapper())
-        mSettingsView?.exampleImagesRefFileName?.text = PluginSettings.getExampleImagesRefFileName(getProjectWrapper())
-        mSettingsView?.exampleImagesRefClassName?.text =
-            PluginSettings.getExampleImagesRefClassName(getProjectWrapper())
     }
 
     private fun resetExtractStr2L10n() {
