@@ -19,17 +19,12 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.ui.JBColor
 import com.intellij.ui.LanguageTextField
-import com.intellij.ui.components.JBBox
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBList
-import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextField
+import com.intellij.ui.components.*
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.LocalTimeCounter
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.wanggaowan.tools.ui.UIColor
 import com.wanggaowan.tools.ui.language.DartLanguageTextField
@@ -264,7 +259,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
                 } else {
                     languageTextField?.isVisible = true
                 }
-                languageTextField?.text = obj.content ?: ""
+                languageTextField?.text = obj.tempContent ?: obj.content ?: ""
                 languageTextField?.editor?.scrollingModel?.disableAnimation()
                 languageTextField?.editor?.scrollingModel?.scroll(0, 0)
             } else {
@@ -349,7 +344,7 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
         languageTextField.autoscrolls = false
         languageTextField.border = JBUI.Borders.empty()
         languageTextField.editor?.setBorder(JBUI.Borders.empty())
-        languageTextField.document.addDocumentListener(object : DocumentListener {
+        val listener = object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
                 super.documentChanged(event)
                 val tempContent = languageTextField.text
@@ -362,7 +357,10 @@ class CreateFileTemplateDialog(val project: Project) : DialogWrapper(project, fa
                 val content = obj.content ?: ""
                 applyLanguageTextBtn.isEnabled = tempContent != content
             }
-        })
+        }
+        languageTextField.document.addDocumentListener(listener) {
+            languageTextField.document.removeDocumentListener(listener)
+        }
         return languageTextField
     }
 
