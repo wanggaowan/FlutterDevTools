@@ -10,7 +10,7 @@ import com.wanggaowan.tools.utils.PropertiesSerializeUtils
  */
 object PluginSettings {
     private const val IMAGE_DIR = "imageDir"
-    private const val IMAGES_REF_FILE_PATH = "imagesRefFilePath"
+    private const val IMAGES_REF_FILE_PATH = "imagesRefFilePath2"
     private const val IMAGES_REF_CLASS_NAME = "imagesRefClassName"
 
     private const val COPY_ANDROID_STR_USE_SIMPLE_MODE = "copyAndroidStrUseSimpleMode"

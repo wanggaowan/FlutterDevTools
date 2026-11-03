@@ -13,6 +13,81 @@ import com.wanggaowan.tools.utils.ex.findChild
  */
 object XUtils {
     /**
+     * 图片引用生成器
+     * 根据图片文件生成 Dart 类的 getter 方法
+     */
+    val DART_KEYWORDS = setOf(
+        "abstract",
+        "as",
+        "assert",
+        "async",
+        "await",
+        "base",
+        "break",
+        "case",
+        "catch",
+        "class",
+        "const",
+        "continue",
+        "covariant",
+        "default",
+        "deferred",
+        "do",
+        "dynamic",
+        "else",
+        "enum",
+        "export",
+        "extends",
+        "extension",
+        "external",
+        "factory",
+        "false",
+        "final",
+        "finally",
+        "for",
+        "Function",
+        "get",
+        "hide",
+        "if",
+        "implements",
+        "import",
+        "in",
+        "interface",
+        "is",
+        "late",
+        "library",
+        "mixin",
+        "new",
+        "null",
+        "of",
+        "on",
+        "operator",
+        "part",
+        "required",
+        "rethrow",
+        "return",
+        "sealed",
+        "set",
+        "show",
+        "static",
+        "super",
+        "switch",
+        "sync",
+        "this",
+        "throw",
+        "true",
+        "try",
+        "type",
+        "typedef",
+        "var",
+        "void",
+        "when",
+        "while",
+        "with",
+        "yield",
+    )
+
+    /**
      * 检测项目是否有pubspec.lock文件
      */
     fun havePubspecLockFile(project: Project): Boolean {
@@ -45,12 +120,23 @@ object XUtils {
      * 将图片路径数据转化为符合Dart规则的Key
      */
     fun imagePathToDartKey(name: String): String {
-        return StringUtils.lowerCamelCase(
-            name.substring(0, name.lastIndexOf("."))
-                .replace("/", "_")
-                .replace("-", "_")
-                .replace("@", ""), false
-        )
+        val nameMap = name.replace("""\.[^/.]+$""".toRegex(), "") // 去掉后缀名
+            .replace("""[0-9]+\.[0-9]+x/""".toRegex(), "") // 去掉变体目录
+            .replace("@", "")
+            .replace("""[^A-Za-z0-9_]+""".toRegex(), "_") // 将非法标识符字符（含 /, -, ., 空格, 中文等）统一替换为下划线
+
+        var methodName = StringUtils.lowerCamelCase(nameMap, false)
+        if (methodName.isNotEmpty() && methodName[0].isDigit()) {
+            // Dart 标识符不能以数字开头
+            methodName = "img${methodName}"
+        }
+
+        if (DART_KEYWORDS.indexOf(methodName) != -1) {
+            // 避免生成 `static String get class => ...` 这类非法代码
+            methodName = "img${methodName}"
+        }
+
+        return methodName
     }
 
     /**
